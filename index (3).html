@@ -1,0 +1,235 @@
+
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Защитено приложение</title>
+  <style>
+    body {
+      font-family: Arial;
+      background-color: #121212;
+      color: white;
+      text-align: center;
+      padding: 50px;
+    }
+    #login {
+      margin: auto;
+      max-width: 300px;
+    }
+    input {
+      padding: 10px;
+      width: 100%;
+      margin-top: 10px;
+      font-size: 18px;
+      border-radius: 5px;
+      border: none;
+    }
+    button {
+      margin-top: 15px;
+      padding: 10px;
+      width: 100%;
+      background: #2196f3;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      color: white;
+      cursor: pointer;
+    }
+    #app {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="login">
+    <h2>🔐 Въведи парола</h2>
+    <input type="password" id="password" placeholder="Парола">
+    <button onclick="checkPassword()">Вход</button>
+  </div>
+
+  <div id="app" style="display:none">
+    
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Нон Стоп Отчет</title>
+  <style>
+    body { font-family: Arial; background-color: #121212; color: #fff; padding: 16px; max-width: 700px; margin: auto; }
+    input, select { width: 100%; padding: 8px; margin: 4px 0; border-radius: 5px; border: none; font-size: 16px; }
+    button { padding: 10px; border: none; border-radius: 5px; background: #2196f3; color: #fff; font-size: 16px; cursor: pointer; margin-top: 10px; width: 100%; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border-bottom: 1px solid #444; padding: 8px; text-align: left; }
+    .summary, .summary2 { background: #1e1e1e; padding: 10px; border-radius: 5px; margin-top: 20px; }
+    .filters input, .filters select { width: 48%; display: inline-block; margin-right: 2%; margin-top: 10px; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <h2 style="text-align:center;">📋 Нон Стоп Отчет</h2>
+
+  <!-- Екран 1: Въвеждане + обобщение + таблица -->
+  <div id="screen-add">
+    <label>Дата</label><input type="date" id="date">
+    <label>Тип</label><select id="type"><option>Приход</option><option>Разход</option></select>
+    <label>Метод</label><select id="method"><option>Кеш</option><option>Банка</option></select>
+    <label>Сума</label><input type="number" id="amount">
+    <label>Бележка</label><input type="text" id="note">
+    <button onclick="addRecord()">Добави запис</button>
+    <button onclick="window.print()">🖨️ Принтирай</button>
+    <button onclick="showScreen('report')">📊 Отчети</button>
+
+    <div class="summary" id="totalSummary"></div>
+    <table id="recordsTable">
+      <thead><tr><th>Дата</th><th>Тип</th><th>Сума</th><th>Метод</th><th>Бележка</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- Екран 2: Само филтри и анализ -->
+  <div id="screen-report" class="hidden">
+    <button onclick="showScreen('add')">⬅️ Назад</button>
+    <div class="filters">
+      <input type="text" id="searchNote" placeholder="Търси по бележка" oninput="renderTable()">
+      <select id="filterType" onchange="renderTable()">
+        <option value="">Всички типове</option>
+        <option value="Приход">Приход</option>
+        <option value="Разход">Разход</option>
+      </select>
+      <select id="filterMethod" onchange="renderTable()">
+        <option value="">Всички методи</option>
+        <option value="Кеш">Кеш</option>
+        <option value="Банка">Банка</option>
+      </select>
+    </div>
+
+    <div class="summary2" id="daily"></div>
+    <div class="summary2" id="monthly"></div>
+    <button onclick="window.print()">🖨️ Принтирай</button>
+    <button onclick="clearRecords()">🗑️ Изчисти всички</button>
+  </div>
+
+<script>
+let records = [];
+
+function showScreen(name) {
+  document.getElementById("screen-add").classList.toggle("hidden", name !== "add");
+  document.getElementById("screen-report").classList.toggle("hidden", name !== "report");
+  if (name === "report") renderTable();
+  if (name === "add") renderMainTable();
+}
+
+function saveToLocal() {
+  localStorage.setItem("nonstop_records", JSON.stringify(records));
+}
+
+function loadFromLocal() {
+  const saved = localStorage.getItem("nonstop_records");
+  if (saved) records = JSON.parse(saved);
+}
+
+function addRecord() {
+  const date = document.getElementById("date").value;
+  const type = document.getElementById("type").value;
+  const method = document.getElementById("method").value;
+  const amount = parseFloat(document.getElementById("amount").value);
+  const note = document.getElementById("note").value;
+  if (!date || isNaN(amount)) return alert("Моля въведи дата и сума");
+  records.push({ date, type, method, amount, note });
+  saveToLocal();
+  renderMainTable();
+  clearForm();
+}
+
+function clearForm() {
+  document.getElementById("date").value = "";
+  document.getElementById("amount").value = "";
+  document.getElementById("note").value = "";
+}
+
+function clearRecords() {
+  if (confirm("Сигурен ли си, че искаш да изтриеш всички записи?")) {
+    records = [];
+    saveToLocal();
+    renderMainTable();
+  }
+}
+
+function renderMainTable() {
+  const tbody = document.querySelector("#recordsTable tbody");
+  tbody.innerHTML = "";
+  let income = 0, expense = 0, cashIn = 0, cashOut = 0, bankIn = 0, bankOut = 0;
+
+  records.forEach(r => {
+    const row = `<tr><td>${r.date}</td><td>${r.type}</td><td>${r.amount.toFixed(2)} лв</td><td>${r.method}</td><td>${r.note}</td></tr>`;
+    tbody.innerHTML += row;
+
+    if (r.type === "Приход") income += r.amount;
+    if (r.type === "Разход") expense += r.amount;
+
+    if (r.method === "Кеш" && r.type === "Приход") cashIn += r.amount;
+    if (r.method === "Кеш" && r.type === "Разход") cashOut += r.amount;
+    if (r.method === "Банка" && r.type === "Приход") bankIn += r.amount;
+    if (r.method === "Банка" && r.type === "Разход") bankOut += r.amount;
+  });
+
+  const balance = income - expense;
+  const cashBalance = cashIn - cashOut;
+  const bankBalance = bankIn - bankOut;
+
+  document.getElementById("totalSummary").innerHTML = `
+    <strong>Общо приходи:</strong> ${income.toFixed(2)} лв |
+    <strong>Общо разходи:</strong> ${expense.toFixed(2)} лв |
+    <strong>Баланс:</strong> ${balance.toFixed(2)} лв<br>
+    💵 Кеш: ${cashBalance.toFixed(2)} лв | 🏦 Банка: ${bankBalance.toFixed(2)} лв`;
+}
+
+function renderTable() {
+  const filterType = document.getElementById("filterType").value;
+  const filterMethod = document.getElementById("filterMethod").value;
+  const searchNote = document.getElementById("searchNote").value.toLowerCase();
+
+  let todayIncome = 0, monthIncome = 0, todayExpense = 0, monthExpense = 0;
+  const today = new Date().toISOString().slice(0,10);
+  const month = today.slice(0,7);
+
+  const filtered = records.filter(r =>
+    (!filterType || r.type === filterType) &&
+    (!filterMethod || r.method === filterMethod) &&
+    (!searchNote || r.note.toLowerCase().includes(searchNote))
+  );
+
+  filtered.forEach(r => {
+    if (r.date === today && r.type === "Приход") todayIncome += r.amount;
+    if (r.date === today && r.type === "Разход") todayExpense += r.amount;
+    if (r.date.startsWith(month) && r.type === "Приход") monthIncome += r.amount;
+    if (r.date.startsWith(month) && r.type === "Разход") monthExpense += r.amount;
+  });
+
+  document.getElementById("daily").innerHTML = `📅 <strong>Днес:</strong> Приходи: ${todayIncome.toFixed(2)} лв | Разходи: ${todayExpense.toFixed(2)} лв`;
+  document.getElementById("monthly").innerHTML = `📆 <strong>Месец:</strong> Приходи: ${monthIncome.toFixed(2)} лв | Разходи: ${monthExpense.toFixed(2)} лв`;
+}
+
+loadFromLocal();
+renderMainTable();
+</script>
+</body>
+</html>
+
+  </div>
+
+  <script>
+    function checkPassword() {
+      const pass = document.getElementById("password").value;
+      if (pass === "7801") {
+        document.getElementById("login").style.display = "none";
+        document.getElementById("app").style.display = "block";
+      } else {
+        alert("Грешна парола!");
+      }
+    }
+  </script>
+</body>
+</html>
