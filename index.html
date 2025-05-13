@@ -122,28 +122,26 @@ function clearRecords() {
 }
 
 function renderMainTable() {
+function renderMainTable() {
   const tbody = document.querySelector("#recordsTable tbody");
   tbody.innerHTML = "";
   let income = 0, expense = 0, cashIn = 0, cashOut = 0, bankIn = 0, bankOut = 0;
 
-  records.forEach(r => {
-    const row =const row = `<tr>
-  const row = `<tr>
-  <td>${r.date}</td>
-  <td>${r.type}</td>
-  <td>${r.amount.toFixed(2)} лв</td>
-  <td>${r.method}</td>
-  <td>${r.note}</td>
-  <td>
-    <button onclick="editRecord(${i})">✏️</button>
-    <button onclick="deleteRecord(${i})" style="margin-left:5px; background:#f44336;">🗑️</button>
-  </td>
-</tr>`;
-
-
-</tr>`;
-
+  records.forEach((r, i) => {
+    const row = `<tr>
+      <td>${r.date}</td>
+      <td>${r.type}</td>
+      <td>${r.amount.toFixed(2)} лв</td>
+      <td>${r.method}</td>
+      <td>${r.note}</td>
+      <td>
+        <button onclick="editRecord(${i})">✏️</button>
+        <button onclick="deleteRecord(${i})" style="margin-left:5px; background:#f44336;">🗑️</button>
+      </td>
+    </tr>`;
     tbody.innerHTML += row;
+
+    // сметките
     if (r.type === "Приход") income += r.amount;
     if (r.type === "Разход") expense += r.amount;
     if (r.method === "Кеш" && r.type === "Приход") cashIn += r.amount;
@@ -162,6 +160,7 @@ function renderMainTable() {
     <strong>Баланс:</strong> ${balance.toFixed(2)} лв<br>
     💵 Кеш: ${cashBalance.toFixed(2)} лв | 🏦 Банка: ${bankBalance.toFixed(2)} лв`;
 }
+
 
 function renderTable() {
   const filterType = document.getElementById("filterType").value;
