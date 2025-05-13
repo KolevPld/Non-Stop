@@ -128,15 +128,18 @@ function renderMainTable() {
 
   records.forEach(r => {
     const row =const row = `<tr>
+  const row = `<tr>
   <td>${r.date}</td>
   <td>${r.type}</td>
   <td>${r.amount.toFixed(2)} лв</td>
   <td>${r.method}</td>
   <td>${r.note}</td>
-  <td><button onclick="editRecord(${i})">✏️</button></td>
-  <button id="editBtn" onclick="saveEditedRecord()" style="display:none; background:#4caf50;">
-  💾 Запази промените
-</button>
+  <td>
+    <button onclick="editRecord(${i})">✏️</button>
+    <button onclick="deleteRecord(${i})" style="margin-left:5px; background:#f44336;">🗑️</button>
+  </td>
+</tr>`;
+
 
 </tr>`;
 
