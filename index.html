@@ -122,7 +122,6 @@ function clearRecords() {
 }
 
 function renderMainTable() {
-function renderMainTable() {
   const tbody = document.querySelector("#recordsTable tbody");
   tbody.innerHTML = "";
   let income = 0, expense = 0, cashIn = 0, cashOut = 0, bankIn = 0, bankOut = 0;
@@ -141,7 +140,7 @@ function renderMainTable() {
     </tr>`;
     tbody.innerHTML += row;
 
-    // сметките
+    // сметки
     if (r.type === "Приход") income += r.amount;
     if (r.type === "Разход") expense += r.amount;
     if (r.method === "Кеш" && r.type === "Приход") cashIn += r.amount;
@@ -160,6 +159,7 @@ function renderMainTable() {
     <strong>Баланс:</strong> ${balance.toFixed(2)} лв<br>
     💵 Кеш: ${cashBalance.toFixed(2)} лв | 🏦 Банка: ${bankBalance.toFixed(2)} лв`;
 }
+
 
 
 function editRecord(i) {
