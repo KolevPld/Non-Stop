@@ -232,6 +232,13 @@ function saveEditedRecord() {
   editIndex = -1;
   document.getElementById("editBtn").style.display = "none";
 }
+function deleteRecord(i) {
+  if (confirm("Сигурен ли си, че искаш да изтриеш този запис?")) {
+    records.splice(i, 1);
+    saveToLocal();
+    renderMainTable();
+  }
+}
 
 </script>
 </body>
