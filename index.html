@@ -134,6 +134,10 @@ function renderMainTable() {
   <td>${r.method}</td>
   <td>${r.note}</td>
   <td><button onclick="editRecord(${i})">✏️</button></td>
+  <button id="editBtn" onclick="saveEditedRecord()" style="display:none; background:#4caf50;">
+  💾 Запази промените
+</button>
+
 </tr>`;
 
     tbody.innerHTML += row;
