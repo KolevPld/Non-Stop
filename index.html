@@ -216,41 +216,6 @@ function checkPassword() {
   } else {
     alert("Грешна парола!");
   }
-}let editIndex = -1;
-
-function editRecord(i) {
-  const r = records[i];
-  document.getElementById("date").value = r.date;
-  document.getElementById("type").value = r.type;
-  document.getElementById("method").value = r.method;
-  document.getElementById("amount").value = r.amount;
-  document.getElementById("note").value = r.note;
-  editIndex = i;
-  document.getElementById("editBtn").style.display = "block";
-}
-
-function saveEditedRecord() {
-  if (editIndex === -1) return;
-  const date = document.getElementById("date").value;
-  const type = document.getElementById("type").value;
-  const method = document.getElementById("method").value;
-  const amount = parseFloat(document.getElementById("amount").value);
-  const note = document.getElementById("note").value;
-  if (!date || isNaN(amount)) return alert("Моля въведи дата и сума");
-  records[editIndex] = { date, type, method, amount, note };
-  saveToLocal();
-  renderMainTable();
-  clearForm();
-  editIndex = -1;
-  document.getElementById("editBtn").style.display = "none";
-}
-function deleteRecord(i) {
-  if (confirm("Сигурен ли си, че искаш да изтриеш този запис?")) {
-    records.splice(i, 1);
-    saveToLocal();
-    renderMainTable();
-  }
-}
 
 </script>
 </body>
