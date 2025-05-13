@@ -42,11 +42,12 @@
 <label>Сума</label><input id="amount" type="number"/>
 <label>Бележка</label><input id="note" type="text"/>
 <button onclick="addRecord()">Добави запис</button>
-    <button id="editBtn" onclick="saveEditedRecord()" style="display:none; background:#4caf50;">
+<button id="editBtn" onclick="saveEditedRecord()" style="display:none; background:#4caf50;">
   💾 Запази промените
 </button>
 
-<button onclick="window.print()">🖨️ Принтирай</button>
+
+ck="window.print()">🖨️ Принтирай</button>
 <button onclick="showScreen('report')">📊 Отчети</button>
 <div class="summary" id="totalSummary"></div>
 <table id="recordsTable">
@@ -128,16 +129,17 @@ function renderMainTable() {
 
   records.forEach((r, i) => {
     const row = `<tr>
-      <td>${r.date}</td>
-      <td>${r.type}</td>
-      <td>${r.amount.toFixed(2)} лв</td>
-      <td>${r.method}</td>
-      <td>${r.note}</td>
-      <td>
-        <button onclick="editRecord(${i})">✏️</button>
-        <button onclick="deleteRecord(${i})" style="margin-left:5px; background:#f44336;">🗑️</button>
-      </td>
-    </tr>`;
+  <td>${r.date}</td>
+  <td>${r.type}</td>
+  <td>${r.amount.toFixed(2)} лв</td>
+  <td>${r.method}</td>
+  <td>${r.note}</td>
+  <td>
+    <button onclick="editRecord(${i})">✏️</button>
+    <button onclick="deleteRecord(${i})" style="margin-left:5px; background:#f44336;">🗑️</button>
+  </td>
+</tr>`;
+
     tbody.innerHTML += row;
 
     // сметки
@@ -162,6 +164,8 @@ function renderMainTable() {
 
 
 
+let editIndex = -1;
+
 function editRecord(i) {
   const r = records[i];
   document.getElementById("date").value = r.date;
@@ -172,6 +176,7 @@ function editRecord(i) {
   editIndex = i;
   document.getElementById("editBtn").style.display = "block";
 }
+
 
 function saveEditedRecord() {
   if (editIndex === -1) return;
@@ -196,6 +201,7 @@ function deleteRecord(i) {
     renderMainTable();
   }
 }
+
 
 </script>
 </body>
