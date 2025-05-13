@@ -141,10 +141,8 @@ function renderMainTable() {
 </tr>`;
 
     tbody.innerHTML += row;
-
     if (r.type === "Приход") income += r.amount;
     if (r.type === "Разход") expense += r.amount;
-
     if (r.method === "Кеш" && r.type === "Приход") cashIn += r.amount;
     if (r.method === "Кеш" && r.type === "Разход") cashOut += r.amount;
     if (r.method === "Банка" && r.type === "Приход") bankIn += r.amount;
