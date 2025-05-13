@@ -123,7 +123,15 @@ function renderMainTable() {
   let income = 0, expense = 0, cashIn = 0, cashOut = 0, bankIn = 0, bankOut = 0;
 
   records.forEach(r => {
-    const row = `<tr><td>${r.date}</td><td>${r.type}</td><td>${r.amount.toFixed(2)} лв</td><td>${r.method}</td><td>${r.note}</td></tr>`;
+    const row =const row = `<tr>
+  <td>${r.date}</td>
+  <td>${r.type}</td>
+  <td>${r.amount.toFixed(2)} лв</td>
+  <td>${r.method}</td>
+  <td>${r.note}</td>
+  <td><button onclick="editRecord(${i})">✏️</button></td>
+</tr>`;
+
     tbody.innerHTML += row;
 
     if (r.type === "Приход") income += r.amount;
