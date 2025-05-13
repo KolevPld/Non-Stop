@@ -42,6 +42,10 @@
 <label>Сума</label><input id="amount" type="number"/>
 <label>Бележка</label><input id="note" type="text"/>
 <button onclick="addRecord()">Добави запис</button>
+    <button id="editBtn" onclick="saveEditedRecord()" style="display:none; background:#4caf50;">
+  💾 Запази промените
+</button>
+
 <button onclick="window.print()">🖨️ Принтирай</button>
 <button onclick="showScreen('report')">📊 Отчети</button>
 <div class="summary" id="totalSummary"></div>
