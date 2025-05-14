@@ -1,0 +1,434 @@
+
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Нон Стоп Отчет</title>
+  <style>
+
+@media (max-width: 600px) {
+  body {
+    padding: 10px;
+    font-size: 14px;
+  }
+  input, select, button {
+    font-size: 14px;
+  }
+  table, th, td {
+    font-size: 13px;
+    word-break: break-word;
+  }
+  canvas {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+  .btn-group {
+    flex-direction: column;
+    gap: 6px;
+  }
+}
+
+    body { font-family: Arial; background: #121212; color: #fff; padding: 20px; max-width: 700px; margin: auto; }
+    input, select, button { padding: 10px; margin: 5px 0; width: 100%; font-size: 16px; border: none; border-radius: 5px; }
+    button { cursor: pointer; background: #2196f3; color: white; }
+    table { width: 100%; margin-top: 20px; border-collapse: collapse; }
+    th, td { padding: 10px; border-bottom: 1px solid #333; }
+    .hidden { display: none; }
+    .summary { background: #1e1e1e; padding: 10px; margin-top: 10px; border-radius: 5px; }
+    .btn-group { display: flex; gap: 10px; }
+  </style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<div id="login">
+  <h2>🔐 Въведи парола</h2>
+  <input type="password" id="password" placeholder="Парола">
+  <button onclick="checkPassword()">Вход</button>
+</div>
+
+
+<div id="app" class="hidden">
+<div id="screen-add">
+
+  <h2>📋 Нон Стоп Отчет</h2>
+
+  <label>Дата</label><input type="date" id="date" />
+  <label>Тип</label><select id="type"><option>Приход</option><option>Разход</option></select>
+  <label>Метод</label><select id="method"><option>Кеш</option><option>Банка</option></select>
+  <label>Сума</label><input type="number" id="amount" />
+  <label>Бележка</label><input type="text" id="note" />
+
+  <div class="btn-group">
+    <button onclick="addRecord()">Добави запис</button>
+    <button id="editBtn" onclick="saveEditedRecord()" style="display:none; background:#4caf50;">💾 Запази промените</button>
+  </div>
+  <div class="btn-group">
+    <button onclick="showScreen('report')">📊 Отчети</button>
+    <button onclick="window.print()">🖨️ Принтирай</button>
+  </div>
+
+  <div class="summary" id="totalSummary"></div>
+
+  </div>
+<div id="screen-report" class="hidden">
+<h3>📊 Отчети</h3>
+
+
+<div style="margin-top:20px;">
+  <label>🔍 Търси по бележка:</label>
+  <input type="text" id="filterNote" oninput="renderFilteredTable()">
+  <label>📆 От дата:</label>
+  <input type="date" id="filterFrom" onchange="renderFilteredTable()">
+  <label>До дата:</label>
+  <input type="date" id="filterTo" onchange="renderFilteredTable()">
+  <label>Тип:</label>
+  <select id="filterType" onchange="renderFilteredTable()">
+    <option value="">Всички</option>
+    <option value="Приход">Приход</option>
+    <option value="Разход">Разход</option>
+  </select>
+  <label>Метод:</label>
+  <select id="filterMethod" onchange="renderFilteredTable()">
+    <option value="">Всички</option>
+    <option value="Кеш">Кеш</option>
+    <option value="Банка">Банка</option>
+  </select>
+</div>
+<div class="summary" id="dailySummary"></div>
+<div class="summary" id="monthlySummary"></div>
+<canvas id="chart" width="400" height="200" style="margin-top:20px;"></canvas>
+
+<button onclick="showScreen('add')">⬅️ Назад</button>
+</div>
+<div id="screen-add">
+<table id="recordsTable">
+    <thead>
+      <tr><th>Дата</th><th>Тип</th><th>Сума</th><th>Метод</th><th>Бележка</th><th>Действия</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <div class="btn-group" style="margin-top: 20px;">
+    <button onclick="exportToExcel()">📤 Excel</button>
+    <button onclick="exportToExcel()">📤 Excel</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+let records = [];
+let editIndex = -1;
+
+function checkPassword() {
+  const pass = document.getElementById("password").value;
+  if (pass === "7801") {
+    document.getElementById("login").style.display = "none";
+    document.getElementById("app").classList.remove("hidden");
+    loadFromLocal();
+    renderTable();
+  updateSummaries();
+  renderChart();
+  } else {
+    alert("Грешна парола!");
+  }
+}
+
+function addRecord() {
+  const date = dateEl().value;
+  const type = typeEl().value;
+  const method = methodEl().value;
+  const amount = parseFloat(amountEl().value);
+  const note = noteEl().value;
+  if (!date || isNaN(amount)) return alert("Попълни дата и сума.");
+  records.push({ date, type, method, amount, note });
+  saveToLocal();
+  clearForm();
+  renderTable();
+  updateSummaries();
+  renderChart();
+}
+
+function editRecord(i) {
+  const r = records[i];
+  dateEl().value = r.date;
+  typeEl().value = r.type;
+  methodEl().value = r.method;
+  amountEl().value = r.amount;
+  noteEl().value = r.note;
+  editIndex = i;
+  document.getElementById("editBtn").style.display = "block";
+}
+
+function saveEditedRecord() {
+  if (editIndex === -1) return;
+  const date = dateEl().value;
+  const type = typeEl().value;
+  const method = methodEl().value;
+  const amount = parseFloat(amountEl().value);
+  const note = noteEl().value;
+  if (!date || isNaN(amount)) return alert("Попълни дата и сума.");
+  records[editIndex] = { date, type, method, amount, note };
+  saveToLocal();
+  editIndex = -1;
+  clearForm();
+  document.getElementById("editBtn").style.display = "none";
+  renderTable();
+  updateSummaries();
+  renderChart();
+}
+
+function deleteRecord(i) {
+  if (!confirm("Сигурен ли си?")) return;
+  records.splice(i, 1);
+  saveToLocal();
+  renderTable();
+  updateSummaries();
+  renderChart();
+}
+
+function renderTable() {
+  const tbody = document.querySelector("#recordsTable tbody");
+  tbody.innerHTML = "";
+  let income = 0, expense = 0;
+  records.forEach((r, i) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${r.date}</td>
+      <td>${r.type}</td>
+      <td>${r.amount.toFixed(2)} лв</td>
+      <td>${r.method}</td>
+      <td>${r.note}</td>
+      <td>
+        <button onclick="editRecord(${i})" style="font-size: 12px; padding: 4px 6px;">✏️</button>
+        <button onclick="deleteRecord(${i})" style="background:#f44336; margin-left:5px; font-size: 12px; padding: 4px 6px;">🗑️</button>
+      </td>`;
+    tbody.appendChild(tr);
+    if (r.type === "Приход") income += r.amount;
+    if (r.type === "Разход") expense += r.amount;
+  });
+  const balance = income - expense;
+  document.getElementById("totalSummary").innerHTML = `
+    Приходи: ${income.toFixed(2)} лв |
+    Разходи: ${expense.toFixed(2)} лв |
+    Баланс: ${balance.toFixed(2)} лв`;
+}
+
+function clearForm() {
+  dateEl().value = "";
+  amountEl().value = "";
+  noteEl().value = "";
+}
+
+function saveToLocal() {
+  localStorage.setItem("nonstop_records", JSON.stringify(records));
+}
+function loadFromLocal() {
+  const saved = localStorage.getItem("nonstop_records");
+  if (saved) records = JSON.parse(saved);
+}
+
+function dateEl() { return document.getElementById("date"); }
+function typeEl() { return document.getElementById("type"); }
+function methodEl() { return document.getElementById("method"); }
+function amountEl() { return document.getElementById("amount"); }
+function noteEl() { return document.getElementById("note"); }
+
+function exportToExcel() {
+  const wb = XLSX.utils.book_new();
+  const rows = [["Дата", "Тип", "Сума", "Метод", "Бележка"]];
+  records.forEach(r => rows.push([r.date, r.type, r.amount.toFixed(2), r.method, r.note]));
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  XLSX.utils.book_append_sheet(wb, ws, "Отчет");
+  XLSX.writeFile(wb, "nonstop_otchet.xlsx");
+}
+
+
+function showScreen(name) {
+  document.getElementById("screen-add").classList.add("hidden");
+  document.getElementById("screen-report").classList.add("hidden");
+  document.getElementById("screen-" + name).classList.remove("hidden");
+}
+
+
+function updateSummaries() {
+  let todayIncome = 0, todayExpense = 0;
+  let monthIncome = 0, monthExpense = 0;
+  const today = new Date().toISOString().slice(0, 10);
+  const month = today.slice(0, 7);
+  records.forEach(r => {
+    if (r.date === today) {
+      if (r.type === "Приход") todayIncome += r.amount;
+      if (r.type === "Разход") todayExpense += r.amount;
+    }
+    if (r.date.startsWith(month)) {
+      if (r.type === "Приход") monthIncome += r.amount;
+      if (r.type === "Разход") monthExpense += r.amount;
+    }
+  });
+
+  document.getElementById("dailySummary").innerHTML = `
+    📅 <strong>Днес:</strong> Приходи: ${todayIncome.toFixed(2)} лв | Разходи: ${todayExpense.toFixed(2)} лв`;
+  document.getElementById("monthlySummary").innerHTML = `
+    📆 <strong>Месец:</strong> Приходи: ${monthIncome.toFixed(2)} лв | Разходи: ${monthExpense.toFixed(2)} лв`;
+}
+
+
+function renderFilteredTable() {
+  const noteVal = document.getElementById("filterNote").value.toLowerCase();
+  const from = document.getElementById("filterFrom").value;
+  const to = document.getElementById("filterTo").value;
+  const type = document.getElementById("filterType").value;
+  const method = document.getElementById("filterMethod").value;
+
+  const tbody = document.querySelector("#recordsTable tbody");
+  tbody.innerHTML = "";
+  let income = 0, expense = 0;
+
+  records.forEach((r, i) => {
+    const matchNote = r.note.toLowerCase().includes(noteVal);
+    const matchDate = (!from || r.date >= from) && (!to || r.date <= to);
+    const matchType = !type || r.type === type;
+    const matchMethod = !method || r.method === method;
+
+    if (matchNote && matchDate && matchType && matchMethod) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${r.date}</td>
+        <td>${r.type}</td>
+        <td>${r.amount.toFixed(2)} лв</td>
+        <td>${r.method}</td>
+        <td>${r.note}</td>
+        <td>
+          <button onclick="editRecord(${i})" style="font-size: 12px; padding: 4px 6px;">✏️</button>
+          <button onclick="deleteRecord(${i})" style="background:#f44336; margin-left:5px; font-size: 12px; padding: 4px 6px;">🗑️</button>
+        </td>`;
+      tbody.appendChild(tr);
+      if (r.type === "Приход") income += r.amount;
+      if (r.type === "Разход") expense += r.amount;
+    }
+  });
+
+  const balance = income - expense;
+  document.getElementById("totalSummary").innerHTML = `
+    <strong>Филтрирано:</strong> Приходи: ${income.toFixed(2)} лв |
+    Разходи: ${expense.toFixed(2)} лв |
+    Баланс: ${balance.toFixed(2)} лв`;
+}
+
+
+function exportFilteredToPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  doc.text("Филтриран отчет", 14, 14);
+  let y = 24;
+
+  const noteVal = document.getElementById("filterNote").value.toLowerCase();
+  const from = document.getElementById("filterFrom").value;
+  const to = document.getElementById("filterTo").value;
+  const type = document.getElementById("filterType").value;
+  const method = document.getElementById("filterMethod").value;
+
+  records.forEach(r => {
+    const matchNote = r.note.toLowerCase().includes(noteVal);
+    const matchDate = (!from || r.date >= from) && (!to || r.date <= to);
+    const matchType = !type || r.type === type;
+    const matchMethod = !method || r.method === method;
+    if (matchNote && matchDate && matchType && matchMethod) {
+      doc.text(`${r.date} | ${r.type} | ${r.amount.toFixed(2)} лв | ${r.method} | ${r.note}`, 14, y);
+      y += 8;
+      if (y > 280) {
+        doc.addPage();
+        y = 20;
+      }
+    }
+  });
+
+  doc.save("filtered_otchet.pdf");
+}
+
+function exportFilteredToExcel() {
+  const wb = XLSX.utils.book_new();
+  const rows = [["Дата", "Тип", "Сума", "Метод", "Бележка"]];
+
+  const noteVal = document.getElementById("filterNote").value.toLowerCase();
+  const from = document.getElementById("filterFrom").value;
+  const to = document.getElementById("filterTo").value;
+  const type = document.getElementById("filterType").value;
+  const method = document.getElementById("filterMethod").value;
+
+  records.forEach(r => {
+    const matchNote = r.note.toLowerCase().includes(noteVal);
+    const matchDate = (!from || r.date >= from) && (!to || r.date <= to);
+    const matchType = !type || r.type === type;
+    const matchMethod = !method || r.method === method;
+    if (matchNote && matchDate && matchType && matchMethod) {
+      rows.push([r.date, r.type, r.amount.toFixed(2), r.method, r.note]);
+    }
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  XLSX.utils.book_append_sheet(wb, ws, "Филтрирани");
+  XLSX.writeFile(wb, "filtered_otchet.xlsx");
+}
+
+
+let chartRef = null;
+
+function renderChart() {
+  const ctx = document.getElementById('chart').getContext('2d');
+  const monthData = {};
+
+  records.forEach(r => {
+    const month = r.date?.slice(0, 7);
+    if (!month) return;
+    if (!monthData[month]) monthData[month] = { income: 0, expense: 0 };
+    if (r.type === "Приход") monthData[month].income += r.amount;
+    if (r.type === "Разход") monthData[month].expense += r.amount;
+  });
+
+  const labels = Object.keys(monthData).sort();
+  const incomeData = labels.map(m => monthData[m].income);
+  const expenseData = labels.map(m => monthData[m].expense);
+
+  if (chartRef) chartRef.destroy(); // презареждане
+  chartRef = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        { label: 'Приходи', data: incomeData, backgroundColor: '#4caf50' },
+        { label: 'Разходи', data: expenseData, backgroundColor: '#f44336' }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'top' },
+        title: { display: true, text: 'Приходи и разходи по месеци' }
+      }
+    }
+  });
+}
+
+function exportToPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  doc.text("Нон Стоп Отчет", 14, 14);
+  let y = 24;
+  records.forEach(r => {
+    doc.text(`${r.date} | ${r.type} | ${r.amount.toFixed(2)} лв | ${r.method} | ${r.note}`, 14, y);
+    y += 8;
+    if (y > 280) {
+      doc.addPage();
+      y = 20;
+    }
+  });
+  doc.save("nonstop_otchet.pdf");
+}
+</script>
+</body>
+</html>
