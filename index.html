@@ -4,115 +4,200 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Нон Стоп Отчет</title>
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, query, orderBy, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
-    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyD692ktQboNPavUgo9XiANtaqm-8tUOB6c",
-      authDomain: "nonstopapp-c30b1.firebaseapp.com",
-      projectId: "nonstopapp-c30b1",
-      storageBucket: "nonstopapp-c30b1.firebasestorage.app",
-      messagingSenderId: "368870682423",
-      appId: "1:368870682423:web:5f0ff3245c07c7796a74b2",
-      measurementId: "G-G2N5CSYPD7"
-    };
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth();
-
-    let userId = null;
-    let records = [];
-
-    signInAnonymously(auth)
-      .then(() => console.log("Signed in anonymously"))
-      .catch(console.error);
-
-    onAuthStateChanged(auth, user => {
-      if (user) {
-        userId = user.uid;
-        loadFromFirestore();
-      }
-    });
-
-    async function loadFromFirestore() {
-      records = [];
-      const q = query(collection(db, "users", userId, "records"), orderBy("date", "desc"));
-      const querySnapshot = await getDocs(q);
-      querySnapshot.forEach(docSnap => {
-        records.push({ id: docSnap.id, ...docSnap.data() });
-      });
-      renderTable();
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    :root {
+      --bg: #121212;
+      --text: #fff;
     }
-
-    async function addRecord() {
-      const date = document.getElementById("date").value;
-      const type = document.getElementById("type").value;
-      const method = document.getElementById("method").value;
-      const amount = parseFloat(document.getElementById("amount").value);
-      const note = document.getElementById("note").value;
-      if (!date || isNaN(amount)) return alert("Попълни дата и сума.");
-      await addDoc(collection(db, "users", userId, "records"), {
-        date, type, method, amount, note
-      });
-      loadFromFirestore();
-      clearForm();
+    body.light {
+      --bg: #f5f5f5;
+      --text: #000;
     }
-
-    async function deleteRecord(id) {
-      if (!confirm("Сигурен ли си?")) return;
-      await deleteDoc(doc(db, "users", userId, "records", id));
-      loadFromFirestore();
+    body {
+      font-family: Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 20px;
+      max-width: 800px;
+      margin: auto;
     }
-
-    function clearForm() {
-      document.getElementById("date").value = "";
-      document.getElementById("amount").value = "";
-      document.getElementById("note").value = "";
+    input, select, button {
+      width: 100%;
+      padding: 12px;
+      margin: 6px 0;
+      font-size: 16px;
+      border: none;
+      border-radius: 5px;
     }
-
-    function renderTable() {
-      const tbody = document.querySelector("#recordsTable tbody");
-      tbody.innerHTML = "";
-      let income = 0, expense = 0;
-      records.forEach((r, i) => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${r.date}</td>
-          <td style="color:${r.type==='Приход'?'#4caf50':'#f44336'};">
-            ${r.type==='Приход' ? '✅' : '❌'} ${r.type}
-          </td>
-          <td>${r.amount.toFixed(2)} лв</td>
-          <td>${r.method}</td>
-          <td>${r.note}</td>
-          <td><button onclick="deleteRecord('${r.id}')">🗑️</button></td>
-        `;
-        tbody.appendChild(tr);
-        if (r.type === "Приход") income += r.amount;
-        else expense += r.amount;
-      });
-      document.getElementById("totalSummary").innerHTML = `
-        Приходи: ${income.toFixed(2)} лв | Разходи: ${expense.toFixed(2)} лв | Баланс: ${(income-expense).toFixed(2)} лв`;
+    button { cursor: pointer; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
     }
-
-    window.addRecord = addRecord;
-    window.deleteRecord = deleteRecord;
-  </script>
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid #333;
+    }
+    .theme-toggle {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: transparent;
+      border: none;
+      font-size: 24px;
+      color: var(--text);
+      cursor: pointer;
+    }
+    .add-float {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #4caf50;
+      color: #fff;
+      font-size: 28px;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    }
+  </style>
 </head>
 <body>
-  <h2>📋 Нон Стоп Отчет (Firestore)</h2>
+<button class="theme-toggle" onclick="toggleTheme()">
+  <i class="fa-solid fa-moon"></i>
+</button>
 
-  <label>Дата</label><input type="date" id="date">
-  <label>Тип</label><select id="type"><option>Приход</option><option>Разход</option></select>
-  <label>Метод</label><select id="method"><option>Кеш</option><option>Банка</option><option>Карта</option></select>
-  <label>Сума</label><input type="number" id="amount">
-  <label>Бележка</label><input type="text" id="note">
+<h2>📋 Нон Стоп Отчет (Firestore)</h2>
 
-  <button onclick="addRecord()">Добави запис</button>
+<label>Дата</label><input type="date" id="date">
+<label>Тип</label><select id="type"><option>Приход</option><option>Разход</option></select>
+<label>Метод</label><select id="method"><option>Кеш</option><option>Банка</option><option>Карта</option></select>
+<label>Сума</label><input type="number" id="amount">
+<label>Бележка</label><input type="text" id="note">
 
-  <div id="totalSummary" style="margin-top:10px;"></div>
+<button onclick="addRecord()"><i class="fa-solid fa-plus"></i> Добави запис</button>
 
-  <table id="recordsTable">
+<div id="totalSummary" style="margin-top:10px;"></div>
+
+<table id="recordsTable">
+  <thead>
+    <tr><th>Дата</th><th>Тип</th><th>Сума</th><th>Метод</th><th>Бележка</th><th>Действия</th></tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<a class="add-float" href="javascript:scrollTo(0,0)">
+  <i class="fa-solid fa-plus"></i>
+</a>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, query, orderBy, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyD692ktQboNPavUgo9XiANtaqm-8tUOB6c",
+  authDomain: "nonstopapp-c30b1.firebaseapp.com",
+  projectId: "nonstopapp-c30b1",
+  storageBucket: "nonstopapp-c30b1.firebasestorage.app",
+  messagingSenderId: "368870682423",
+  appId: "1:368870682423:web:5f0ff3245c07c7796a74b2",
+  measurementId: "G-G2N5CSYPD7"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth();
+
+let userId = null;
+let records = [];
+
+signInAnonymously(auth)
+  .then(() => console.log("Signed in anonymously"))
+  .catch(console.error);
+
+onAuthStateChanged(auth, user => {
+  if (user) {
+    userId = user.uid;
+    loadFromFirestore();
+  }
+});
+
+async function loadFromFirestore() {
+  records = [];
+  const q = query(collection(db, "users", userId, "records"), orderBy("date", "desc"));
+  const querySnapshot = await getDocs(q);
+  querySnapshot.forEach(docSnap => {
+    records.push({ id: docSnap.id, ...docSnap.data() });
+  });
+  renderTable();
+}
+
+async function addRecord() {
+  const date = document.getElementById("date").value;
+  const type = document.getElementById("type").value;
+  const method = document.getElementById("method").value;
+  const amount = parseFloat(document.getElementById("amount").value);
+  const note = document.getElementById("note").value;
+  if (!date || isNaN(amount)) return alert("Попълни дата и сума.");
+  await addDoc(collection(db, "users", userId, "records"), {
+    date, type, method, amount, note
+  });
+  loadFromFirestore();
+  clearForm();
+}
+
+async function deleteRecord(id) {
+  if (!confirm("Сигурен ли си?")) return;
+  await deleteDoc(doc(db, "users", userId, "records", id));
+  loadFromFirestore();
+}
+
+function clearForm() {
+  document.getElementById("date").value = "";
+  document.getElementById("amount").value = "";
+  document.getElementById("note").value = "";
+}
+
+function renderTable() {
+  const tbody = document.querySelector("#recordsTable tbody");
+  tbody.innerHTML = "";
+  let income = 0, expense = 0;
+  records.forEach((r, i) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${r.date}</td>
+      <td style="color:${r.type==='Приход'?'#4caf50':'#f44336'};">
+        ${r.type==='Приход' ? '<i class="fa-solid fa-arrow-up"></i>' : '<i class="fa-solid fa-arrow-down"></i>'}
+        ${r.type}
+      </td>
+      <td>${r.amount.toFixed(2)} лв</td>
+      <td>${r.method}</td>
+      <td>${r.note}</td>
+      <td><button onclick="deleteRecord('${r.id}')"><i class="fa-solid fa-trash"></i></button></td>
+    `;
+    tbody.appendChild(tr);
+    if (r.type === "Приход") income += r.amount;
+    else expense += r.amount;
+  });
+  document.getElementById("totalSummary").innerHTML = `
+    Приходи: ${income.toFixed(2)} лв | Разходи: ${expense.toFixed(2)} лв | Баланс: ${(income-expense).toFixed(2)} лв`;
+}
+
+function toggleTheme() {
+  document.body.classList.toggle("light");
+  localStorage.setItem("theme", document.body.classList.contains("light") ? "light" : "dark");
+}
+if (localStorage.getItem("theme") === "light") document.body.classList.add("light");
+</script>
+</body>
+</html>
 
 
