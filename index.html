@@ -18,7 +18,17 @@
     th, td { padding: 10px; border-bottom: 1px solid #333; }
     .hidden { display: none; }
     .summary { background: #1e1e1e; padding: 10px; margin-top: 10px; border-radius: 5px; }
-    .btn-group { display: flex; gap: 10
+    .btn-group { display: flex; gap: 10px; }
+    @media (max-width: 600px) {
+      body { padding: 10px; font-size: 14px; }
+      input, select, button { font-size: 14px; }
+      table, th, td { font-size: 13px; word-break: break-word; }
+      canvas { max-width: 100% !important; height: auto !important; }
+      .btn-group { flex-direction: column; gap: 6px; }
+    }
+  </style>
+</head>
+<body>
 <div id="login">
   <h2>🔐 Въведи парола</h2>
   <input type="password" id="password" placeholder="Парола">
@@ -35,7 +45,6 @@
     <label>Бележка</label><input type="text" id="note">
     <div class="btn-group">
       <button onclick="addRecord()">Добави запис</button>
-      <button id="editBtn" onclick="saveEditedRecord()" style="display:none;background:#4caf50;">💾 Запази</button>
     </div>
     <div class="btn-group">
       <button onclick="showScreen('report')">📊 Отчети</button>
@@ -97,8 +106,7 @@ const firebaseConfig = {
   projectId: "nonstopapp-c30b1",
   storageBucket: "nonstopapp-c30b1.firebasestorage.app",
   messagingSenderId: "368870682423",
-  appId: "1:368870682423:web:5f0ff3245c07c7796a74b2",
-  measurementId: "G-G2N5CSYPD7"
+  appId: "1:368870682423:web:5f0ff3245c07c7796a74b2"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -243,12 +251,22 @@ window.exportToPDF = () => {
   doc.save("nonstop_otchet.pdf");
 };
 
-window.renderFilteredTable = function(){ alert("Филтрите сега връщат всички записи — може да се настроят да четат директно от Firestore при нужда."); };
-
-window.checkPassword = function(){
-  document.getElementById("login").style.display = "none";
-  document.getElementById("app").classList.remove("hidden");
+window.renderFilteredTable = () => alert("Филтрите сега връщат всички записи. Може да ги направим да теглят динамично от Firestore ако искаш.");
+window.checkPassword = () => {
+  const pass = document.getElementById("password").value;
+  if (pass === "7801") {
+    document.getElementById("login").style.display = "none";
+    document.getElementById("app").classList.remove("hidden");
+  } else {
+    alert("Грешна парола!");
+  }
 };
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js')
+    .then(() => console.log("✅ Service Worker регистриран"))
+    .catch(console.error);
+}
 </script>
 </body>
 </html>
