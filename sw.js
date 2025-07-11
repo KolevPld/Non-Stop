@@ -4,16 +4,18 @@ self.addEventListener('install', e => {
       cache.addAll([
         '/',
         '/index.html',
-        '/icon-192.png',
         '/manifest.json',
-        'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css'
+        '/icon-192.png',
+        'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css',
+        'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
+        'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+        'https://cdn.jsdelivr.net/npm/chart.js'
       ])
     )
   );
 });
-
 self.addEventListener('fetch', e => {
   e.respondWith(
-    caches.match(e.request).then(response => response || fetch(e.request))
+    caches.match(e.request).then(res => res || fetch(e.request))
   );
 });
