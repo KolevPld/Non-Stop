@@ -198,7 +198,8 @@ async function loadFromFirestore() {
 async function addRecord() {
   const date = document.getElementById("date").value;
   const type = document.getElementById("type").value;
-  const method = document.getElementById("method").value;
+  let method = document.getElementById("method").value;
+  method = method.split(' ')[0]; // вземи само "Кеш", "Банка", "Карта"
   const amount = parseFloat(document.getElementById("amount").value);
   const note = document.getElementById("note").value;
   if (!date || isNaN(amount)) return alert("Попълни дата и сума.");
@@ -309,7 +310,7 @@ window.exportToPDF = () => {
   doc.save("nonstop_otchet.pdf");
 };
 
-window.renderFilteredTable = () => alert("Филтрите сега връщат всички записи. Може да ги направим динамични по Firestore ако искаш.");
+window.renderFilteredTable = () => alert("Филтрите сега връщат всички записи. Можем да ги направим динамични по Firestore ако искаш.");
 window.checkPassword = () => {
   const pass = document.getElementById("password").value;
   if (pass === "7801") {
