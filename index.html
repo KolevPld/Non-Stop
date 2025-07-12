@@ -66,7 +66,7 @@
     </div>
     <div class="btn-group" style="margin-top:10px;">
       <button onclick="showScreen('report')"><i class="fa-solid fa-chart-column"></i> Отчети</button>
-      <button onclick="window.print()"><i class="fa-solid fa-print"></i> Принт</button>
+      <button onclick="exportToPDF()"><i class="fa-solid fa-print"></i> PDF Принт</button>
     </div>
     <div class="summary" id="totalSummary"></div>
   </div>
@@ -114,7 +114,6 @@ let records = [];
 let chartRef = null;
 
 window.onload = () => {
-  // зареди записите, но НЕ показвай app, докато не се въведе парола
   records = JSON.parse(localStorage.getItem("records") || "[]");
 };
 
@@ -264,15 +263,18 @@ window.exportToExcel = () => {
 window.exportToPDF = () => {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
-  doc.text("Нон Стоп Отчет",14,14);
-  let y=24;
-  records.forEach(r=>{
-    doc.text(`${r.date} | ${r.type} | ${r.amount.toFixed(2)} лв | ${r.method} | ${r.note}`,14,y);
-    y+=8; if(y>280){ doc.addPage(); y=20; }
+  doc.setFontSize(14);
+  doc.text("Нон Стоп Отчет", 14, 14);
+  let y = 24;
+  records.forEach(r => {
+    doc.text(`${r.date} | ${r.type} | ${r.amount.toFixed(2)} лв | ${r.method} | ${r.note}`, 14, y);
+    y += 8;
+    if (y > 280) { doc.addPage(); y = 20; }
   });
   doc.save("nonstop_otchet.pdf");
 };
 </script>
 </body>
 </html>
+
 
