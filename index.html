@@ -30,6 +30,7 @@
     .summary { background: #1f1f1f; padding: 12px; margin-top: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
     .btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
     .btn-group button { flex: 1; }
+    .hidden { display: none; }
     @media (max-width: 600px) {
       body { padding: 10px; font-size: 14px; }
       input, select, button { font-size: 14px; }
@@ -113,9 +114,20 @@ let records = [];
 let chartRef = null;
 
 window.onload = () => {
+  // зареди записите, но НЕ показвай app, докато не се въведе парола
   records = JSON.parse(localStorage.getItem("records") || "[]");
-  renderTable(); updateSummaries(); renderChart();
 };
+
+function checkPassword() {
+  const pass = document.getElementById("password").value;
+  if (pass === "7801") {
+    document.getElementById("login").style.display = "none";
+    document.getElementById("app").classList.remove("hidden");
+    renderTable(); updateSummaries(); renderChart();
+  } else {
+    alert("Грешна парола!");
+  }
+}
 
 function addRecord() {
   const date = document.getElementById("date").value;
@@ -260,16 +272,7 @@ window.exportToPDF = () => {
   });
   doc.save("nonstop_otchet.pdf");
 };
-
-window.checkPassword = () => {
-  const pass = document.getElementById("password").value;
-  if (pass === "7801") {
-    document.getElementById("login").style.display = "none";
-    document.getElementById("app").classList.remove("hidden");
-  } else {
-    alert("Грешна парола!");
-  }
-};
 </script>
 </body>
 </html>
+
