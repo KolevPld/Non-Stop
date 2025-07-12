@@ -107,6 +107,7 @@
     </div>
   </div>
 </div>
+
 <script>
 let records = [];
 let chartRef = null;
@@ -119,8 +120,7 @@ window.onload = () => {
 function addRecord() {
   const date = document.getElementById("date").value;
   const type = document.getElementById("type").value;
-  let method = document.getElementById("method").value;
-  method = method.split(" ")[0]; // само Кеш, Банка, Карта
+  let method = document.getElementById("method").value.split(" ")[0];
   const amount = parseFloat(document.getElementById("amount").value);
   const note = document.getElementById("note").value;
   if (!date || isNaN(amount)) return alert("Попълни дата и сума.");
