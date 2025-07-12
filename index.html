@@ -11,80 +11,25 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #121212;
-      color: #e0e0e0;
-      padding: 20px;
-      max-width: 800px;
-      margin: auto;
-    }
-    h2, h3 {
-      color: #ffffff;
-      margin-bottom: 10px;
-    }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: #e0e0e0; padding: 20px; max-width: 800px; margin: auto; }
+    h2, h3 { color: #ffffff; margin-bottom: 10px; }
     input, select, button {
-      width: 100%;
-      padding: 12px;
-      margin: 6px 0;
-      font-size: 16px;
-      border: none;
-      border-radius: 8px;
-      background: #1f1f1f;
-      color: #e0e0e0;
-      box-shadow: inset 0 0 5px rgba(0,0,0,0.5);
-      transition: all 0.2s;
+      width: 100%; padding: 12px; margin: 6px 0; font-size: 16px; border: none; border-radius: 8px;
+      background: #1f1f1f; color: #e0e0e0; box-shadow: inset 0 0 5px rgba(0,0,0,0.5); transition: all 0.2s;
     }
-    input:focus, select:focus {
-      outline: none;
-      background: #2c2c2c;
-      box-shadow: 0 0 0 2px #4caf50;
-    }
+    input:focus, select:focus { outline: none; background: #2c2c2c; box-shadow: 0 0 0 2px #4caf50; }
     button {
-      cursor: pointer;
-      background: #4caf50;
-      color: #fff;
-      font-weight: bold;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+      cursor: pointer; background: #4caf50; color: #fff; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
       transition: background 0.3s, transform 0.1s;
     }
-    button:hover {
-      background: #66bb6a;
-    }
-    button:active {
-      transform: scale(0.98);
-    }
-    table {
-      width: 100%;
-      margin-top: 20px;
-      border-collapse: collapse;
-      background: #1e1e1e;
-      border-radius: 8px;
-      overflow: hidden;
-    }
-    th, td {
-      padding: 12px;
-      border-bottom: 1px solid #333;
-      text-align: left;
-    }
-    th {
-      background: #2c2c2c;
-    }
-    .summary {
-      background: #1f1f1f;
-      padding: 12px;
-      margin-top: 15px;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.5);
-    }
-    .btn-group {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-    .btn-group button {
-      flex: 1;
-    }
+    button:hover { background: #66bb6a; }
+    button:active { transform: scale(0.98); }
+    table { width: 100%; margin-top: 20px; border-collapse: collapse; background: #1e1e1e; border-radius: 8px; overflow: hidden; }
+    th, td { padding: 12px; border-bottom: 1px solid #333; text-align: left; }
+    th { background: #2c2c2c; }
+    .summary { background: #1f1f1f; padding: 12px; margin-top: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+    .btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
+    .btn-group button { flex: 1; }
     @media (max-width: 600px) {
       body { padding: 10px; font-size: 14px; }
       input, select, button { font-size: 14px; }
@@ -137,9 +82,9 @@
     </select>
     <label>Метод</label><select id="filterMethod" onchange="renderFilteredTable()">
       <option value="">Всички</option>
-      <option value="Кеш 💰">Кеш 💰</option>
-      <option value="Банка 🏦">Банка 🏦</option>
-      <option value="Карта 💳">Карта 💳</option>
+      <option value="Кеш">Кеш 💰</option>
+      <option value="Банка">Банка 🏦</option>
+      <option value="Карта">Карта 💳</option>
     </select>
     <div class="summary" id="dailySummary"></div>
     <div class="summary" id="monthlySummary"></div>
@@ -162,55 +107,33 @@
     </div>
   </div>
 </div>
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, query, orderBy, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
-import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyD692ktQboNPavUgo9XiANtaqm-8tUOB6c",
-  authDomain: "nonstopapp-c30b1.firebaseapp.com",
-  projectId: "nonstopapp-c30b1",
-  storageBucket: "nonstopapp-c30b1.firebasestorage.app",
-  messagingSenderId: "368870682423",
-  appId: "1:368870682423:web:5f0ff3245c07c7796a74b2"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth();
-
-let userId = null;
+<script>
 let records = [];
 let chartRef = null;
 
-signInAnonymously(auth).then(() => console.log("Signed in anonymously")).catch(console.error);
-onAuthStateChanged(auth, user => { if (user) { userId = user.uid; loadFromFirestore(); } });
-
-async function loadFromFirestore() {
-  records = [];
-  const q = query(collection(db, "users", userId, "records"), orderBy("date", "desc"));
-  const snapshot = await getDocs(q);
-  snapshot.forEach(docSnap => records.push({ id: docSnap.id, ...docSnap.data() }));
+window.onload = () => {
+  records = JSON.parse(localStorage.getItem("records") || "[]");
   renderTable(); updateSummaries(); renderChart();
-}
+};
 
-async function addRecord() {
+function addRecord() {
   const date = document.getElementById("date").value;
   const type = document.getElementById("type").value;
   let method = document.getElementById("method").value;
-  method = method.split(' ')[0]; // вземи само "Кеш", "Банка", "Карта"
+  method = method.split(" ")[0]; // само Кеш, Банка, Карта
   const amount = parseFloat(document.getElementById("amount").value);
   const note = document.getElementById("note").value;
   if (!date || isNaN(amount)) return alert("Попълни дата и сума.");
-  await addDoc(collection(db, "users", userId, "records"), { date, type, method, amount, note });
-  loadFromFirestore(); clearForm();
+  records.unshift({ date, type, method, amount, note });
+  localStorage.setItem("records", JSON.stringify(records));
+  renderTable(); updateSummaries(); renderChart(); clearForm();
 }
 
-async function deleteRecord(id) {
+function deleteRecord(index) {
   if (!confirm("Сигурен ли си?")) return;
-  await deleteDoc(doc(db, "users", userId, "records", id));
-  loadFromFirestore();
+  records.splice(index,1);
+  localStorage.setItem("records", JSON.stringify(records));
+  renderTable(); updateSummaries(); renderChart();
 }
 
 function clearForm() {
@@ -223,7 +146,7 @@ function renderTable() {
   const tbody = document.querySelector("#recordsTable tbody");
   tbody.innerHTML = "";
   let income = 0, expense = 0;
-  records.forEach((r) => {
+  records.forEach((r, i) => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${r.date}</td>
@@ -231,7 +154,7 @@ function renderTable() {
       <td>${r.amount.toFixed(2)} лв</td>
       <td>${r.method}</td>
       <td>${r.note}</td>
-      <td><button onclick="deleteRecord('${r.id}')" style="background:#f44336;font-size:12px;padding:4px 6px;">🗑️</button></td>`;
+      <td><button onclick="deleteRecord(${i})" style="background:#f44336;font-size:12px;padding:4px 6px;">🗑️</button></td>`;
     tbody.appendChild(tr);
     if (r.type === "Приход") income += r.amount;
     if (r.type === "Разход") expense += r.amount;
@@ -245,6 +168,7 @@ function showScreen(name) {
   document.getElementById("screen-add").classList.add("hidden");
   document.getElementById("screen-report").classList.add("hidden");
   document.getElementById("screen-" + name).classList.remove("hidden");
+  renderFilteredTable();
 }
 
 function updateSummaries() {
@@ -289,6 +213,33 @@ function renderChart() {
   });
 }
 
+function renderFilteredTable() {
+  const tbody = document.querySelector("#recordsTable tbody");
+  tbody.innerHTML = "";
+  let note = document.getElementById("filterNote").value.toLowerCase();
+  let from = document.getElementById("filterFrom").value;
+  let to = document.getElementById("filterTo").value;
+  let type = document.getElementById("filterType").value;
+  let method = document.getElementById("filterMethod").value.split(" ")[0];
+
+  records.forEach((r,i)=>{
+    if (note && !r.note.toLowerCase().includes(note)) return;
+    if (from && r.date<from) return;
+    if (to && r.date>to) return;
+    if (type && r.type!==type) return;
+    if (method && r.method!==method) return;
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${r.date}</td>
+      <td style="color:${r.type==='Приход'?'#4caf50':'#f44336'};">${r.type}</td>
+      <td>${r.amount.toFixed(2)} лв</td>
+      <td>${r.method}</td>
+      <td>${r.note}</td>
+      <td><button onclick="deleteRecord(${i})" style="background:#f44336;font-size:12px;padding:4px 6px;">🗑️</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
 window.exportToExcel = () => {
   const wb = XLSX.utils.book_new();
   const rows = [["Дата", "Тип", "Сума", "Метод", "Бележка"]];
@@ -310,7 +261,6 @@ window.exportToPDF = () => {
   doc.save("nonstop_otchet.pdf");
 };
 
-window.renderFilteredTable = () => alert("Филтрите сега връщат всички записи. Можем да ги направим динамични по Firestore ако искаш.");
 window.checkPassword = () => {
   const pass = document.getElementById("password").value;
   if (pass === "7801") {
@@ -320,12 +270,6 @@ window.checkPassword = () => {
     alert("Грешна парола!");
   }
 };
-
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js')
-    .then(() => console.log("✅ Service Worker регистриран"))
-    .catch(console.error);
-}
 </script>
 </body>
 </html>
