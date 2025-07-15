@@ -66,6 +66,8 @@
     <div class="btn-group" style="margin-top:10px;">
       <button onclick="showScreen('report')"><i class="fa-solid fa-chart-column"></i> Отчети</button>
       <button onclick="exportToExcel()"><i class="fa-solid fa-file-excel"></i> Excel</button>
+      <button onclick="exportToCSV()"><i class="fa-solid fa-file-csv"></i> CSV Backup</button>
+      <button onclick="exportToJSON()"><i class="fa-solid fa-file-code"></i> JSON Backup</button>
     </div>
     <div class="summary" id="totalSummary"></div>
   </div>
@@ -112,7 +114,7 @@ let userId = null;
 let records = [];
 let chartRef = null;
 
-signInAnonymously(auth).then(() => console.log("Logged in anonymously")).catch(console.error);
+signInAnonymously(auth).then(() => console.log("Signed in anonymously")).catch(console.error);
 onAuthStateChanged(auth, user => { 
   if (user) { 
     userId = user.uid;
@@ -235,6 +237,31 @@ window.exportToExcel = () => {
   const ws = XLSX.utils.aoa_to_sheet(rows);
   XLSX.utils.book_append_sheet(wb, ws, "Отчет");
   XLSX.writeFile(wb, "nonstop_otchet.xlsx");
+};
+
+window.exportToCSV = () => {
+  let csv = "Дата,Тип,Сума,Метод,Бележка\n";
+  records.forEach(r => {
+    csv += `${r.date},${r.type},${r.amount.toFixed(2)},${r.method},${r.note}\n`;
+  });
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `nonstop_backup_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
+window.exportToJSON = () => {
+  const json = JSON.stringify(records, null, 2);
+  const blob = new Blob([json], { type: "application/json" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `nonstop_backup_${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 };
 
 window.checkPassword = () => {
