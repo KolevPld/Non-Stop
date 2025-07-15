@@ -8,7 +8,6 @@
   <link rel="apple-touch-icon" href="icon-192.png" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: #e0e0e0; padding: 20px; max-width: 800px; margin: auto; }
@@ -66,13 +65,14 @@
     </div>
     <div class="btn-group" style="margin-top:10px;">
       <button onclick="showScreen('report')"><i class="fa-solid fa-chart-column"></i> Отчети</button>
-      <button onclick="exportToPDF()"><i class="fa-solid fa-print"></i> PDF Принт</button>
+      <button onclick="exportToExcel()"><i class="fa-solid fa-print"></i> Excel Принт</button>
     </div>
     <div class="summary" id="totalSummary"></div>
   </div>
 
   <div id="screen-report" class="hidden">
     <h3><i class="fa-solid fa-chart-pie"></i> Отчети</h3>
+    <div class="summary" id="methodSummary"></div>
     <label>🔍 Търси по бележка</label><input type="text" id="filterNote" oninput="renderFilteredTable()">
     <label>📆 От дата</label><input type="date" id="filterFrom" onchange="renderFilteredTable()">
     <label>До дата</label><input type="date" id="filterTo" onchange="renderFilteredTable()">
@@ -104,11 +104,9 @@
     </table>
     <div class="btn-group" style="margin-top:20px;">
       <button onclick="exportToExcel()"><i class="fa-solid fa-file-excel"></i> Excel</button>
-      <button onclick="exportToPDF()"><i class="fa-solid fa-file-pdf"></i> PDF</button>
     </div>
   </div>
 </div>
-
 <script>
 let records = [];
 let chartRef = null;
@@ -122,7 +120,7 @@ function checkPassword() {
   if (pass === "7801") {
     document.getElementById("login").style.display = "none";
     document.getElementById("app").classList.remove("hidden");
-    renderTable(); updateSummaries(); renderChart();
+    renderTable(); updateSummaries(); renderMethodSummary(); renderChart();
   } else {
     alert("Грешна парола!");
   }
@@ -137,14 +135,14 @@ function addRecord() {
   if (!date || isNaN(amount)) return alert("Попълни дата и сума.");
   records.unshift({ date, type, method, amount, note });
   localStorage.setItem("records", JSON.stringify(records));
-  renderTable(); updateSummaries(); renderChart(); clearForm();
+  renderTable(); updateSummaries(); renderMethodSummary(); renderChart(); clearForm();
 }
 
 function deleteRecord(index) {
   if (!confirm("Сигурен ли си?")) return;
   records.splice(index,1);
   localStorage.setItem("records", JSON.stringify(records));
-  renderTable(); updateSummaries(); renderChart();
+  renderTable(); updateSummaries(); renderMethodSummary(); renderChart();
 }
 
 function clearForm() {
@@ -180,6 +178,7 @@ function showScreen(name) {
   document.getElementById("screen-report").classList.add("hidden");
   document.getElementById("screen-" + name).classList.remove("hidden");
   renderFilteredTable();
+  renderMethodSummary();
 }
 
 function updateSummaries() {
@@ -194,6 +193,20 @@ function updateSummaries() {
     `📅 <strong>Днес:</strong> Приходи: ${todayIncome.toFixed(2)} лв | Разходи: ${todayExpense.toFixed(2)} лв`;
   document.getElementById("monthlySummary").innerHTML = 
     `📆 <strong>Месец:</strong> Приходи: ${monthIncome.toFixed(2)} лв | Разходи: ${monthExpense.toFixed(2)} лв`;
+}
+
+function renderMethodSummary() {
+  let cash = 0, bank = 0, card = 0;
+  records.forEach(r=>{
+    const val = r.type==="Приход"?r.amount:-r.amount;
+    if (r.method==="Кеш") cash+=val;
+    if (r.method==="Банка") bank+=val;
+    if (r.method==="Карта") card+=val;
+  });
+  const total = cash+bank+card;
+  document.getElementById("methodSummary").innerHTML = `
+    💰 Кеш: ${cash.toFixed(2)} лв | 🏦 Банка: ${bank.toFixed(2)} лв | 💳 Карта: ${card.toFixed(2)} лв | Общо: ${total.toFixed(2)} лв
+  `;
 }
 
 function renderChart() {
@@ -259,22 +272,6 @@ window.exportToExcel = () => {
   XLSX.utils.book_append_sheet(wb, ws, "Отчет");
   XLSX.writeFile(wb, "nonstop_otchet.xlsx");
 };
-
-window.exportToPDF = () => {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-  doc.setFontSize(14);
-  doc.text("Нон Стоп Отчет", 14, 14);
-  let y = 24;
-  records.forEach(r => {
-    doc.text(`${r.date} | ${r.type} | ${r.amount.toFixed(2)} лв | ${r.method} | ${r.note}`, 14, y);
-    y += 8;
-    if (y > 280) { doc.addPage(); y = 20; }
-  });
-  doc.save("nonstop_otchet.pdf");
-};
 </script>
 </body>
 </html>
-
-
