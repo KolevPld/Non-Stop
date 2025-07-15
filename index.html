@@ -117,7 +117,6 @@ let userId = null;
 let records = [];
 let chartRef = null;
 
-// индикатор
 const statusDiv = document.getElementById("status");
 statusDiv.textContent = "⏳ Свързване с Firestore...";
 
@@ -144,7 +143,7 @@ async function loadRecords() {
 }
 
 async function addRecord() {
-  if (!userId) return alert("Изчакай да се свърже с Firestore. Опитай пак след малко.");
+  if (!userId) return alert("Изчакай връзката с Firestore и опитай пак.");
   const date = document.getElementById("date").value;
   const type = document.getElementById("type").value;
   const method = document.getElementById("method").value.split(" ")[0];
@@ -244,6 +243,13 @@ function renderChart() {
   });
 }
 
+window.addRecord = addRecord;
+window.deleteRecord = deleteRecord;
+window.showScreen = function(name) {
+  document.getElementById("screen-add").classList.add("hidden");
+  document.getElementById("screen-report").classList.add("hidden");
+  document.getElementById("screen-" + name).classList.remove("hidden");
+};
 window.exportToExcel = () => {
   const wb = XLSX.utils.book_new();
   const rows = [["Дата", "Тип", "Сума", "Метод", "Бележка"]];
@@ -252,7 +258,6 @@ window.exportToExcel = () => {
   XLSX.utils.book_append_sheet(wb, ws, "Отчет");
   XLSX.writeFile(wb, "nonstop_otchet.xlsx");
 };
-
 window.exportToCSV = () => {
   let csv = "Дата,Тип,Сума,Метод,Бележка\n";
   records.forEach(r => {
@@ -266,7 +271,6 @@ window.exportToCSV = () => {
   link.click();
   document.body.removeChild(link);
 };
-
 window.exportToJSON = () => {
   const json = JSON.stringify(records, null, 2);
   const blob = new Blob([json], { type: "application/json" });
@@ -277,7 +281,6 @@ window.exportToJSON = () => {
   link.click();
   document.body.removeChild(link);
 };
-
 window.checkPassword = () => {
   const pass = document.getElementById("password").value;
   if (pass === "7801") {
@@ -290,4 +293,5 @@ window.checkPassword = () => {
 </script>
 </body>
 </html>
+
 
