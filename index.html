@@ -94,7 +94,6 @@
       <tbody></tbody>
     </table>
   </div>
-</div>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, query, orderBy, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
@@ -113,7 +112,6 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth();
 
-let userId = null;
 let records = [];
 let chartRef = null;
 
@@ -126,7 +124,6 @@ signInAnonymously(auth)
 
 onAuthStateChanged(auth, user => { 
   if (user) { 
-    userId = user.uid;
     statusDiv.textContent = "✅ Свързан с Firestore";
     loadRecords();
   } else {
@@ -136,27 +133,26 @@ onAuthStateChanged(auth, user => {
 
 async function loadRecords() {
   records = [];
-  const q = query(collection(db, "users", userId, "records"), orderBy("date", "desc"));
+  const q = query(collection(db, "records"), orderBy("date", "desc"));
   const snapshot = await getDocs(q);
   snapshot.forEach(docSnap => records.push({ id: docSnap.id, ...docSnap.data() }));
   renderTable(); updateSummaries(); renderMethodSummary(); renderChart();
 }
 
 async function addRecord() {
-  if (!userId) return alert("Изчакай връзката с Firestore и опитай пак.");
   const date = document.getElementById("date").value;
   const type = document.getElementById("type").value;
   const method = document.getElementById("method").value.split(" ")[0];
   const amount = parseFloat(document.getElementById("amount").value);
   const note = document.getElementById("note").value;
   if (!date || isNaN(amount)) return alert("Попълни дата и сума.");
-  await addDoc(collection(db, "users", userId, "records"), { date, type, method, amount, note });
+  await addDoc(collection(db, "records"), { date, type, method, amount, note });
   loadRecords(); clearForm();
 }
 
 async function deleteRecord(id) {
   if (!confirm("Сигурен ли си?")) return;
-  await deleteDoc(doc(db, "users", userId, "records", id));
+  await deleteDoc(doc(db, "records", id));
   loadRecords();
 }
 
