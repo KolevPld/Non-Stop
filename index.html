@@ -65,7 +65,7 @@
     </div>
     <div class="btn-group" style="margin-top:10px;">
       <button onclick="showScreen('report')"><i class="fa-solid fa-chart-column"></i> Отчети</button>
-      <button onclick="exportToExcel()"><i class="fa-solid fa-print"></i> Excel Принт</button>
+      <button onclick="exportToExcel()"><i class="fa-solid fa-file-excel"></i> Excel</button>
     </div>
     <div class="summary" id="totalSummary"></div>
   </div>
@@ -73,20 +73,6 @@
   <div id="screen-report" class="hidden">
     <h3><i class="fa-solid fa-chart-pie"></i> Отчети</h3>
     <div class="summary" id="methodSummary"></div>
-    <label>🔍 Търси по бележка</label><input type="text" id="filterNote" oninput="renderFilteredTable()">
-    <label>📆 От дата</label><input type="date" id="filterFrom" onchange="renderFilteredTable()">
-    <label>До дата</label><input type="date" id="filterTo" onchange="renderFilteredTable()">
-    <label>Тип</label><select id="filterType" onchange="renderFilteredTable()">
-      <option value="">Всички</option>
-      <option value="Приход">Приход</option>
-      <option value="Разход">Разход</option>
-    </select>
-    <label>Метод</label><select id="filterMethod" onchange="renderFilteredTable()">
-      <option value="">Всички</option>
-      <option value="Кеш">Кеш 💰</option>
-      <option value="Банка">Банка 🏦</option>
-      <option value="Карта">Карта 💳</option>
-    </select>
     <div class="summary" id="dailySummary"></div>
     <div class="summary" id="monthlySummary"></div>
     <canvas id="chart" width="400" height="200" style="margin-top:20px;"></canvas>
@@ -102,47 +88,61 @@
       </thead>
       <tbody></tbody>
     </table>
-    <div class="btn-group" style="margin-top:20px;">
-      <button onclick="exportToExcel()"><i class="fa-solid fa-file-excel"></i> Excel</button>
-    </div>
   </div>
 </div>
-<script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, query, orderBy, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyD692ktQboNPavUgo9XiANtaqm-8tUOB6c",
+  authDomain: "nonstopapp-c30b1.firebaseapp.com",
+  projectId: "nonstopapp-c30b1",
+  storageBucket: "nonstopapp-c30b1.firebasestorage.app",
+  messagingSenderId: "368870682423",
+  appId: "1:368870682423:web:5f0ff3245c07c7796a74b2"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth();
+
+let userId = null;
 let records = [];
 let chartRef = null;
 
-window.onload = () => {
-  records = JSON.parse(localStorage.getItem("records") || "[]");
-};
-
-function checkPassword() {
-  const pass = document.getElementById("password").value;
-  if (pass === "7801") {
-    document.getElementById("login").style.display = "none";
-    document.getElementById("app").classList.remove("hidden");
-    renderTable(); updateSummaries(); renderMethodSummary(); renderChart();
-  } else {
-    alert("Грешна парола!");
+signInAnonymously(auth).then(() => console.log("Logged in anonymously")).catch(console.error);
+onAuthStateChanged(auth, user => { 
+  if (user) { 
+    userId = user.uid;
+    loadRecords();
   }
+});
+
+async function loadRecords() {
+  records = [];
+  const q = query(collection(db, "users", userId, "records"), orderBy("date", "desc"));
+  const snapshot = await getDocs(q);
+  snapshot.forEach(docSnap => records.push({ id: docSnap.id, ...docSnap.data() }));
+  renderTable(); updateSummaries(); renderMethodSummary(); renderChart();
 }
 
-function addRecord() {
+async function addRecord() {
   const date = document.getElementById("date").value;
   const type = document.getElementById("type").value;
-  let method = document.getElementById("method").value.split(" ")[0];
+  const method = document.getElementById("method").value.split(" ")[0];
   const amount = parseFloat(document.getElementById("amount").value);
   const note = document.getElementById("note").value;
   if (!date || isNaN(amount)) return alert("Попълни дата и сума.");
-  records.unshift({ date, type, method, amount, note });
-  localStorage.setItem("records", JSON.stringify(records));
-  renderTable(); updateSummaries(); renderMethodSummary(); renderChart(); clearForm();
+  await addDoc(collection(db, "users", userId, "records"), { date, type, method, amount, note });
+  loadRecords(); clearForm();
 }
 
-function deleteRecord(index) {
+async function deleteRecord(id) {
   if (!confirm("Сигурен ли си?")) return;
-  records.splice(index,1);
-  localStorage.setItem("records", JSON.stringify(records));
-  renderTable(); updateSummaries(); renderMethodSummary(); renderChart();
+  await deleteDoc(doc(db, "users", userId, "records", id));
+  loadRecords();
 }
 
 function clearForm() {
@@ -155,7 +155,7 @@ function renderTable() {
   const tbody = document.querySelector("#recordsTable tbody");
   tbody.innerHTML = "";
   let income = 0, expense = 0;
-  records.forEach((r, i) => {
+  records.forEach((r) => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${r.date}</td>
@@ -163,7 +163,7 @@ function renderTable() {
       <td>${r.amount.toFixed(2)} лв</td>
       <td>${r.method}</td>
       <td>${r.note}</td>
-      <td><button onclick="deleteRecord(${i})" style="background:#f44336;font-size:12px;padding:4px 6px;">🗑️</button></td>`;
+      <td><button onclick="deleteRecord('${r.id}')" style="background:#f44336;font-size:12px;padding:4px 6px;">🗑️</button></td>`;
     tbody.appendChild(tr);
     if (r.type === "Приход") income += r.amount;
     if (r.type === "Разход") expense += r.amount;
@@ -171,14 +171,6 @@ function renderTable() {
   const balance = income - expense;
   document.getElementById("totalSummary").innerHTML = 
     `Приходи: ${income.toFixed(2)} лв | Разходи: ${expense.toFixed(2)} лв | Баланс: ${balance.toFixed(2)} лв`;
-}
-
-function showScreen(name) {
-  document.getElementById("screen-add").classList.add("hidden");
-  document.getElementById("screen-report").classList.add("hidden");
-  document.getElementById("screen-" + name).classList.remove("hidden");
-  renderFilteredTable();
-  renderMethodSummary();
 }
 
 function updateSummaries() {
@@ -204,9 +196,8 @@ function renderMethodSummary() {
     if (r.method==="Карта") card+=val;
   });
   const total = cash+bank+card;
-  document.getElementById("methodSummary").innerHTML = `
-    💰 Кеш: ${cash.toFixed(2)} лв | 🏦 Банка: ${bank.toFixed(2)} лв | 💳 Карта: ${card.toFixed(2)} лв | Общо: ${total.toFixed(2)} лв
-  `;
+  document.getElementById("methodSummary").innerHTML = 
+    `💰 Кеш: ${cash.toFixed(2)} лв | 🏦 Банка: ${bank.toFixed(2)} лв | 💳 Карта: ${card.toFixed(2)} лв | Общо: ${total.toFixed(2)} лв`;
 }
 
 function renderChart() {
@@ -237,33 +228,6 @@ function renderChart() {
   });
 }
 
-function renderFilteredTable() {
-  const tbody = document.querySelector("#recordsTable tbody");
-  tbody.innerHTML = "";
-  let note = document.getElementById("filterNote").value.toLowerCase();
-  let from = document.getElementById("filterFrom").value;
-  let to = document.getElementById("filterTo").value;
-  let type = document.getElementById("filterType").value;
-  let method = document.getElementById("filterMethod").value.split(" ")[0];
-
-  records.forEach((r,i)=>{
-    if (note && !r.note.toLowerCase().includes(note)) return;
-    if (from && r.date<from) return;
-    if (to && r.date>to) return;
-    if (type && r.type!==type) return;
-    if (method && r.method!==method) return;
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${r.date}</td>
-      <td style="color:${r.type==='Приход'?'#4caf50':'#f44336'};">${r.type}</td>
-      <td>${r.amount.toFixed(2)} лв</td>
-      <td>${r.method}</td>
-      <td>${r.note}</td>
-      <td><button onclick="deleteRecord(${i})" style="background:#f44336;font-size:12px;padding:4px 6px;">🗑️</button></td>`;
-    tbody.appendChild(tr);
-  });
-}
-
 window.exportToExcel = () => {
   const wb = XLSX.utils.book_new();
   const rows = [["Дата", "Тип", "Сума", "Метод", "Бележка"]];
@@ -272,6 +236,17 @@ window.exportToExcel = () => {
   XLSX.utils.book_append_sheet(wb, ws, "Отчет");
   XLSX.writeFile(wb, "nonstop_otchet.xlsx");
 };
+
+window.checkPassword = () => {
+  const pass = document.getElementById("password").value;
+  if (pass === "7801") {
+    document.getElementById("login").style.display = "none";
+    document.getElementById("app").classList.remove("hidden");
+  } else {
+    alert("Грешна парола!");
+  }
+};
 </script>
 </body>
 </html>
+
