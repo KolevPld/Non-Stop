@@ -4,8 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>Нон Стоп Отчет</title>
-  <link rel="manifest" href="manifest.json" />
-  <link rel="apple-touch-icon" href="icon-192.png" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -39,6 +37,7 @@
   </style>
 </head>
 <body>
+
 <div id="login">
   <h2><i class="fa-solid fa-lock"></i> Въведи парола</h2>
   <input type="password" id="password" placeholder="Парола">
@@ -66,7 +65,7 @@
       <option>Заплати</option>
       <option>Други</option>
     </select>
-    <input type="text" id="note" class="hidden" placeholder="Въведи бележка при 'Други'">
+    <input type="text" id="note" class="hidden" placeholder="Въведи при 'Други'">
     <label>💸 Сума</label><input type="number" id="amount">
     <div class="btn-group">
       <button onclick="addRecord()"><i class="fa-solid fa-plus"></i> Добави запис</button>
@@ -76,6 +75,7 @@
     </div>
     <div class="summary" id="totalSummary"></div>
   </div>
+
   <div id="screen-report" class="hidden">
     <h3><i class="fa-solid fa-chart-pie"></i> Отчети</h3>
     <div class="summary" id="methodSummary"></div>
