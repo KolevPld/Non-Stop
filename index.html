@@ -49,7 +49,7 @@
 </div>
 
 <div id="app" class="hidden">
-  <div id="screen-form">
+  <div id="screen-add">
     <h2><i class="fa-solid fa-cash-register"></i> Нон Стоп Отчет</h2>
     <label>📅 Дата</label><input type="date" id="date">
     <label>💵 Тип</label><select id="type">
@@ -82,7 +82,7 @@
     <div class="summary" id="monthlySummary"></div>
     <canvas id="chart" width="400" height="200" style="margin-top:20px;"></canvas>
     <div class="btn-group" style="margin-top:15px;">
-      <button onclick="showScreen('form')"><i class="fa-solid fa-arrow-left"></i> Назад</button>
+      <button onclick="showScreen('add')"><i class="fa-solid fa-arrow-left"></i> Назад</button>
     </div>
   </div>
 
@@ -158,13 +158,13 @@ function clearForm() {
   document.getElementById("note").value = "";
 }
 
-function renderTable() { /* същия код */ }
-function updateSummaries() { /* същия код */ }
-function renderMethodSummary() { /* същия код */ }
-function renderChart() { /* същия код */ }
+function renderTable() { /* твоят същ код */ }
+function updateSummaries() { /* твоят същ код */ }
+function renderMethodSummary() { /* твоят същ код */ }
+function renderChart() { /* твоят същ код */ }
 
 window.showScreen = function(name) {
-  document.getElementById("screen-form").classList.add("hidden");
+  document.getElementById("screen-add").classList.add("hidden");
   document.getElementById("screen-report").classList.add("hidden");
   document.getElementById("screen-table").classList.add("hidden");
   document.getElementById("screen-" + name).classList.remove("hidden");
@@ -179,7 +179,7 @@ window.checkPassword = () => {
   if (pass === "7801") {
     document.getElementById("login").style.display = "none";
     document.getElementById("app").classList.remove("hidden");
-    document.getElementById("password").value = "";
+    document.getElementById("date").focus();
   } else {
     alert("Грешна парола!");
     document.getElementById("password").focus();
