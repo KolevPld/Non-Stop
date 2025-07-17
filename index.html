@@ -316,6 +316,38 @@ window.checkPassword = () => {
     alert("Грешна парола!");
     document.getElementById("password").focus();
   }showScreen(localStorage.getItem("screen") || "add");
+  window.renderTable = function () {
+  const tbody = document.querySelector("#recordsTable tbody");
+  tbody.innerHTML = "";
+
+  const filter = document.getElementById("search")?.value?.toLowerCase() || "";
+
+  let income = 0, expense = 0;
+
+  records.forEach((r) => {
+    const combinedText = `${r.note} ${r.method} ${r.type}`.toLowerCase();
+    if (!combinedText.includes(filter)) return;
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${r.date}</td>
+      <td style="color:${r.type==='Приход'?'#4caf50':'#f44336'};">${r.type}</td>
+      <td>${r.amount.toFixed(2)} лв</td>
+      <td>${r.method}</td>
+      <td>${r.note}</td>
+      <td><button onclick="deleteRecord('${r.id}')" style="background:#f44336;font-size:12px;padding:4px 6px;">🗑️</button></td>
+    `;
+    tbody.appendChild(tr);
+
+    if (r.type === "Приход") income += r.amount;
+    if (r.type === "Разход") expense += r.amount;
+  });
+
+  const balance = income - expense;
+  document.getElementById("totalSummary").innerHTML = 
+    `Приходи: ${income.toFixed(2)} лв | Разходи: ${expense.toFixed(2)} лв | Баланс: ${balance.toFixed(2)} лв`;
+};
+
 
 };
 </script>
