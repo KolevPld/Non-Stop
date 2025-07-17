@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>Нон Стоп Отчет</title>
   <link rel="manifest" href="manifest.json" />
-  <link rel="apple-touch-icon" href="icon-192.png" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -73,6 +72,12 @@
       <button onclick="exportToJSON()"><i class="fa-solid fa-file-code"></i> JSON Backup</button>
     </div>
     <div class="summary" id="totalSummary"></div>
+    <table id="recordsTable">
+      <thead>
+        <tr><th>Дата</th><th>Тип</th><th>Сума</th><th>Метод</th><th>Бележка</th><th>Действия</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
   </div>
 
   <div id="screen-report" class="hidden">
@@ -85,15 +90,6 @@
       <button onclick="showScreen('add')"><i class="fa-solid fa-arrow-left"></i> Назад</button>
     </div>
   </div>
-
-  <div id="screen-table">
-    <table id="recordsTable">
-      <thead>
-        <tr><th>Дата</th><th>Тип</th><th>Сума</th><th>Метод</th><th>Бележка</th><th>Действия</th></tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
 </div>
 
 <script type="module">
@@ -105,7 +101,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyD692ktQboNPavUgo9XiANtaqm-8tUOB6c",
   authDomain: "nonstopapp-c30b1.firebaseapp.com",
   projectId: "nonstopapp-c30b1",
-  storageBucket: "nonstopapp-c30b1.firebasestorage.app",
+  storageBucket: "nonstopapp-c30b1.appspot.com",
   messagingSenderId: "368870682423",
   appId: "1:368870682423:web:5f0ff3245c07c7796a74b2"
 };
@@ -113,13 +109,14 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth();
+
 let records = [];
 let chartRef = null;
-
 const statusDiv = document.getElementById("status");
+
 signInAnonymously(auth).then(() => console.log("Signed in anonymously")).catch(console.error);
-onAuthStateChanged(auth, user => { 
-  if (user) { 
+onAuthStateChanged(auth, user => {
+  if (user) {
     statusDiv.textContent = "✅ Свързан с Firestore";
     loadRecords();
   } else {
@@ -146,7 +143,7 @@ async function addRecord() {
   loadRecords(); clearForm();
 }
 
-window.deleteRecord = async (id) => {
+async function deleteRecord(id) {
   if (!confirm("Сигурен ли си?")) return;
   await deleteDoc(doc(db, "records", id));
   loadRecords();
@@ -158,22 +155,119 @@ function clearForm() {
   document.getElementById("note").value = "";
 }
 
-function renderTable() { /* твоят същ код */ }
-function updateSummaries() { /* твоят същ код */ }
-function renderMethodSummary() { /* твоят същ код */ }
-function renderChart() { /* твоят същ код */ }
+function renderTable() {
+  const tbody = document.querySelector("#recordsTable tbody");
+  tbody.innerHTML = "";
+  let income = 0, expense = 0;
+  records.forEach((r) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${r.date}</td>
+      <td style="color:${r.type==='Приход'?'#4caf50':'#f44336'};">${r.type}</td>
+      <td>${r.amount.toFixed(2)} лв</td>
+      <td>${r.method}</td>
+      <td>${r.note}</td>
+      <td><button onclick="deleteRecord('${r.id}')" style="background:#f44336;font-size:12px;padding:4px 6px;">🗑️</button></td>`;
+    tbody.appendChild(tr);
+    if (r.type === "Приход") income += r.amount;
+    if (r.type === "Разход") expense += r.amount;
+  });
+  const balance = income - expense;
+  document.getElementById("totalSummary").innerHTML =
+    `Приходи: ${income.toFixed(2)} лв | Разходи: ${expense.toFixed(2)} лв | Баланс: ${balance.toFixed(2)} лв`;
+}
+
+function updateSummaries() {
+  let todayIncome=0, todayExpense=0, monthIncome=0, monthExpense=0;
+  const today = new Date().toISOString().slice(0,10);
+  const month = today.slice(0,7);
+  records.forEach(r=>{
+    if(r.date===today){ if(r.type==="Приход")todayIncome+=r.amount; else todayExpense+=r.amount;}
+    if(r.date.startsWith(month)){ if(r.type==="Приход")monthIncome+=r.amount; else monthExpense+=r.amount;}
+  });
+  document.getElementById("dailySummary").innerHTML = 
+    `📅 <strong>Днес:</strong> Приходи: ${todayIncome.toFixed(2)} лв | Разходи: ${todayExpense.toFixed(2)} лв`;
+  document.getElementById("monthlySummary").innerHTML = 
+    `📆 <strong>Месец:</strong> Приходи: ${monthIncome.toFixed(2)} лв | Разходи: ${monthExpense.toFixed(2)} лв`;
+}
+
+function renderMethodSummary() {
+  let cash = 0, bank = 0, card = 0;
+  records.forEach(r=>{
+    const val = r.type==="Приход"?r.amount:-r.amount;
+    if (r.method==="Кеш") cash+=val;
+    if (r.method==="Банка") bank+=val;
+    if (r.method==="Карта") card+=val;
+  });
+  const total = cash+bank+card;
+  document.getElementById("methodSummary").innerHTML = 
+    `💰 Кеш: ${cash.toFixed(2)} лв | 🏦 Банка: ${bank.toFixed(2)} лв | 💳 Карта: ${card.toFixed(2)} лв | Общо: ${total.toFixed(2)} лв`;
+}
+
+function renderChart() {
+  const ctx = document.getElementById('chart').getContext('2d');
+  const monthData = {};
+  records.forEach(r=>{
+    const m = r.date?.slice(0,7);
+    if(!m) return;
+    if(!monthData[m]) monthData[m]={income:0,expense:0};
+    if(r.type==="Приход") monthData[m].income+=r.amount;
+    if(r.type==="Разход") monthData[m].expense+=r.amount;
+  });
+  const labels = Object.keys(monthData).sort();
+  const incomeData = labels.map(m=>monthData[m].income);
+  const expenseData = labels.map(m=>monthData[m].expense);
+
+  if(chartRef) chartRef.destroy();
+  chartRef = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Приходи', data: incomeData, backgroundColor:'#4caf50' },
+        { label: 'Разходи', data: expenseData, backgroundColor:'#f44336' }
+      ]
+    },
+    options: { responsive:true, plugins:{ legend:{position:'top'}, title:{display:true,text:'Приходи и разходи по месеци'}}}
+  });
+}
 
 window.showScreen = function(name) {
   document.getElementById("screen-add").classList.add("hidden");
   document.getElementById("screen-report").classList.add("hidden");
-  document.getElementById("screen-table").classList.add("hidden");
   document.getElementById("screen-" + name).classList.remove("hidden");
 };
-
-window.exportToExcel = /* същия код */;
-window.exportToCSV = /* същия код */;
-window.exportToJSON = /* същия код */;
-
+window.exportToExcel = () => {
+  const wb = XLSX.utils.book_new();
+  const rows = [["Дата", "Тип", "Сума", "Метод", "Бележка"]];
+  records.forEach(r=>rows.push([r.date, r.type, r.amount.toFixed(2), r.method, r.note]));
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  XLSX.utils.book_append_sheet(wb, ws, "Отчет");
+  XLSX.writeFile(wb, "nonstop_otchet.xlsx");
+};
+window.exportToCSV = () => {
+  let csv = "Дата,Тип,Сума,Метод,Бележка\n";
+  records.forEach(r => {
+    csv += `${r.date},${r.type},${r.amount.toFixed(2)},${r.method},${r.note}\n`;
+  });
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `nonstop_backup_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+window.exportToJSON = () => {
+  const json = JSON.stringify(records, null, 2);
+  const blob = new Blob([json], { type: "application/json" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `nonstop_backup_${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
 window.checkPassword = () => {
   const pass = document.getElementById("password").value;
   if (pass === "7801") {
@@ -187,5 +281,6 @@ window.checkPassword = () => {
 </script>
 </body>
 </html>
+
 
 
