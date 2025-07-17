@@ -296,7 +296,8 @@ window.checkPassword = () => {
  } else {
     alert("Грешна парола!");
     document.getElementById("password").focus();
-  }
+  }showScreen(localStorage.getItem("screen") || "add");
+
 };
 </script>
 </body>
