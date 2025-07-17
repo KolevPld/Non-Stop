@@ -169,11 +169,15 @@ function clearForm() {
 function renderTable() {
   const tbody = document.querySelector("#recordsTable tbody");
   tbody.innerHTML = "";
+
   const filter = document.getElementById("search")?.value?.toLowerCase() || "";
 
   let income = 0, expense = 0;
+
   records.forEach((r) => {
-    const matches = `${r.note} ${r.method} ${r.type}`.toLowerCase().includes(filter);
+    const combinedText = `${r.note} ${r.method} ${r.type}`.toLowerCase();
+    const matches = combinedText.includes(filter);
+
     if (!matches) return;
 
     const tr = document.createElement("tr");
@@ -183,7 +187,8 @@ function renderTable() {
       <td>${r.amount.toFixed(2)} лв</td>
       <td>${r.method}</td>
       <td>${r.note}</td>
-      <td><button onclick="deleteRecord('${r.id}')" style="background:#f44336;font-size:12px;padding:4px 6px;">🗑️</button></td>`;
+      <td><button onclick="deleteRecord('${r.id}')" style="background:#f44336;font-size:12px;padding:4px 6px;">🗑️</button></td>
+    `;
     tbody.appendChild(tr);
 
     if (r.type === "Приход") income += r.amount;
