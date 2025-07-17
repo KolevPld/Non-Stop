@@ -273,7 +273,8 @@ window.checkPassword = () => {
   if (pass === "7801") {
     document.getElementById("login").style.display = "none";
     document.getElementById("app").classList.remove("hidden");
-  } else {
+    document.getElementById("date").value = new Date().toISOString().slice(0, 10);
+ } else {
     alert("Грешна парола!");
     document.getElementById("password").focus();
   }
