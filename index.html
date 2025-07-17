@@ -163,8 +163,13 @@ function clearForm() {
 function renderTable() {
   const tbody = document.querySelector("#recordsTable tbody");
   tbody.innerHTML = "";
+  const filter = document.getElementById("search")?.value?.toLowerCase() || "";
+
   let income = 0, expense = 0;
   records.forEach((r) => {
+    const matches = `${r.note} ${r.method} ${r.type}`.toLowerCase().includes(filter);
+    if (!matches) return;
+
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${r.date}</td>
@@ -174,11 +179,13 @@ function renderTable() {
       <td>${r.note}</td>
       <td><button onclick="deleteRecord('${r.id}')" style="background:#f44336;font-size:12px;padding:4px 6px;">🗑️</button></td>`;
     tbody.appendChild(tr);
+
     if (r.type === "Приход") income += r.amount;
     if (r.type === "Разход") expense += r.amount;
   });
+
   const balance = income - expense;
-  document.getElementById("totalSummary").innerHTML =
+  document.getElementById("totalSummary").innerHTML = 
     `Приходи: ${income.toFixed(2)} лв | Разходи: ${expense.toFixed(2)} лв | Баланс: ${balance.toFixed(2)} лв`;
 }
 
