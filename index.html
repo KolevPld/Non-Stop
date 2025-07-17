@@ -76,8 +76,14 @@
       <button onclick="exportToJSON()"><i class="fa-solid fa-file-code"></i> JSON Backup</button>
     </div>
     <div class="summary" id="totalSummary"></div>
-    <input type="text" id="search" placeholder="🔎 Търси по бележка, метод или тип..." oninput="renderTable()" style="margin-top:20px;">
-    <table id="recordsTable">
+    <input 
+  type="text" 
+  id="search" 
+  placeholder="🔎 Търси по бележка, метод или тип..." 
+  oninput="renderTable()" 
+  style="margin: 20px 0; padding: 10px; border-radius: 8px; background: #1f1f1f; color: #e0e0e0; width: 100%; border: none;"
+>
+   <table id="recordsTable">
       <thead>
         <tr><th>Дата</th><th>Тип</th><th>Сума</th><th>Метод</th><th>Бележка</th><th>Действия</th></tr>
       </thead>
