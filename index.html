@@ -333,11 +333,13 @@ window.checkPassword = () => {
     document.getElementById("login").style.display = "none";
     document.getElementById("app").classList.remove("hidden");
     document.getElementById("date").value = new Date().toISOString().slice(0, 10);
- } else {
+    showScreen(localStorage.getItem("screen") || "add");
+  } else {
     alert("Грешна парола!");
     document.getElementById("password").focus();
-  }showScreen(localStorage.getItem("screen") || "add");
- };
+  }
+};
+
   window.renderTable = function () {
   const tbody = document.querySelector("#recordsTable tbody");
   tbody.innerHTML = "";
