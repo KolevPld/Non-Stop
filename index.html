@@ -237,10 +237,25 @@ function renderChart() {
 }
 
 window.showScreen = function(name) {
-  document.getElementById("screen-add").classList.add("hidden");
-  document.getElementById("screen-report").classList.add("hidden");
+  // скриване на всички екрани
+  ["add", "report"].forEach(s => {
+    document.getElementById("screen-" + s).classList.add("hidden");
+  });
+  // показване на активния
   document.getElementById("screen-" + name).classList.remove("hidden");
+
+  // маркиране на активен бутон
+  document.querySelectorAll(".btn-group button").forEach(b => b.classList.remove("active"));
+  const map = {
+    "add": 0,
+    "report": 1
+  };
+  document.querySelectorAll(".btn-group button")[map[name]]?.classList.add("active");
+
+  // по избор: запазване в localStorage
+  localStorage.setItem("screen", name);
 };
+
 window.exportToExcel = () => {
   const wb = XLSX.utils.book_new();
   const rows = [["Дата", "Тип", "Сума", "Метод", "Бележка"]];
