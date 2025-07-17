@@ -316,6 +316,7 @@ window.checkPassword = () => {
     alert("Грешна парола!");
     document.getElementById("password").focus();
   }showScreen(localStorage.getItem("screen") || "add");
+ };
   window.renderTable = function () {
   const tbody = document.querySelector("#recordsTable tbody");
   tbody.innerHTML = "";
@@ -348,8 +349,6 @@ window.checkPassword = () => {
     `Приходи: ${income.toFixed(2)} лв | Разходи: ${expense.toFixed(2)} лв | Баланс: ${balance.toFixed(2)} лв`;
 };
 
-
-};
 </script>
 </body>
 </html>
