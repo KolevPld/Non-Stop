@@ -60,6 +60,16 @@
       <option>Разход</option>
     </select>
     <label>💳 Метод</label><select id="method">
+      <label>🏷️ Категория</label>
+<select id="category">
+  <option>Продажба</option>
+  <option>Доставка</option>
+  <option>Ток</option>
+  <option>Наем</option>
+  <option>Заплати</option>
+  <option>Друго</option>
+</select>
+
       <option>Кеш 💰</option>
       <option>Банка 🏦</option>
       <option>Карта 💳</option>
@@ -144,15 +154,22 @@ async function loadRecords() {
 }
 
 async function addRecord() {
+  const category = document.getElementById("category").value;
   const date = document.getElementById("date").value;
   const type = document.getElementById("type").value;
   const method = document.getElementById("method").value.split(" ")[0];
   const amount = parseFloat(document.getElementById("amount").value);
   const note = document.getElementById("note").value;
   if (!date || isNaN(amount) || amount < 0) return alert("Попълни валидна дата и сума.");
-  await addDoc(collection(db, "records"), { date, type, method, amount, note });
-  loadRecords(); clearForm();
-}
+  await addDoc(collection(db, "records"), {
+  date,
+  type,
+  method,
+  amount,
+  note,
+  category
+});
+
 
 async function deleteRecord(id) {
   if (!confirm("Сигурен ли си?")) return;
