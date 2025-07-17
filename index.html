@@ -154,12 +154,12 @@ async function loadRecords() {
 }
 
 async function addRecord() {
-  const category = document.getElementById("category").value;
   const date = document.getElementById("date").value;
   const type = document.getElementById("type").value;
   const method = document.getElementById("method").value.split(" ")[0];
   const amount = parseFloat(document.getElementById("amount").value);
   const note = document.getElementById("note").value;
+  const category = document.getElementById("category").value;
   if (!date || isNaN(amount) || amount < 0) return alert("Попълни валидна дата и сума.");
   await addDoc(collection(db, "records"), {
   date,
