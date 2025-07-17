@@ -168,10 +168,14 @@ async function addRecord() {
   method,
   amount,
   note,
-  category // да е запетайка преди него, без грешки
+  category
 });
 
-async function deleteRecord(id) {
+clearForm();
+loadRecords();
+} 
+
+  async function deleteRecord(id) {
   if (!confirm("Сигурен ли си?")) return;
   await deleteDoc(doc(db, "records", id));
   loadRecords();
