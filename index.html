@@ -251,25 +251,23 @@ function renderTable() {
   const tbody = document.querySelector("#recordsTable tbody");
   tbody.innerHTML = "";
 
-  const search = document.getElementById("search").value.toLowerCase();
-  const from = document.getElementById("fromDate").value;
-  const to = document.getElementById("toDate").value;
+  const search = document.getElementById("search")?.value?.toLowerCase() || "";
+  const from = document.getElementById("fromDate")?.value || "";
+  const to = document.getElementById("toDate")?.value || "";
 
   let income = 0, expense = 0;
 
-  records.forEach(r => {
-    // филтър по търсене в текст
-    const text = `${r.note} ${r.method} ${r.type} ${r.category}`.toLowerCase();
+  records.forEach((r) => {
+    const text = `${r.note} ${r.method} ${r.type} ${r.category || ""}`.toLowerCase();
     if (!text.includes(search)) return;
 
-    // филтър по дата
     if (from && r.date < from) return;
     if (to && r.date > to) return;
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${r.date}</td>
-      <td style="color:${r.type==='Приход'?'#4caf50':'#f44336'}">${r.type}</td>
+      <td style="color:${r.type === "Приход" ? "#4caf50" : "#f44336"};">${r.type}</td>
       <td>${r.amount.toFixed(2)} лв</td>
       <td>${r.method}</td>
       <td>${r.note}</td>
@@ -277,12 +275,13 @@ function renderTable() {
     `;
     tbody.appendChild(tr);
 
-    if (r.type==="Приход") income += r.amount;
-    else expense += r.amount;
+    if (r.type === "Приход") income += r.amount;
+    if (r.type === "Разход") expense += r.amount;
   });
 
-  document.getElementById("dailySummary").textContent = 
-    `Показани: ${income.toFixed(2)} приход | ${expense.toFixed(2)} разход`;
+  const balance = income - expense;
+  document.getElementById("dailySummary").innerHTML = 
+    `📊 Общо показани: Приходи: ${income.toFixed(2)} лв | Разходи: ${expense.toFixed(2)} лв | Баланс: ${balance.toFixed(2)} лв`;
 }
 
 
