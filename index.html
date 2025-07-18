@@ -176,7 +176,8 @@ async function addRecord() {
 
 clearForm();
 loadRecords();
-} 
+} window.addRecord = addRecord;
+
 
   async function deleteRecord(id) {
   if (!confirm("Сигурен ли си?")) return;
