@@ -200,8 +200,7 @@ async function loadRecords() {
   const q = query(collection(db, "records"), orderBy("date", "desc"));
   const snapshot = await getDocs(q);
   snapshot.forEach(docSnap => records.push({ id: docSnap.id, ...docSnap.data() }));
-  renderTable(); renderTodayRecords(); updateSummaries(); renderMethodSummary(); renderChart();renderTable(); updateSummaries(); renderMethodSummary(); renderChart(); renderTodayTable();
-renderCategorySummary();
+  renderTable(); renderTodayRecords(); updateSummaries(); renderMethodSummary(); renderChart();renderTable(); updateSummaries(); renderMethodSummary(); renderChart(); renderTodayTable();renderCategorySummary();
 
 }function renderTodayTable() {
   const tbody = document.querySelector("#todayTable tbody");
