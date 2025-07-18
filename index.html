@@ -328,19 +328,27 @@ function updateSummaries() {
   document.getElementById("monthlySummary").innerHTML = 
     `📆 <strong>Месец:</strong> Приходи: ${monthIncome.toFixed(2)} лв | Разходи: ${monthExpense.toFixed(2)} лв`;
 }
+
 function renderCategorySummary() {
   const categories = {};
+  const selectedType = document.getElementById("filterType")?.value;
+
   records.forEach(r => {
     if (!r.category) return;
-    const val = r.type === "Приход" ? r.amount : -r.amount;
-    categories[r.category] = (categories[r.category] || 0) + val;
+
+    // Пропускаме записите, ако има избран тип и той не съвпада
+    if (selectedType && r.type !== selectedType) return;
+
+    const value = r.amount;
+    categories[r.category] = (categories[r.category] || 0) + value;
   });
 
   const summaryText = Object.entries(categories)
     .map(([cat, sum]) => `${cat}: ${sum.toFixed(2)} лв`)
     .join(" | ");
 
-  document.getElementById("categorySummary").innerHTML = `🏷️ Категории: ${summaryText}`;
+  document.getElementById("categorySummary").innerHTML = 
+    `🏷️ Категории: ${summaryText || "Няма данни"}`;
 }
 
 function renderMethodSummary() {
