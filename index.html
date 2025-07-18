@@ -157,6 +157,7 @@
     </thead>
     <tbody></tbody>
   </table>
+<div class="summary" id="categorySummary"></div>
 
   <!-- Бутон Назад -->
   <div class="btn-group" style="margin-top:15px;">
@@ -205,6 +206,7 @@ async function loadRecords() {
   const snapshot = await getDocs(q);
   snapshot.forEach(docSnap => records.push({ id: docSnap.id, ...docSnap.data() }));
   renderTable(); renderTodayRecords(); updateSummaries(); renderMethodSummary(); renderChart();renderTable(); updateSummaries(); renderMethodSummary(); renderChart(); renderTodayTable();
+renderCategorySummary();
 
 }function renderTodayTable() {
   const tbody = document.querySelector("#todayTable tbody");
@@ -330,6 +332,20 @@ function updateSummaries() {
     `📅 <strong>Днес:</strong> Приходи: ${todayIncome.toFixed(2)} лв | Разходи: ${todayExpense.toFixed(2)} лв`;
   document.getElementById("monthlySummary").innerHTML = 
     `📆 <strong>Месец:</strong> Приходи: ${monthIncome.toFixed(2)} лв | Разходи: ${monthExpense.toFixed(2)} лв`;
+}
+function renderCategorySummary() {
+  const categories = {};
+  records.forEach(r => {
+    if (!r.category) return;
+    const val = r.type === "Приход" ? r.amount : -r.amount;
+    categories[r.category] = (categories[r.category] || 0) + val;
+  });
+
+  const summaryText = Object.entries(categories)
+    .map(([cat, sum]) => `${cat}: ${sum.toFixed(2)} лв`)
+    .join(" | ");
+
+  document.getElementById("categorySummary").innerHTML = `🏷️ Категории: ${summaryText}`;
 }
 
 function renderMethodSummary() {
