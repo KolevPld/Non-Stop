@@ -101,7 +101,15 @@
   <div id="screen-report" class="hidden">
   <h3><i class="fa-solid fa-chart-pie"></i> Отчети</h3>
 
-  <!-- Търсачка -->
+  <!-- Обобщения -->
+  <div class="summary" id="methodSummary"></div>
+  <div class="summary" id="dailySummary"></div>
+  <div class="summary" id="monthlySummary"></div>
+
+  <!-- Графика -->
+  <canvas id="chart" width="400" height="200" style="margin-top:20px;"></canvas>
+
+  <!-- Търсачка и таблица ПОД графиката -->
   <input 
     type="text" 
     id="search" 
@@ -110,7 +118,6 @@
     style="margin: 20px 0; padding: 10px; border-radius: 8px; background: #1f1f1f; color: #e0e0e0; width: 100%; border: none;"
   >
 
-  <!-- Таблица с всички записи -->
   <table id="recordsTable">
     <thead>
       <tr>
@@ -125,14 +132,6 @@
     <tbody></tbody>
   </table>
 
-  <!-- Обобщения -->
-  <div class="summary" id="methodSummary"></div>
-  <div class="summary" id="dailySummary"></div>
-  <div class="summary" id="monthlySummary"></div>
-
-  <!-- Графика -->
-  <canvas id="chart" width="400" height="200" style="margin-top:20px;"></canvas>
-
   <!-- Бутон Назад -->
   <div class="btn-group" style="margin-top:15px;">
     <button onclick="showScreen('add')">
@@ -140,6 +139,7 @@
     </button>
   </div>
 </div>
+
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
