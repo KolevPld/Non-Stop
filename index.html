@@ -89,6 +89,14 @@
       <button onclick="exportToJSON()"><i class="fa-solid fa-file-code"></i> JSON Backup</button>
     </div>
     <div class="summary" id="totalSummary"></div>
+    <div class="summary" id="todaySummary"></div>
+<table id="todayTable">
+  <thead>
+    <tr><th>Дата</th><th>Тип</th><th>Сума</th><th>Метод</th><th>Бележка</th></tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
     <input 
 
    <table id="recordsTable">
@@ -118,6 +126,35 @@
   </thead>
   <tbody></tbody>
 </table>
+    function renderTodayTable() {
+  const tbody = document.querySelector("#todayTable tbody");
+  tbody.innerHTML = "";
+
+  const today = new Date().toISOString().slice(0, 10);
+  let income = 0, expense = 0;
+
+  records.forEach(r => {
+    if (r.date !== today) return;
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${r.date}</td>
+      <td style="color:${r.type==='Приход'?'#4caf50':'#f44336'};">${r.type}</td>
+      <td>${r.amount.toFixed(2)} лв</td>
+      <td>${r.method}</td>
+      <td>${r.note}</td>
+    `;
+    tbody.appendChild(tr);
+
+    if (r.type === "Приход") income += r.amount;
+    if (r.type === "Разход") expense += r.amount;
+  });
+
+  const balance = income - expense;
+  document.getElementById("todaySummary").innerHTML = 
+    `📅 <strong>Днес:</strong> Приходи: ${income.toFixed(2)} лв | Разходи: ${expense.toFixed(2)} лв | Баланс: ${balance.toFixed(2)} лв`;
+}
+
 
     <div class="btn-group" style="margin-top:15px;">
       <button onclick="showScreen('add')"><i class="fa-solid fa-arrow-left"></i> Назад</button>
@@ -162,7 +199,8 @@ async function loadRecords() {
   const q = query(collection(db, "records"), orderBy("date", "desc"));
   const snapshot = await getDocs(q);
   snapshot.forEach(docSnap => records.push({ id: docSnap.id, ...docSnap.data() }));
-  renderTable(); updateSummaries(); renderMethodSummary(); renderChart();
+  renderTable(); renderTodayRecords(); updateSummaries(); renderMethodSummary(); renderChart();renderTable(); updateSummaries(); renderMethodSummary(); renderChart(); renderTodayTable();
+
 }
 
 async function addRecord() {
@@ -290,6 +328,35 @@ function renderChart() {
     options: { responsive:true, plugins:{ legend:{position:'top'}, title:{display:true,text:'Приходи и разходи по месеци'}}}
   });
 }
+  function renderTodayRecords() {
+  const tbody = document.querySelector("#todayTable tbody");
+  tbody.innerHTML = "";
+
+  const today = new Date().toISOString().slice(0,10);
+  let income = 0, expense = 0;
+
+  records.forEach((r) => {
+    if (r.date !== today) return;
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${r.date}</td>
+      <td style="color:${r.type==='Приход'?'#4caf50':'#f44336'};">${r.type}</td>
+      <td>${r.amount.toFixed(2)} лв</td>
+      <td>${r.method}</td>
+      <td>${r.note}</td>
+    `;
+    tbody.appendChild(tr);
+
+    if (r.type === "Приход") income += r.amount;
+    if (r.type === "Разход") expense += r.amount;
+  });
+
+  const balance = income - expense;
+  document.getElementById("todaySummary").innerHTML = 
+    `Днес: Приходи: ${income.toFixed(2)} лв | Разходи: ${expense.toFixed(2)} лв | Баланс: ${balance.toFixed(2)} лв`;
+}
+
 
 window.showScreen = function(name) {
   // скриване на всички екрани
