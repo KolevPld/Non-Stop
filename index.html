@@ -354,6 +354,7 @@ function renderChart() {
   document.getElementById("todaySummary").innerHTML = 
     `Днес: Приходи: ${income.toFixed(2)} лв | Разходи: ${expense.toFixed(2)} лв | Баланс: ${balance.toFixed(2)} лв`;
 }
+window.renderTodayTable = renderTodayTable;
 
 
 window.showScreen = function(name) {
