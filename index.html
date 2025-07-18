@@ -184,6 +184,8 @@ loadRecords();
   await deleteDoc(doc(db, "records", id));
   loadRecords();
 }
+  window.deleteRecord = deleteRecord;
+
 
 function clearForm() {
   document.getElementById("date").value = "";
