@@ -330,16 +330,24 @@ function updateSummaries() {
 
 function renderCategorySummary() {
   const categories = {};
-  const selectedType = document.getElementById("filterType")?.value;
+  const filterType = document.getElementById("filterType")?.value;
+  const filterCategory = document.getElementById("filterCategory")?.value;
+  const fromDate = document.getElementById("filterFrom")?.value;
+  const toDate = document.getElementById("filterTo")?.value;
 
   records.forEach(r => {
+    // Филтри по тип
+    if (filterType && r.type !== filterType) return;
+
+    // Филтри по категория
+    if (filterCategory && r.category !== filterCategory) return;
+
+    // Филтри по дати
+    if (fromDate && r.date < fromDate) return;
+    if (toDate && r.date > toDate) return;
+
     if (!r.category) return;
-
-    // Пропускаме записите, ако има избран тип и той не съвпада
-    if (selectedType && r.type !== selectedType) return;
-
-    const value = r.amount;
-    categories[r.category] = (categories[r.category] || 0) + value;
+    categories[r.category] = (categories[r.category] || 0) + r.amount;
   });
 
   const summaryText = Object.entries(categories)
@@ -347,8 +355,9 @@ function renderCategorySummary() {
     .join(" | ");
 
   document.getElementById("categorySummary").innerHTML = 
-    `🏷️ Категории: ${summaryText || "Няма данни"}`;
+    summaryText ? `🏷️ Категории: ${summaryText}` : "";
 }
+
 
 function renderMethodSummary() {
   let cash = 0, bank = 0, card = 0;
