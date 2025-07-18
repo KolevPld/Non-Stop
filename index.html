@@ -119,17 +119,23 @@
   >
 <!-- Филтри за дата, категория и тип -->
 <div style="margin-bottom: 10px; display: flex; flex-wrap: wrap; gap: 10px;">
-  <input type="date" id="filterFrom" style="flex:1;">
-  <input type="date" id="filterTo" style="flex:1;">
-  <select id="filterCategory" style="flex:1;">
-    <option value="">Всички категории</option>
-    <option>Продажба</option>
-    <option>Доставка</option>
-    <option>Ток</option>
-    <option>Наем</option>
-    <option>Заплати</option>
-    <option>Друго</option>
-  </select>
+<input type="date" id="filterFrom" onchange="renderTable()" style="flex:1;">
+<input type="date" id="filterTo" onchange="renderTable()" style="flex:1;">
+<select id="filterCategory" onchange="renderTable()" style="flex:1;">
+  <option value="">Всички категории</option>
+  <option>Продажба</option>
+  <option>Доставка</option>
+  <option>Ток</option>
+  <option>Наем</option>
+  <option>Заплати</option>
+  <option>Друго</option>
+</select>
+<select id="filterType" onchange="renderTable()" style="flex:1;">
+  <option value="">Всички</option>
+  <option>Приход</option>
+  <option>Разход</option>
+</select>
+
   <select id="filterType" style="flex:1;">
     <option value="">Всички</option>
     <option>Приход</option>
