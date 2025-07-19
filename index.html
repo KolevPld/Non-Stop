@@ -506,7 +506,7 @@ window.checkPassword = () => {
   }
 };
 
- window.renderTable = function () {
+window.renderTable = function () {
   const tbody = document.querySelector("#recordsTable tbody");
   tbody.innerHTML = "";
 
@@ -519,17 +519,33 @@ window.checkPassword = () => {
   let income = 0, expense = 0;
 
   records.forEach((r) => {
-    const combinedText = `${r.note} ${r.method} ${r.type}`.toLowerCase();
+    const combinedText = `${r.note} ${r.method} ${r.type} ${r.category || ''}`.toLowerCase();
     if (!combinedText.includes(filterText)) return;
-
     if (from && r.date < from) return;
     if (to && r.date > to) return;
     if (filterCat && r.category !== filterCat) return;
     if (filterType && r.type !== filterType) return;
-  
-    const filterBalance = income - expense;
-document.getElementById("filterSummary").innerHTML =
-  `Филтър: Приходи: ${income.toFixed(2)} лв | Разходи: ${expense.toFixed(2)} лв | Баланс: ${filterBalance.toFixed(2)} лв`;
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${r.date}</td>
+      <td style="color:${r.type === 'Приход' ? '#4caf50' : '#f44336'};">${r.type}</td>
+      <td>${r.amount.toFixed(2)} лв</td>
+      <td>${r.method}</td>
+      <td>${r.note}</td>
+      <td><button onclick="deleteRecord('${r.id}')" style="background:#f44336;font-size:12px;padding:4px 6px;">🗑️</button></td>
+    `;
+    tbody.appendChild(tr);
+
+    if (r.type === "Приход") income += r.amount;
+    if (r.type === "Разход") expense += r.amount;
+  });
+
+  const balance = income - expense;
+  document.getElementById("filterSummary").innerHTML =
+    `Филтър: Приходи: ${income.toFixed(2)} лв | Разходи: ${expense.toFixed(2)} лв | Баланс: ${balance.toFixed(2)} лв`;
+};
+
 
 
     const tr = document.createElement("tr");
