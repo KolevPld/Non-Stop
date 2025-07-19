@@ -282,17 +282,6 @@ function clearForm() {
   document.getElementById("note").value = "";
 }
 
-function renderTable() {
-  const tbody = document.querySelector("#recordsTable tbody");
-  tbody.innerHTML = "";
-
-  const search = document.getElementById("search")?.value?.toLowerCase() || "";
-  const from = document.getElementById("filterFrom")?.value || "";
-  const to = document.getElementById("filterTo")?.value || "";
-  const category = document.getElementById("filterCategory")?.value || "";
-  const type = document.getElementById("filterType")?.value || "";
-
-  let income = 0, expense = 0;
 
   records.forEach(r => {
     const combined = `${r.note} ${r.method} ${r.type} ${r.category || ''}`.toLowerCase();
