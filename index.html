@@ -117,6 +117,9 @@
     oninput="renderTable()" 
     style="margin: 20px 0; padding: 10px; border-radius: 8px; background: #1f1f1f; color: #e0e0e0; width: 100%; border: none;"
   >
+    <!-- Обща стойност от филтъра -->
+<div class="summary" id="filterSummary" style="margin-bottom: 10px;"></div>
+
 <!-- Филтри за дата, категория и тип -->
 <div style="margin-bottom: 10px; display: flex; flex-wrap: wrap; gap: 10px; font-size: 14px;">
 
@@ -317,10 +320,10 @@ function renderTable() {
     }
   });
 
-  const balance = income - expense;
-  document.getElementById("totalSummary").innerHTML =
-    `Приходи: ${income.toFixed(2)} лв | Разходи: ${expense.toFixed(2)} лв | Баланс: ${balance.toFixed(2)} лв`;
-}
+ // след като изчислиш income и expense
+const balance = income - expense;
+document.getElementById("filterSummary").innerHTML = 
+  `Филтър: Приходи: ${income.toFixed(2)} лв | Разходи: ${expense.toFixed(2)} лв | Баланс: ${balance.toFixed(2)} лв`;
 
 
 
