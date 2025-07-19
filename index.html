@@ -118,26 +118,37 @@
     style="margin: 20px 0; padding: 10px; border-radius: 8px; background: #1f1f1f; color: #e0e0e0; width: 100%; border: none;"
   >
 <!-- Филтри за дата, категория и тип -->
-<div style="margin-bottom: 10px; display: flex; flex-wrap: wrap; gap: 10px;">
-<input type="date" id="filterFrom" onchange="renderTable()" style="flex:1;">
-<input type="date" id="filterTo" onchange="renderTable()" style="flex:1;">
-<select id="filterCategory" onchange="renderTable()" style="flex:1;">
-  <option value="">Всички категории</option>
-  <option>Продажба</option>
-  <option>Доставка</option>
-  <option>Ток</option>
-  <option>Наем</option>
-  <option>Заплати</option>
-  <option>Друго</option>
-</select>
-   
+<div style="margin-bottom: 10px; display: flex; flex-wrap: wrap; gap: 10px; font-size: 14px;">
+
+  <div style="flex:1;">
+    <label for="filterFrom" style="font-size: 12px; color: #aaa;">От (дд.мм.гг)</label>
+    <input type="date" id="filterFrom" onchange="renderTable()" style="width: 100%; font-size: 14px;">
+  </div>
+
+  <div style="flex:1;">
+    <label for="filterTo" style="font-size: 12px; color: #aaa;">До (дд.мм.гг)</label>
+    <input type="date" id="filterTo" onchange="renderTable()" style="width: 100%; font-size: 14px;">
+  </div>
+
+  <select id="filterCategory" onchange="renderTable()" style="flex:1;">
+    <option value="">Всички категории</option>
+    <option>Продажба</option>
+    <option>Доставка</option>
+    <option>Ток</option>
+    <option>Наем</option>
+    <option>Заплати</option>
+    <option>Друго</option>
+  </select>
+
   <select id="filterType" onchange="renderTable()" style="flex:1;">
     <option value="">Всички</option>
     <option>Приход</option>
     <option>Разход</option>
   </select>
+
   <button onclick="setCurrentMonth()" style="flex:1;">📅 Текущ месец</button>
 </div>
+
 
   <table id="recordsTable">
     <thead>
