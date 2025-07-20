@@ -223,11 +223,14 @@ function clearForm() {
 }
 
 function renderTable() {
+  const from = document.getElementById("filterFrom")?.value || "";
+  const to = document.getElementById("filterTo")?.value || "";
+  const filterType = document.getElementById("filterType")?.value || "";
   const tbody = document.querySelector("#recordsTable tbody");
   tbody.innerHTML = "";
   let income = 0, expense = 0;
   records.forEach((r) => {
-    const tr = document.createElement("tr");
+   const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${r.date}</td>
       <td style="color:${r.type==='Приход'?'#4caf50':'#f44336'};">${r.type}</td>
