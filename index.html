@@ -81,12 +81,7 @@
     <div class="summary" id="dailySummary"></div>
     <div class="summary" id="monthlySummary"></div>
     <canvas id="chart" width="400" height="200" style="margin-top:20px;"></canvas>
-    <div class="btn-group" style="margin-top:15px;">
-      <button onclick="showScreen('add')"><i class="fa-solid fa-arrow-left"></i> Назад</button>
-    </div>
-  </div>
-
-  <div id="screen-add">
+     <div id="screen-add">
     <table id="recordsTable">
       <thead>
         <tr><th>Дата</th><th>Тип</th><th>Сума</th><th>Метод</th><th>Бележка</th><th>Действия</th></tr>
@@ -94,6 +89,11 @@
       <tbody></tbody>
     </table>
   </div>
+    <div class="btn-group" style="margin-top:15px;">
+      <button onclick="showScreen('add')"><i class="fa-solid fa-arrow-left"></i> Назад</button>
+    </div>
+  </div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, query, orderBy, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
