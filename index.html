@@ -284,8 +284,6 @@ function clearForm() {
 
 
   records.forEach(r => {
-    const combined = `${r.note} ${r.method} ${r.type} ${r.category || ''}`.toLowerCase();
-
     const matchSearch = combined.includes(search);
     const matchFrom = !from || r.date >= from;
     const matchTo = !to || r.date <= to;
@@ -544,11 +542,9 @@ window.renderTable = function () {
     `Филтър: Приходи: ${income.toFixed(2)} лв | Разходи: ${expense.toFixed(2)} лв | Баланс: ${balance.toFixed(2)} лв`;
 };
 
-
-};<script> 
-</script>
 </body>
 </html>
+
 
 
 
