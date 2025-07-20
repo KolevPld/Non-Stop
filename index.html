@@ -230,7 +230,10 @@ function renderTable() {
   tbody.innerHTML = "";
   let income = 0, expense = 0;
   records.forEach((r) => {
-   const tr = document.createElement("tr");
+      if (from && r.date < from) return;
+      if (to && r.date > to) return;
+      if (filterType && r.type !== filterType) return;
+      const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${r.date}</td>
       <td style="color:${r.type==='Приход'?'#4caf50':'#f44336'};">${r.type}</td>
