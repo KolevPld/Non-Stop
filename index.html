@@ -207,14 +207,21 @@ function renderTable() {
   const from = document.getElementById("filterFrom")?.value || "";
   const to = document.getElementById("filterTo")?.value || "";
   const filterType = document.getElementById("filterType")?.value || "";
+  const filterText = document.getElementById("search")?.value?.toLowerCase() || "";
   const tbody = document.querySelector("#recordsTable tbody");
   tbody.innerHTML = "";
   let income = 0, expense = 0;
+
   records.forEach((r) => {
-      if (from && r.date < from) return;
-      if (to && r.date > to) return;
-      if (filterType && r.type !== filterType) return;
-      const tr = document.createElement("tr");
+    const recordDate = new Date(r.date).toISOString().slice(0, 10);
+    const combinedText = `${r.note} ${r.method} ${r.type}`.toLowerCase();
+
+    if (filterText && !combinedText.includes(filterText)) return;
+    if (from && recordDate < from) return;
+    if (to && recordDate > to) return;
+    if (filterType && r.type !== filterType) return;
+
+    const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${r.date}</td>
       <td style="color:${r.type==='Приход'?'#4caf50':'#f44336'};">${r.type}</td>
@@ -223,13 +230,16 @@ function renderTable() {
       <td>${r.note}</td>
       <td><button onclick="deleteRecord('${r.id}')" style="background:#f44336;font-size:12px;padding:4px 6px;">🗑️</button></td>`;
     tbody.appendChild(tr);
+
     if (r.type === "Приход") income += r.amount;
     if (r.type === "Разход") expense += r.amount;
   });
+
   const balance = income - expense;
-  document.getElementById("totalSummary").innerHTML = 
+  document.getElementById("totalSummary").innerHTML =
     `Приходи: ${income.toFixed(2)} лв | Разходи: ${expense.toFixed(2)} лв | Баланс: ${balance.toFixed(2)} лв`;
 }
+
 
 function updateSummaries() {
   let todayIncome=0, todayExpense=0, monthIncome=0, monthExpense=0;
