@@ -98,6 +98,17 @@
   </div>
 
   <div id="screen-add">
+    <div style="display:flex; gap:10px; margin-top:20px; flex-wrap:wrap;">
+  <div style="flex:1;">
+    <label for="filterFrom">От дата</label>
+    <input type="date" id="filterFrom" style="width:100%;" onchange="renderTable()">
+  </div>
+  <div style="flex:1;">
+    <label for="filterTo">До дата</label>
+    <input type="date" id="filterTo" style="width:100%;" onchange="renderTable()">
+  </div>
+</div>
+
     <table id="recordsTable">
       <thead>
         <tr><th>Дата</th><th>Тип</th><th>Сума</th><th>Метод</th><th>Бележка</th><th>Действия</th></tr>
@@ -173,10 +184,24 @@ function clearForm() {
   document.getElementById("note").value = "";
 }
 
+
+function updateSummaries() {
+  let todayIncome=0, todayExpense=0, monthIncome=0, monthExpense=0;
+  const today = new Date().toISOString().slice(0,10);
+  const month = today.slice(0,7);
+  records.forEach(r=>{
+    if(r.date===today){ if(r.type==="Приход")todayIncome+=r.amount; else todayExpense+=r.amount;}
+    if(r.date.startsWith(month)){ if(r.type==="Приход")monthIncome+=r.amount; else monthExpense+=r.amount;}
+  });
+  document.getElementById("dailySummary").innerHTML = 
+    `📅 <strong>Днес:</strong> Приходи: ${todayIncome.toFixed(2)} лв | Разходи: ${todayExpense.toFixed(2)} лв`;
+  document.getElementById("monthlySummary").innerHTML = 
+    `📆 <strong>Месец:</strong> Приходи: ${monthIncome.toFixed(2)} лв | Разходи: ${monthExpense.toFixed(2)} лв`;
+}
 function renderTable() {
   const tbody = document.querySelector("#recordsTable tbody");
-  const from = document.getElementById("filterFrom")?.value || "";
-  const to = document.getElementById("filterTo")?.value || "";
+  const from = document.getElementById("filterFrom")?.value;
+  const to = document.getElementById("filterTo")?.value;
 
   tbody.innerHTML = "";
   let income = 0, expense = 0;
@@ -202,20 +227,6 @@ function renderTable() {
   const balance = income - expense;
   document.getElementById("totalSummary").innerHTML = 
     `Приходи: ${income.toFixed(2)} лв | Разходи: ${expense.toFixed(2)} лв | Баланс: ${balance.toFixed(2)} лв`;
-}
-
-function updateSummaries() {
-  let todayIncome=0, todayExpense=0, monthIncome=0, monthExpense=0;
-  const today = new Date().toISOString().slice(0,10);
-  const month = today.slice(0,7);
-  records.forEach(r=>{
-    if(r.date===today){ if(r.type==="Приход")todayIncome+=r.amount; else todayExpense+=r.amount;}
-    if(r.date.startsWith(month)){ if(r.type==="Приход")monthIncome+=r.amount; else monthExpense+=r.amount;}
-  });
-  document.getElementById("dailySummary").innerHTML = 
-    `📅 <strong>Днес:</strong> Приходи: ${todayIncome.toFixed(2)} лв | Разходи: ${todayExpense.toFixed(2)} лв`;
-  document.getElementById("monthlySummary").innerHTML = 
-    `📆 <strong>Месец:</strong> Приходи: ${monthIncome.toFixed(2)} лв | Разходи: ${monthExpense.toFixed(2)} лв`;
 }
 
 function renderMethodSummary() {
