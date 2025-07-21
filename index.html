@@ -81,6 +81,17 @@
     <div class="summary" id="dailySummary"></div>
     <div class="summary" id="monthlySummary"></div>
     <canvas id="chart" width="400" height="200" style="margin-top:20px;"></canvas>
+    <div class="btn-group" style="margin: 20px 0;">
+  <div style="flex:1;">
+    <label for="filterFrom">От дата</label>
+    <input type="date" id="filterFrom" onchange="renderTable()">
+  </div>
+  <div style="flex:1;">
+    <label for="filterTo">До дата</label>
+    <input type="date" id="filterTo" onchange="renderTable()">
+  </div>
+</div>
+
     <div class="btn-group" style="margin-top:15px;">
       <button onclick="showScreen('add')"><i class="fa-solid fa-arrow-left"></i> Назад</button>
     </div>
@@ -164,9 +175,16 @@ function clearForm() {
 
 function renderTable() {
   const tbody = document.querySelector("#recordsTable tbody");
+  const from = document.getElementById("filterFrom")?.value || "";
+  const to = document.getElementById("filterTo")?.value || "";
+
   tbody.innerHTML = "";
   let income = 0, expense = 0;
+
   records.forEach((r) => {
+    if (from && r.date < from) return;
+    if (to && r.date > to) return;
+
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${r.date}</td>
@@ -176,9 +194,11 @@ function renderTable() {
       <td>${r.note}</td>
       <td><button onclick="deleteRecord('${r.id}')" style="background:#f44336;font-size:12px;padding:4px 6px;">🗑️</button></td>`;
     tbody.appendChild(tr);
+
     if (r.type === "Приход") income += r.amount;
     if (r.type === "Разход") expense += r.amount;
   });
+
   const balance = income - expense;
   document.getElementById("totalSummary").innerHTML = 
     `Приходи: ${income.toFixed(2)} лв | Разходи: ${expense.toFixed(2)} лв | Баланс: ${balance.toFixed(2)} лв`;
