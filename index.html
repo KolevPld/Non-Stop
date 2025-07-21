@@ -78,15 +78,12 @@
   <div id="screen-report" class="hidden">
   <h3><i class="fa-solid fa-chart-pie"></i> Отчети</h3>
 
-  <!-- Обобщения -->
   <div class="summary" id="methodSummary"></div>
   <div class="summary" id="dailySummary"></div>
   <div class="summary" id="monthlySummary"></div>
 
-  <!-- Графика -->
   <canvas id="chart" width="400" height="200" style="margin-top:20px;"></canvas>
 
-  <!-- Търсачка -->
   <input 
     type="text" 
     id="search" 
@@ -95,7 +92,6 @@
     style="margin: 20px 0; padding: 10px; border-radius: 8px; background: #1f1f1f; color: #e0e0e0; width: 100%; border: none;"
   >
 
-  <!-- Филтри за дата и тип -->
   <div style="margin-bottom: 15px; display: flex; flex-wrap: wrap; gap: 10px;">
     <div style="flex:1;">
       <label for="filterFrom" style="font-size: 12px; color: #aaa;">От дата</label>
@@ -117,8 +113,6 @@
     </div>
   </div>
 
-
-  <!-- Таблица с резултати -->
   <table id="recordsTable">
     <thead>
       <tr>
@@ -133,10 +127,8 @@
     <tbody></tbody>
   </table>
 
-  <!-- Обобщение по категории (ако се използва) -->
   <div class="summary" id="categorySummary"></div>
 
-  <!-- Бутон Назад -->
   <div class="btn-group" style="margin-top:15px;">
     <button onclick="showScreen('add')"><i class="fa-solid fa-arrow-left"></i> Назад</button>
   </div>
