@@ -204,7 +204,8 @@ function clearForm() {
 }
 function isDateInRange(date, from, to) {
   if (!date) return false;
-  if (!isDateInRange(recordDate, from, to)) return;
+  if (from && date < from) return false;
+  if (to && date > to) return false;
   return true;
 }
 
