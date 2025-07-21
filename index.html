@@ -223,8 +223,7 @@ function renderTable() {
     const combinedText = `${r.note} ${r.method} ${r.type}`.toLowerCase();
 
     if (filterText && !combinedText.includes(filterText)) return;
-    if (from && recordDate < from) return;
-    if (to && recordDate > to) return;
+    if (!isDateInRange(recordDate, from, to)) return;
     if (filterType && r.type !== filterType) return;
 
     const tr = document.createElement("tr");
