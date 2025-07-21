@@ -94,14 +94,14 @@
 
   <div style="margin-bottom: 15px; display: flex; flex-wrap: wrap; gap: 10px;">
     <div style="flex:1;">
-      <label for="filterFrom" style="font-size: 12px; color: #aaa;">От дата</label>
-      <input type="date" id="filterFrom" onchange="renderTable()" style="width: 100%;">
-    </div>
+  <label for="filterFrom" style="font-size: 12px; color: #aaa;">От дата</label>
+  <input type="date" id="filterFrom" onchange="renderTable()" oninput="renderTable()" style="width: 100%;">
+</div>
 
-    <div style="flex:1;">
-      <label for="filterTo" style="font-size: 12px; color: #aaa;">До дата</label>
-      <input type="date" id="filterTo" onchange="renderTable()" style="width: 100%;">
-    </div>
+<div style="flex:1;">
+  <label for="filterTo" style="font-size: 12px; color: #aaa;">До дата</label>
+  <input type="date" id="filterTo" onchange="renderTable()" oninput="renderTable()" style="width: 100%;">
+</div>
 
     <div style="flex:1;">
       <label for="filterType" style="font-size: 12px; color: #aaa;">Тип</label>
@@ -201,6 +201,11 @@ function clearForm() {
   document.getElementById("date").value = "";
   document.getElementById("amount").value = "";
   document.getElementById("note").value = "";
+}
+function isDateInRange(date, from, to) {
+  if (!date) return false;
+  if (!isDateInRange(recordDate, from, to)) return;
+  return true;
 }
 
 function renderTable() {
