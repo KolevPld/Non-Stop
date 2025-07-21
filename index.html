@@ -117,6 +117,29 @@
     </div>
   </div>
 
+    <div style="margin-bottom: 10px; display: flex; flex-wrap: wrap; gap: 10px; font-size: 14px;">
+
+  <div style="flex:1;">
+    <label for="filterFrom" style="font-size: 12px; color: #aaa;">От дата</label>
+    <input type="date" id="filterFrom" onchange="renderTable()" style="width: 100%; font-size: 14px;">
+  </div>
+
+  <div style="flex:1;">
+    <label for="filterTo" style="font-size: 12px; color: #aaa;">До дата</label>
+    <input type="date" id="filterTo" onchange="renderTable()" style="width: 100%; font-size: 14px;">
+  </div>
+
+  <div style="flex:1;">
+    <label for="filterType" style="font-size: 12px; color: #aaa;">Тип</label>
+    <select id="filterType" onchange="renderTable()" style="width: 100%; font-size: 14px;">
+      <option value="">Всички</option>
+      <option>Приход</option>
+      <option>Разход</option>
+    </select>
+  </div>
+
+</div>
+
   <!-- Таблица с резултати -->
   <table id="recordsTable">
     <thead>
