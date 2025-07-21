@@ -202,42 +202,48 @@ function clearForm() {
   document.getElementById("amount").value = "";
   document.getElementById("note").value = "";
 }
-function isDateInRange(date, from, to) {
-  if (!date) return false;
-  if (from && date < from) return false;
-  if (to && date > to) return false;
-  return true;
-}
 
 function renderTable() {
   const from = document.getElementById("filterFrom")?.value || "";
   const to = document.getElementById("filterTo")?.value || "";
   const filterType = document.getElementById("filterType")?.value || "";
   const filterText = document.getElementById("search")?.value?.toLowerCase() || "";
+
   const tbody = document.querySelector("#recordsTable tbody");
   tbody.innerHTML = "";
+
   let income = 0, expense = 0;
 
-  records.forEach((r) => {
+  const filteredRecords = records.filter(r => {
     const recordDate = r.date;
     const combinedText = `${r.note} ${r.method} ${r.type}`.toLowerCase();
 
-    if (filterText && !combinedText.includes(filterText)) return;
-    if (!isDateInRange(recordDate, from, to)) return;
-    if (filterType && r.type !== filterType) return;
+    if (filterText && !combinedText.includes(filterText)) return false;
+    if (from && recordDate < from) return false;
+    if (to && recordDate > to) return false;
+    if (filterType && r.type !== filterType) return false;
 
+    return true;
+  });
+
+  filteredRecords.forEach(r => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${r.date}</td>
-      <td style="color:${r.type==='Приход'?'#4caf50':'#f44336'};">${r.type}</td>
+      <td style="color:${r.type === 'Приход' ? '#4caf50' : '#f44336'};">${r.type}</td>
       <td>${r.amount.toFixed(2)} лв</td>
       <td>${r.method}</td>
       <td>${r.note}</td>
-      <td><button onclick="deleteRecord('${r.id}')" style="background:#f44336;font-size:12px;padding:4px 6px;">🗑️</button></td>`;
+      <td>
+        <button onclick="deleteRecord('${r.id}')" 
+          style="background:#f44336;font-size:12px;padding:4px 6px;">
+          🗑️
+        </button>
+      </td>`;
     tbody.appendChild(tr);
 
     if (r.type === "Приход") income += r.amount;
-    if (r.type === "Разход") expense += r.amount;
+    else if (r.type === "Разход") expense += r.amount;
   });
 
   const balance = income - expense;
