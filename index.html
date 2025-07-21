@@ -213,7 +213,7 @@ function renderTable() {
   let income = 0, expense = 0;
 
   records.forEach((r) => {
-    const recordDate = new Date(r.date).toISOString().slice(0, 10);
+    const recordDate = r.date;
     const combinedText = `${r.note} ${r.method} ${r.type}`.toLowerCase();
 
     if (filterText && !combinedText.includes(filterText)) return;
