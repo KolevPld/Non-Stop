@@ -77,7 +77,7 @@
   <h3><i class="fa-solid fa-clock-rotate-left"></i> Последни 5 записа</h3>
   <table id="recentTable">
     <thead>
-      <tr><th>Дата</th><th>Тип</th><th>Сума</th><th>Метод</th><th>Бележка</th></tr>
+      <tr><th>Дата</th><th>Тип</th><th>Сума</th><th>Метод</th><th>Бележка</th><th>Действие</th></tr>
     </thead>
     <tbody></tbody>
   </table>
@@ -196,10 +196,10 @@ function renderTable() {
     `Приходи: ${income.toFixed(2)} лв | Разходи: ${expense.toFixed(2)} лв | Баланс: ${balance.toFixed(2)} лв`;
 }
  
-  function renderRecentTable() {
+function renderRecentTable() {
   const tbody = document.querySelector("#recentTable tbody");
   tbody.innerHTML = "";
-  const recent = records.slice(0, 5); // последните 5
+  const recent = records.slice(0, 5);
   recent.forEach(r => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -207,7 +207,8 @@ function renderTable() {
       <td style="color:${r.type==='Приход'?'#4caf50':'#f44336'};">${r.type}</td>
       <td>${r.amount.toFixed(2)} лв</td>
       <td>${r.method}</td>
-      <td>${r.note}</td>`;
+      <td>${r.note}</td>
+      <td><button onclick="deleteRecord('${r.id}')" style="background:#f44336;font-size:12px;padding:4px 6px;">🗑️</button></td>`;
     tbody.appendChild(tr);
   });
 }
