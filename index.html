@@ -107,7 +107,13 @@
     <div class="btn-group" style="margin: 15px 0;">
   <button onclick="showScreen('add')"><i class="fa-solid fa-arrow-left"></i> Назад</button>
 </div>
-   <div class="summary" style="margin-bottom: 10px;">
+    <div style="margin: 10px 0; text-align: center;">
+  <label>От: <input type="date" id="filterFrom" onchange="applyFilters()"></label>
+  <label>До: <input type="date" id="filterTo" onchange="applyFilters()"></label>
+  <label><input type="checkbox" id="filterThisMonth" onchange="applyFilters()"> Само текущ месец</label>
+</div>
+ 
+    <div class="summary" style="margin-bottom: 10px;">
   <h3><i class="fa-solid fa-filter"></i> Филтрирай записите</h3>
   <div style="display: flex; gap: 10px; flex-wrap: wrap;">
     <select id="filterType" onchange="applyFilters()" style="flex:1;">
@@ -226,23 +232,31 @@ function clearForm() {
 }
 
 function applyFilters() {
-  const type = document.getElementById("filterType").value;
-  const method = document.getElementById("filterMethod").value;
-  const category = document.getElementById("filterCategory").value;
-
-  console.log("Филтри -> тип:", type, "метод:", method, "категория:", category);
-  console.log("Всички записи:", records);
-
-  const filtered = records.filter(r => {
-    const matchType = !type || r.type === type;
-    const matchMethod = !method || r.method === method;
-    const matchCategory = !category || (r.category || '') === category;
-    return matchType && matchMethod && matchCategory;
+  const fType = document.getElementById("filterType").value;
+  const fMethod = document.getElementById("filterMethod").value;
+  const fCategory = document.getElementById("filterCategory").value;
+  const from = document.getElementById("filterFrom").value;
+  const to = document.getElementById("filterTo").value;
+  const thisMonth = document.getElementById("filterThisMonth").checked;
+  
+  filteredRecords = records.filter(r => {
+    if (fType && r.type !== fType) return false;
+    if (fMethod && r.method !== fMethod) return false;
+    if (fCategory && (r.category || '') !== fCategory) return false;
+    if (thisMonth) {
+      const now = new Date();
+      const ym = r.date?.slice(0,7);
+      if (ym !== now.toISOString().slice(0,7)) return false;
+    } else {
+      if (from && r.date < from) return false;
+      if (to && r.date > to) return false;
+    }
+    return true;
   });
 
-  console.log("Филтрирани:", filtered);
-  renderTable(filtered);
+  renderTable(filteredRecords);
 }
+
 
 function renderTable(data = records) {
   const tbody = document.querySelector("#recordsTable tbody");
@@ -263,14 +277,16 @@ function renderTable(data = records) {
   });
 }
 
-  function clearFilters() {
+function clearFilters() {
   document.getElementById("filterType").value = "";
   document.getElementById("filterMethod").value = "";
   document.getElementById("filterCategory").value = "";
-
-  applyFilters();
+  document.getElementById("filterFrom").value = "";
+  document.getElementById("filterTo").value = "";
+  document.getElementById("filterThisMonth").checked = false;
+  renderTable(records);
 }
-  
+
 function renderRecentTable() {
   const tbody = document.querySelector("#recentTable tbody");
   tbody.innerHTML = "";
