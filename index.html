@@ -314,6 +314,7 @@ function renderRecentTable() {
 }
 
 function updateSummaries() {
+  console.log("updateSummaries invoked");
   let todayIncome = 0, todayExpense = 0, monthIncome = 0, monthExpense = 0;
   const today = new Date().toISOString().slice(0,10);
   const month = today.slice(0,7);
