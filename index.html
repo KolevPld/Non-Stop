@@ -230,14 +230,14 @@ function applyFilters() {
   const method = document.getElementById("filterMethod").value;
   const category = document.getElementById("filterCategory").value;
 
-  filteredRecords = records.filter(r => {
+  const filtered = records.filter(r => {
     const matchType = !type || r.type === type;
     const matchMethod = !method || r.method === method;
     const matchCategory = !category || (r.category || '') === category;
     return matchType && matchMethod && matchCategory;
   });
 
-  renderTable(filteredRecords);
+  renderTable(filtered);
 }
 
 function renderTable(data = records) {
@@ -246,18 +246,21 @@ function renderTable(data = records) {
 
   data.forEach((r) => {
     const tr = document.createElement("tr");
-   tr.innerHTML = `
-  <td>${r.date}</td>
-  <td style="color:${r.type === 'Приход' ? '#4caf50' : '#f44336'};">${r.type}</td>
-  <td>${r.amount.toFixed(2)} лв</td>
-  <td>${r.method}</td>
-  <td>${r.category || ''}</td>
-  <td>${r.note}</td>
-  <td><button onclick="deleteRecord('${r.id}')" style="background:#f44336;font-size:12px;padding:4px 6px;">🗑️</button></td>
-</tr>`;
+    tr.innerHTML = `
+      <td>${r.date}</td>
+      <td style="color:${r.type === 'Приход' ? '#4caf50' : '#f44336'};">${r.type}</td>
+      <td>${r.amount.toFixed(2)} лв</td>
+      <td>${r.method}</td>
+      <td>${r.category || ''}</td>
+      <td>${r.note}</td>
+      <td>
+        <button onclick="deleteRecord('${r.id}')" style="background:#f44336;font-size:12px;padding:4px 6px;">🗑️</button>
+      </td>
+    `;
     tbody.appendChild(tr);
-});
+  });
 }
+
 
   function clearFilters() {
   document.getElementById("filterType").value = "";
