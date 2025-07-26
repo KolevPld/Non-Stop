@@ -188,12 +188,12 @@ async function loadRecords() {
   const q = query(collection(db, "records"), orderBy("date", "desc"));
   const snapshot = await getDocs(q);
   snapshot.forEach(docSnap => records.push({ id: docSnap.id, ...docSnap.data() }));
+  applyFilters();
   renderTable();
   renderRecentTable();
   updateSummaries();
   renderMethodSummary();
   renderChart();
-  applyFilters();
 }
 
 async function addRecord() {
@@ -258,13 +258,14 @@ function renderTable(data = records) {
     tbody.appendChild(tr);
 });
 }
+
   function clearFilters() {
   document.getElementById("filterType").value = "";
   document.getElementById("filterMethod").value = "";
   document.getElementById("filterCategory").value = "";
-  renderTable(records);
-}
 
+  applyFilters();
+}
   
 function renderRecentTable() {
   const tbody = document.querySelector("#recentTable tbody");
