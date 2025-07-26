@@ -107,6 +107,31 @@
     <div class="btn-group" style="margin: 15px 0;">
   <button onclick="showScreen('add')"><i class="fa-solid fa-arrow-left"></i> Назад</button>
 </div>
+    <div class="summary" style="margin-bottom: 10px;">
+  <h3><i class="fa-solid fa-filter"></i> Филтрирай</h3>
+  <div class="btn-group">
+    <select id="filterType" onchange="applyFilters()">
+      <option value="">Всички типове</option>
+      <option>Приход</option>
+      <option>Разход</option>
+    </select>
+    <select id="filterMethod" onchange="applyFilters()">
+      <option value="">Всички методи</option>
+      <option>Кеш</option>
+      <option>Банка</option>
+      <option>Карта</option>
+    </select>
+    <select id="filterCategory" onchange="applyFilters()">
+      <option value="">Всички категории</option>
+      <option>Оборот</option>
+      <option>Стока</option>
+      <option>Заплати</option>
+      <option>Наеми</option>
+      <option>Друго</option>
+    </select>
+  </div>
+</div>
+
 
     <div class="btn-group" style="margin-top:15px;">
       <table id="recordsTable">
@@ -211,6 +236,36 @@ function renderTable() {
   document.getElementById("totalSummary").innerHTML = 
     `Приходи: ${income.toFixed(2)} лв | Разходи: ${expense.toFixed(2)} лв | Баланс: ${balance.toFixed(2)} лв`;
 }
+  function applyFilters() {
+  const type = document.getElementById("filterType").value;
+  const method = document.getElementById("filterMethod").value;
+  const category = document.getElementById("filterCategory").value;
+
+  const filtered = records.filter(r => {
+    return (!type || r.type === type) &&
+           (!method || r.method === method) &&
+           (!category || r.category === category);
+  });
+
+  renderFilteredTable(filtered);
+}
+
+function renderFilteredTable(data) {
+  const tbody = document.querySelector("#recordsTable tbody");
+  tbody.innerHTML = "";
+  data.forEach(r => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${r.date}</td>
+      <td style="color:${r.type==='Приход'?'#4caf50':'#f44336'};">${r.type}</td>
+      <td>${r.amount.toFixed(2)} лв</td>
+      <td>${r.method}</td>
+      <td>${r.note}</td>
+      <td><button onclick="deleteRecord('${r.id}')" style="background:#f44336;font-size:12px;padding:4px 6px;">🗑️</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
  
 function renderRecentTable() {
   const tbody = document.querySelector("#recentTable tbody");
