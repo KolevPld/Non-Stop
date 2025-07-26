@@ -314,17 +314,28 @@ function renderRecentTable() {
 }
 
 function updateSummaries() {
-  let todayIncome=0, todayExpense=0, monthIncome=0, monthExpense=0;
+  let todayIncome = 0, todayExpense = 0, monthIncome = 0, monthExpense = 0;
   const today = new Date().toISOString().slice(0,10);
   const month = today.slice(0,7);
-  records.forEach(r=>{
-    if(r.date===today){ if(r.type==="Приход")todayIncome+=r.amount; else todayExpense+=r.amount;}
-    if(r.date.startsWith(month)){ if(r.type==="Приход")monthIncome+=r.amount; else monthExpense+=r.amount;}
+
+  records.forEach(r => {
+    if (r.date === today) {
+      if (r.type === "Приход") todayIncome += r.amount;
+      else todayExpense += r.amount;
+    }
+    if (r.date.startsWith(month)) {
+      if (r.type === "Приход") monthIncome += r.amount;
+      else monthExpense += r.amount;
+    }
   });
+
+  const saldo = (monthIncome - monthExpense).toFixed(2);
+
   document.getElementById("dailySummary").innerHTML = 
     `📅 <strong>Днес:</strong> Приходи: ${todayIncome.toFixed(2)} лв | Разходи: ${todayExpense.toFixed(2)} лв`;
+
   document.getElementById("monthlySummary").innerHTML = 
-    `📆 <strong>Месец:</strong> Приходи: ${monthIncome.toFixed(2)} лв | Разходи: ${monthExpense.toFixed(2)} лв`;
+    `📆 <strong>Месец:</strong> Приходи: ${monthIncome.toFixed(2)} лв | Разходи: ${monthExpense.toFixed(2)} лв | Салдо: ${saldo} лв`;
 }
 
 function renderMethodSummary() {
