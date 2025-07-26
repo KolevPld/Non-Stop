@@ -280,6 +280,7 @@ function clearFilters() {
   document.getElementById("filterTo").value = "";
   document.getElementById("filterThisMonth").checked = false;
   renderTable(records);
+  applyFilters();
 }
 
 function renderRecentTable() {
