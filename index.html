@@ -37,6 +37,10 @@
       table, th, td { font-size: 13px; word-break: break-word; }
       canvas { max-width: 100% !important; height: auto !important; }
     }
+    .table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
   </style>
 </head>
 <body>
@@ -99,60 +103,69 @@
   </div>
 
   <div id="screen-report" class="hidden">
-    <h3><i class="fa-solid fa-chart-pie"></i> Отчети</h3>
-    <div class="summary" id="methodSummary"></div>
-    <div class="summary" id="dailySummary"></div>
-    <div class="summary" id="monthlySummary"></div>
-    <canvas id="chart" width="400" height="200" style="margin-top:20px;"></canvas>
-    <div class="btn-group" style="margin: 15px 0;">
-  <button onclick="showScreen('add')"><i class="fa-solid fa-arrow-left"></i> Назад</button>
-</div>
-    <div style="display: flex; gap: 10px; align-items: center; margin: 10px 0; flex-wrap: wrap;">
-  <label for="startDate" style="flex:1;">От: <input type="date" id="startDate" onchange="applyFilters()" style="width:100%;"></label>
-  <label for="endDate" style="flex:1;">До: <input type="date" id="endDate" onchange="applyFilters()" style="width:100%;"></label>
-  <button onclick="setCurrentMonth()" style="background:#607d8b; padding: 10px 15px; border-radius: 8px;">
-    <i class="fa-solid fa-calendar-days"></i> Текущ месец
-  </button>
-</div>
+  <h3><i class="fa-solid fa-chart-pie"></i> Отчети</h3>
+  <div class="summary" id="methodSummary"></div>
+  <div class="summary" id="dailySummary"></div>
+  <div class="summary" id="monthlySummary"></div>
+  <canvas id="chart" width="400" height="200" style="margin-top:20px;"></canvas>
 
-    <div class="summary" style="margin-bottom: 10px;">
-  <h3><i class="fa-solid fa-filter"></i> Филтрирай записите</h3>
-  <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-    <select id="filterType" onchange="applyFilters()" style="flex:1;">
-      <option value="">Всички типове</option>
-      <option>Приход</option>
-      <option>Разход</option>
-    </select>
-    <select id="filterMethod" onchange="applyFilters()" style="flex:1;">
-      <option value="">Всички методи</option>
-      <option>Кеш</option>
-      <option>Банка</option>
-      <option>Карта</option>
-    </select>
-    <select id="filterCategory" onchange="applyFilters()" style="flex:1;">
-      <option value="">Всички категории</option>
-      <option>Оборот</option>
-      <option>Стока</option>
-      <option>Заплати</option>
-      <option>Наеми</option>
-      <option>Друго</option>
-    </select>
+  <div class="btn-group" style="margin: 15px 0;">
+    <button onclick="showScreen('add')"><i class="fa-solid fa-arrow-left"></i> Назад</button>
   </div>
- 
-     <div style="text-align:right; margin-top: 10px;">
-  <button onclick="clearFilters()" style="background:#757575;">Изчисти филтрите</button>
-</div>
 
-     <div class="btn-group" style="margin-top:15px;">
-      <table id="recordsTable">
-  <thead>
-  <tr><th>Дата</th><th>Тип</th><th>Сума</th><th>Метод</th><th>Кат.</th><th>Бележка</th><th>Действия</th></tr>
-</thead>
-  <tbody></tbody>
-</table>
-       <div id="filterSummary" class="summary" style="margin-top: 10px;"></div>
+  <div style="display: flex; gap: 10px; align-items: center; margin: 10px 0; flex-wrap: wrap;">
+    <label for="startDate" style="flex:1;">
+      От: <input type="date" id="startDate" onchange="applyFilters()" style="width:100%;">
+    </label>
+    <label for="endDate" style="flex:1;">
+      До: <input type="date" id="endDate" onchange="applyFilters()" style="width:100%;">
+    </label>
+    <button onclick="setCurrentMonth()" style="background:#607d8b; padding:10px 15px; border-radius:8px;">
+      <i class="fa-solid fa-calendar-days"></i> Текущ месец
+    </button>
+  </div>
+
+  <div class="summary" style="margin-bottom:10px;">
+    <h3><i class="fa-solid fa-filter"></i> Филтрирай записите</h3>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <select id="filterType" onchange="applyFilters()" style="flex:1;">
+        <option value="">Всички типове</option>
+        <option>Приход</option>
+        <option>Разход</option>
+      </select>
+      <select id="filterMethod" onchange="applyFilters()" style="flex:1;">
+        <option value="">Всички методи</option>
+        <option>Кеш</option>
+        <option>Банка</option>
+        <option>Карта</option>
+      </select>
+      <select id="filterCategory" onchange="applyFilters()" style="flex:1;">
+        <option value="">Всички категории</option>
+        <option>Оборот</option>
+        <option>Стока</option>
+        <option>Заплати</option>
+        <option>Наеми</option>
+        <option>Друго</option>
+      </select>
     </div>
   </div>
+
+  <div style="text-align:right; margin-top:10px;">
+    <button onclick="clearFilters()" style="background:#757575;">Изчисти филтрите</button>
+  </div>
+
+  <div class="table-responsive">
+    <table id="recordsTable">
+      <thead>
+        <tr>
+          <th>Дата</th><th>Тип</th><th>Сума</th><th>Метод</th><th>Кат.</th><th>Бележка</th><th>Действия</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <div id="filterSummary" class="summary" style="margin-top:10px;"></div>
+  </div>
+</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
