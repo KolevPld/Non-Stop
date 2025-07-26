@@ -114,63 +114,34 @@ input:focus, select:focus, textarea:focus {
   }
 
   #screen-add input,
-  #screen-add select,
-  #screen-add textarea {
-    width: 100%;
-    font-size: 14px;
-    padding: 8px 10px;
-    margin-bottom: 10px;
-    border-radius: 6px;
-    box-sizing: border-box;
-  }
-
-  .btn-group {
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .btn-group button {
-    width: 100%;
-    font-size: 15px;
-    padding: 10px;
-  }
+#screen-add select,
+#screen-add textarea {
+  width: 100%;
+  font-size: 14px;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+  border-radius: 6px;
+  box-sizing: border-box;
 }
-    @media (max-width: 600px) {
+
+.btn-group {
+  flex-direction: column;
+  gap: 8px;
+}
+
+.btn-group button {
+  width: 100%;
+  font-size: 15px;
+  padding: 10px;
+}
+
+@media (max-width: 600px) {
   #screen-report input[type="date"] {
     padding: 8px;
     font-size: 14px;
     width: 100%;
   }
 
-  .date-range-group {
-    display: flex;
-    gap: 10px;
-    flex-direction: column;
-  }
-}
-
-@media (min-width: 601px) {
-  .date-range-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  justify-content: space-between;
-}
-
-.date-range-group label {
-  flex: 1 1 48%;
-  min-width: 140px;
-}
-
-.date-range-group input[type="date"] {
-  width: 100%;
-  font-size: 14px;
-  padding: 8px 10px;
-  border-radius: 6px;
-  box-sizing: border-box;
-}
-
-@media (max-width: 600px) {
   .date-range-group {
     flex-direction: column;
   }
@@ -180,7 +151,29 @@ input:focus, select:focus, textarea:focus {
   }
 }
 
-    #screen-report {
+@media (min-width: 601px) {
+  .date-range-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: space-between;
+  }
+
+  .date-range-group label {
+    flex: 1 1 48%;
+    min-width: 140px;
+  }
+
+  .date-range-group input[type="date"] {
+    width: 100%;
+    font-size: 14px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    box-sizing: border-box;
+  }
+}
+
+#screen-report {
   overflow-x: hidden;
   max-width: 100%;
 }
@@ -190,7 +183,8 @@ input:focus, select:focus, textarea:focus {
   table-layout: fixed;
   word-wrap: break-word;
 }
-    #screen-report label {
+
+#screen-report label {
   flex: 1 1 48%;
   min-width: 140px;
 }
@@ -200,7 +194,6 @@ input:focus, select:focus, textarea:focus {
   font-size: 15px;
   padding: 8px 10px;
 }
-
   </style>
 </head>
 <body>
