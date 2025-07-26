@@ -276,10 +276,8 @@ function clearFilters() {
   document.getElementById("filterType").value = "";
   document.getElementById("filterMethod").value = "";
   document.getElementById("filterCategory").value = "";
-  document.getElementById("filterFrom").value = "";
-  document.getElementById("filterTo").value = "";
-  document.getElementById("filterThisMonth").checked = false;
-  renderTable(records);
+  document.getElementById("startDate").value = "";
+  document.getElementById("endDate").value = "";
   applyFilters();
 }
 
