@@ -236,21 +236,6 @@ function clearForm() {
   renderTable(filtered);
 }
 
-function renderFilteredTable(data) {
-  const tbody = document.querySelector("#recordsTable tbody");
-  tbody.innerHTML = "";
-  data.forEach(r => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-  <td>${r.date}</td>
-  <td style="color:${r.type==='Приход'?'#4caf50':'#f44336'};">${r.type}</td>
-  <td>${r.amount.toFixed(2)} лв</td>
-  <td>${r.method}</td>
-  <td>${r.category || ''}</td>
-  <td>${r.note}</td>
-  <td><button onclick="deleteRecord('${r.id}')" style="background:#f44336;font-size:12px;padding:4px 6px;">🗑️</button></td>`;
-  });
-}
 
 function renderTable(data = records) {
   const tbody = document.querySelector("#recordsTable tbody");
@@ -267,7 +252,24 @@ function renderTable(data = records) {
   <td>${r.note}</td>
   <td><button onclick="deleteRecord('${r.id}')" style="background:#f44336;font-size:12px;padding:4px 6px;">🗑️</button></td>
 </tr>`;
+    tbody.appendChild(tr);
 });
+}
+  
+function renderRecentTable() {
+  const tbody = document.querySelector("#recentTable tbody");
+  tbody.innerHTML = "";
+  records.slice(0, 5).forEach(r => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${r.date}</td>
+      <td style="color:${r.type === 'Приход' ? '#4caf50' : '#f44336'};">${r.type}</td>
+      <td>${r.amount.toFixed(2)} лв</td>
+      <td>${r.method}</td>
+      <td>${r.note}</td>
+      <td><button onclick="deleteRecord('${r.id}')" style="background:#f44336;font-size:12px;padding:4px 6px;">🗑️</button></td>`;
+    tbody.appendChild(tr);
+  });
 }
 
 function updateSummaries() {
