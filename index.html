@@ -150,6 +150,7 @@
 </thead>
   <tbody></tbody>
 </table>
+       <div id="filterSummary" class="summary" style="margin-top: 10px;"></div>
     </div>
   </div>
 
@@ -251,6 +252,7 @@ function applyFilters() {
 
   renderTable(filteredRecords);
   updateFilterSummary(filteredRecords);
+
 }
 
 function renderTable(data = records) {
@@ -271,6 +273,20 @@ function renderTable(data = records) {
     tbody.appendChild(tr);
   });
 }
+  
+function updateFilterSummary(data) {
+  const income = data.filter(r => r.type === "Приход").reduce((sum, r) => sum + r.amount, 0);
+  const expense = data.filter(r => r.type === "Разход").reduce((sum, r) => sum + r.amount, 0);
+  const total = income - expense;
+
+  document.getElementById("filterSummary").innerHTML = `
+    <strong>Сума от филтъра:</strong> 
+    Приходи: ${income.toFixed(2)} лв | 
+    Разходи: ${expense.toFixed(2)} лв | 
+    Нетно: ${total.toFixed(2)} лв
+  `;
+}
+
 
 function clearFilters() {
   document.getElementById("filterType").value = "";
