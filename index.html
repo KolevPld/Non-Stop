@@ -230,6 +230,9 @@ function applyFilters() {
   const method = document.getElementById("filterMethod").value;
   const category = document.getElementById("filterCategory").value;
 
+  console.log("Филтри -> тип:", type, "метод:", method, "категория:", category);
+  console.log("Всички записи:", records);
+
   const filtered = records.filter(r => {
     const matchType = !type || r.type === type;
     const matchMethod = !method || r.method === method;
@@ -237,6 +240,7 @@ function applyFilters() {
     return matchType && matchMethod && matchCategory;
   });
 
+  console.log("Филтрирани:", filtered);
   renderTable(filtered);
 }
 
@@ -244,7 +248,7 @@ function renderTable(data = records) {
   const tbody = document.querySelector("#recordsTable tbody");
   tbody.innerHTML = "";
 
-  data.forEach((r) => {
+  data.forEach(r => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${r.date}</td>
@@ -253,14 +257,11 @@ function renderTable(data = records) {
       <td>${r.method}</td>
       <td>${r.category || ''}</td>
       <td>${r.note}</td>
-      <td>
-        <button onclick="deleteRecord('${r.id}')" style="background:#f44336;font-size:12px;padding:4px 6px;">🗑️</button>
-      </td>
+      <td><button onclick="deleteRecord('${r.id}')" style="background:#f44336;font-size:12px;padding:4px 6px;">🗑️</button></td>
     `;
     tbody.appendChild(tr);
   });
 }
-
 
   function clearFilters() {
   document.getElementById("filterType").value = "";
