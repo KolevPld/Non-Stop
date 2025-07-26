@@ -155,18 +155,19 @@ input:focus, select:focus, textarea:focus {
   .date-range-group {
   display: flex;
   gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 10px;
   align-items: center;
+  flex-wrap: wrap;
+  margin: 10px 0;
 }
 
 .date-range-group label {
-  flex: 1 1 150px;
+  flex: 1;
+  min-width: 140px;
 }
 
 .date-range-group input[type="date"] {
   width: 100%;
-  padding: 8px 10px;
+  padding: 8px;
   font-size: 14px;
   border-radius: 6px;
   box-sizing: border-box;
@@ -176,25 +177,14 @@ input:focus, select:focus, textarea:focus {
   padding: 10px 12px;
   font-size: 14px;
   border-radius: 6px;
-  background-color: #607d8b;
+  background: #607d8b;
   color: #fff;
   border: none;
   white-space: nowrap;
 }
 
 @media (max-width: 600px) {
-  .date-range-group {
-    flex-direction: column;
-    gap: 6px;
-    align-items: stretch;
-  }
-
-  .date-range-group label {
-    flex: 1 1 100%;
-  }
-
-  .date-range-group input[type="date"],
-  .date-range-group button {
+  .date-range-group label, .date-range-group button {
     font-size: 13px;
     padding: 8px;
   }
@@ -272,14 +262,16 @@ input:focus, select:focus, textarea:focus {
     <button onclick="showScreen('add')"><i class="fa-solid fa-arrow-left"></i> Назад</button>
   </div>
 
-  <div class="date-range-group" style="margin: 10px 0;">
-  <label for="startDate">От:
-    <input type="date" id="startDate" onchange="applyFilters()">
+  <div class="date-range-group" style="margin: 10px 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+  <label for="startDate" style="flex: 1; min-width: 140px;">
+    От:<br>
+    <input type="date" id="startDate" onchange="applyFilters()" style="width: 100%; padding: 8px; font-size: 14px;">
   </label>
-  <label for="endDate">До:
-    <input type="date" id="endDate" onchange="applyFilters()">
+  <label for="endDate" style="flex: 1; min-width: 140px;">
+    До:<br>
+    <input type="date" id="endDate" onchange="applyFilters()" style="width: 100%; padding: 8px; font-size: 14px;">
   </label>
-  <button onclick="setCurrentMonth()" style="white-space: nowrap;">
+  <button onclick="setCurrentMonth()" style="padding: 10px 12px; font-size: 14px; background: #607d8b; color: #fff;">
     <i class="fa-solid fa-calendar-days"></i> Текущ месец
   </button>
 </div>
