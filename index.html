@@ -185,6 +185,7 @@ async function loadRecords() {
   const q = query(collection(db, "records"), orderBy("date", "desc"));
   const snapshot = await getDocs(q);
   snapshot.forEach(docSnap => records.push({ id: docSnap.id, ...docSnap.data() }));
+  renderTable();
   renderRecentTable();
   updateSummaries();
   renderMethodSummary();
