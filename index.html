@@ -107,12 +107,14 @@
     <div class="btn-group" style="margin: 15px 0;">
   <button onclick="showScreen('add')"><i class="fa-solid fa-arrow-left"></i> Назад</button>
 </div>
-    <div style="margin: 10px 0; text-align: center;">
-  <label>От: <input type="date" id="filterFrom" onchange="applyFilters()"></label>
-  <label>До: <input type="date" id="filterTo" onchange="applyFilters()"></label>
-  <label><input type="checkbox" id="filterThisMonth" onchange="applyFilters()"> Само текущ месец</label>
+    <div style="display: flex; gap: 10px; align-items: center; margin: 10px 0; flex-wrap: wrap;">
+  <label for="startDate" style="flex:1;">От: <input type="date" id="startDate" onchange="applyFilters()" style="width:100%;"></label>
+  <label for="endDate" style="flex:1;">До: <input type="date" id="endDate" onchange="applyFilters()" style="width:100%;"></label>
+  <button onclick="setCurrentMonth()" style="background:#607d8b; padding: 10px 15px; border-radius: 8px;">
+    <i class="fa-solid fa-calendar-days"></i> Текущ месец
+  </button>
 </div>
- 
+
     <div class="summary" style="margin-bottom: 10px;">
   <h3><i class="fa-solid fa-filter"></i> Филтрирай записите</h3>
   <div style="display: flex; gap: 10px; flex-wrap: wrap;">
@@ -232,31 +234,24 @@ function clearForm() {
 }
 
 function applyFilters() {
-  const fType = document.getElementById("filterType").value;
-  const fMethod = document.getElementById("filterMethod").value;
-  const fCategory = document.getElementById("filterCategory").value;
-  const from = document.getElementById("filterFrom").value;
-  const to = document.getElementById("filterTo").value;
-  const thisMonth = document.getElementById("filterThisMonth").checked;
-  
+  const type = document.getElementById("filterType").value;
+  const method = document.getElementById("filterMethod").value;
+  const category = document.getElementById("filterCategory").value;
+  const startDate = document.getElementById("startDate").value;
+  const endDate = document.getElementById("endDate").value;
+
   filteredRecords = records.filter(r => {
-    if (fType && r.type !== fType) return false;
-    if (fMethod && r.method !== fMethod) return false;
-    if (fCategory && (r.category || '') !== fCategory) return false;
-    if (thisMonth) {
-      const now = new Date();
-      const ym = r.date?.slice(0,7);
-      if (ym !== now.toISOString().slice(0,7)) return false;
-    } else {
-      if (from && r.date < from) return false;
-      if (to && r.date > to) return false;
-    }
-    return true;
+    const matchType = !type || r.type === type;
+    const matchMethod = !method || r.method === method;
+    const matchCategory = !category || (r.category || '') === category;
+    const matchStart = !startDate || r.date >= startDate;
+    const matchEnd = !endDate || r.date <= endDate;
+    return matchType && matchMethod && matchCategory && matchStart && matchEnd;
   });
 
   renderTable(filteredRecords);
+  updateFilterSummary(filteredRecords);
 }
-
 
 function renderTable(data = records) {
   const tbody = document.querySelector("#recordsTable tbody");
@@ -356,6 +351,14 @@ function renderChart() {
     },
     options: { responsive:true, plugins:{ legend:{position:'top'}, title:{display:true,text:'Приходи и разходи по месеци'}}}
   });
+}
+function setCurrentMonth() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  document.getElementById("startDate").value = `${year}-${month}-01`;
+  document.getElementById("endDate").value = `${year}-${month}-${new Date(year, now.getMonth() + 1, 0).getDate()}`;
+  applyFilters();
 }
 
 window.addRecord = addRecord;
