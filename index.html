@@ -98,39 +98,29 @@ input:focus, select:focus, textarea:focus {
 }
 
 @media (max-width: 600px) {
-  #screen-add label {
-    font-size: 14px;
+  #login {
+    max-width: 90%;
+    margin: 20px auto;
+    padding: 16px;
   }
 
-  #screen-add input,
-  #screen-add select {
+  #login input[type="password"],
+  #login button {
+    max-width: 100%;
+    font-size: 16px;
     padding: 10px;
-    font-size: 14px;
-    margin: 4px 0;
   }
 
-  .btn-group button {
-    font-size: 14px;
-    padding: 10px;
-  }
-}
-    @media (min-width: 601px) {
   #screen-add label {
-    margin-top: 8px;
-    font-size: 15px;
+    font-size: 14px;
+    margin-bottom: 2px;
   }
-  #screen-add input,
-  #screen-add select {
-    padding: 10px;
-    font-size: 15px;
-  }
-}
-    @media (max-width: 600px) {
+
   #screen-add input,
   #screen-add select,
   #screen-add textarea {
-    font-size: 15px;
     padding: 8px 10px;
+    font-size: 14px;
     border-radius: 6px;
     margin-bottom: 6px;
   }
@@ -139,11 +129,6 @@ input:focus, select:focus, textarea:focus {
   button {
     font-size: 15px;
     padding: 10px 12px;
-  }
-
-  #screen-add label {
-    font-size: 14px;
-    margin-bottom: 2px;
   }
 }
 
