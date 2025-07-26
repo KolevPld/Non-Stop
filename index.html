@@ -21,6 +21,10 @@
       cursor: pointer; background: #4caf50; color: #fff; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
       transition: background 0.3s, transform 0.1s;
     }
+    .table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
     button:hover { background: #66bb6a; }
     button:active { transform: scale(0.98); }
     table { width: 100%; margin-top: 20px; border-collapse: collapse; background: #1e1e1e; border-radius: 8px; overflow: hidden; }
@@ -292,21 +296,19 @@ input:focus, select:focus, textarea:focus {
   </div>
 
   <div style="text-align:right; margin-top:10px;">
-    <button onclick="clearFilters()" style="background:#757575;">Изчисти филтрите</button>
-  </div>
-
-  <div class="table-responsive">
-    <table id="recordsTable">
-      <thead>
-        <tr>
-          <th>Дата</th><th>Тип</th><th>Сума</th><th>Метод</th><th>Кат.</th><th>Бележка</th><th>Действия</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-    <div id="filterSummary" class="summary" style="margin-top:10px;"></div>
-  </div>
+  <button onclick="clearFilters()" style="background:#757575;">Изчисти филтрите</button>
 </div>
+
+<div class="table-responsive">
+  <table id="recordsTable">
+    <thead>
+      <tr><th>Дата</th><th>Тип</th><th>Сума</th><th>Метод</th><th>Кат.</th><th>Бележка</th><th>Действия</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<div id="filterSummary" class="summary" style="margin-top:10px;"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
