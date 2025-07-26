@@ -228,8 +228,8 @@ input:focus, select:focus, textarea:focus {
     <button onclick="showScreen('add')"><i class="fa-solid fa-arrow-left"></i> Назад</button>
   </div>
 
-  <div style="display: flex; gap: 10px; align-items: center; margin: 10px 0; flex-wrap: wrap;">
-    <label for="startDate" style="flex:1;">
+  <div class="date-range-group" style="margin: 10px 0;">
+     <label for="startDate" style="flex:1;">
       От: <input type="date" id="startDate" onchange="applyFilters()" style="width:100%;">
     </label>
     <label for="endDate" style="flex:1;">
