@@ -357,6 +357,10 @@ window.exportToExcel = () => {
   XLSX.utils.book_append_sheet(wb, ws, "Отчет");
   XLSX.writeFile(wb, "nonstop_otchet.xlsx");
 };
+
+window.applyFilters = applyFilters;
+window.clearFilters = clearFilters;
+
 window.exportToCSV = () => {
   let csv = "Дата,Тип,Сума,Метод,Бележка\n";
   records.forEach(r => {
