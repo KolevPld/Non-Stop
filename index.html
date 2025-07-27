@@ -619,6 +619,58 @@ window.checkPassword = () => {
     alert("Грешна парола!");
   }
 };
+  window.printFilteredTable = () => {
+  const printWindow = window.open('', '_blank');
+  const rows = filteredRecords.map(r =>
+    `<tr>
+      <td>${r.date}</td>
+      <td>${r.type}</td>
+      <td>${r.amount.toFixed(2)} лв</td>
+      <td>${r.method}</td>
+      <td>${r.category || ''}</td>
+      <td>${r.note}</td>
+    </tr>`
+  ).join("");
+
+  const html = `
+    <html>
+    <head>
+      <title>Принтиране на записи</title>
+      <style>
+        table { width: 100%; border-collapse: collapse; font-family: sans-serif; }
+        th, td { border: 1px solid #999; padding: 8px; text-align: left; }
+        th { background: #eee; }
+      </style>
+    </head>
+    <body>
+      <h2>Филтрирани записи</h2>
+      <table>
+        <thead>
+          <tr><th>Дата</th><th>Тип</th><th>Сума</th><th>Метод</th><th>Категория</th><th>Бележка</th></tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </body>
+    </html>
+  `;
+
+  printWindow.document.write(html);
+  printWindow.document.close();
+  printWindow.focus();
+  printWindow.print();
+};
+
+window.exportFilteredToExcel = () => {
+  const wb = XLSX.utils.book_new();
+  const rows = [["Дата", "Тип", "Сума", "Метод", "Категория", "Бележка"]];
+  filteredRecords.forEach(r => {
+    rows.push([r.date, r.type, r.amount.toFixed(2), r.method, r.category || '', r.note]);
+  });
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  XLSX.utils.book_append_sheet(wb, ws, "Филтрирани");
+  XLSX.writeFile(wb, "filtrirani_danni.xlsx");
+};
+
 </script>
 </body>
 </html>
