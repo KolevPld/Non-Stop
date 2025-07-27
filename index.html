@@ -325,6 +325,8 @@ input:focus, select:focus, textarea:focus {
   <button onclick="printFilteredTable()" style="background:#607d8b;"><i class="fa-solid fa-print"></i> Принтирай</button>
   <button onclick="exportFilteredToExcel()" style="background:#388e3c;"><i class="fa-solid fa-file-excel"></i> Ексел</button>
 </div>
+    
+<div id="filterSummary" class="summary" style="margin-top:10px;"></div>
 
 <div class="table-responsive">
   <table id="recordsTable">
@@ -334,8 +336,6 @@ input:focus, select:focus, textarea:focus {
     <tbody></tbody>
   </table>
 </div>
-
-<div id="filterSummary" class="summary" style="margin-top:10px;"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
