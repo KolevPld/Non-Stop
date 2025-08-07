@@ -734,13 +734,27 @@ window.checkPassword = () => {
 window.exportFilteredToExcel = () => {
   const wb = XLSX.utils.book_new();
   const rows = [["Дата", "Тип", "Сума", "Метод", "Категория", "Бележка"]];
+
+  let income = 0, expense = 0;
+
   filteredRecords.forEach(r => {
-    rows.push([r.date, r.type, r.amount.toFixed(2), r.method, r.category || '', r.note]);
+    const amount = parseFloat(r.amount);
+    rows.push([r.date, r.type, amount.toFixed(2), r.method, r.category || '', r.note]);
+
+    if (r.type === "Приход") income += amount;
+    if (r.type === "Разход") expense += amount;
   });
+
+  const total = income - expense;
+
+  rows.push([]);
+  rows.push(["", "Сума от филтъра:", `Приходи: ${income.toFixed(2)} лв`, `Разходи: ${expense.toFixed(2)} лв`, `Нетно: ${total.toFixed(2)} лв`]);
+
   const ws = XLSX.utils.aoa_to_sheet(rows);
   XLSX.utils.book_append_sheet(wb, ws, "Филтрирани");
   XLSX.writeFile(wb, "filtrirani_danni.xlsx");
 };
+
 
 </script>
 </body>
