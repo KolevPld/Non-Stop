@@ -676,6 +676,20 @@ window.checkPassword = () => {
 };
   window.printFilteredTable = () => {
   const printWindow = window.open('', '_blank');
+
+  const income = filteredRecords.filter(r => r.type === "Приход").reduce((sum, r) => sum + r.amount, 0);
+  const expense = filteredRecords.filter(r => r.type === "Разход").reduce((sum, r) => sum + r.amount, 0);
+  const total = income - expense;
+
+  const summaryHtml = `
+    <div style="margin-top:20px; font-weight:bold; font-size:16px;">
+      Сума от филтъра: 
+      Приходи: ${income.toFixed(2)} лв | 
+      Разходи: ${expense.toFixed(2)} лв | 
+      Нетно: ${total.toFixed(2)} лв
+    </div>
+  `;
+
   const rows = filteredRecords.map(r =>
     `<tr>
       <td>${r.date}</td>
@@ -692,7 +706,8 @@ window.checkPassword = () => {
     <head>
       <title>Принтиране на записи</title>
       <style>
-        table { width: 100%; border-collapse: collapse; font-family: sans-serif; }
+        body { font-family: sans-serif; padding: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { border: 1px solid #999; padding: 8px; text-align: left; }
         th { background: #eee; }
       </style>
@@ -705,6 +720,7 @@ window.checkPassword = () => {
         </thead>
         <tbody>${rows}</tbody>
       </table>
+      ${summaryHtml}
     </body>
     </html>
   `;
