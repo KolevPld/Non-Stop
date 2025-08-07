@@ -279,6 +279,11 @@
   <option>Банка 🏦</option>
   <option>Карта 💳</option>
 </select>
+    <label>🏬 Магазин</label>
+<select id="store">
+  <option value="1">Магазин 1</option>
+  <option value="2">Магазин 2</option>
+</select>
 
 <label>🏷️ Категория</label>
 <select id="category" onchange="toggleCustomCategory()">
@@ -360,6 +365,11 @@
         <option>Наеми</option>
         <option>Друго</option>
       </select>
+      <select id="filterStore" onchange="applyFilters()" style="flex:1;">
+  <option value="">Всички магазини</option>
+  <option value="1">Магазин 1</option>
+  <option value="2">Магазин 2</option>
+</select>
     </div>
   </div>
 
@@ -440,14 +450,16 @@ async function addRecord() {
   const amount = parseFloat(document.getElementById("amount").value);
   const note = document.getElementById("note").value;
   const categorySelect = document.getElementById("category");
+  const store = document.getElementById("store").value;
 let category = categorySelect.value;
 if (category === "custom") {
   category = document.getElementById("customCategory").value;
 }
 
   if (!date || isNaN(amount)) return alert("Попълни дата и сума.");
-  await addDoc(collection(db, "records"), { date, type, method, amount, note, category });
-  loadRecords(); clearForm();
+  await addDoc(collection(db, "records"), {date, type, method, amount, note, category, store
+});
+ loadRecords(); clearForm();
 }
 
 async function deleteRecord(id) {
@@ -468,6 +480,7 @@ function applyFilters() {
   const category = document.getElementById("filterCategory").value;
   const startDate = document.getElementById("startDate").value;
   const endDate = document.getElementById("endDate").value;
+  const store = document.getElementById("filterStore").value;
 
   filteredRecords = records.filter(r => {
     const matchType = !type || r.type === type;
@@ -475,7 +488,8 @@ function applyFilters() {
     const matchCategory = !category || (r.category || '') === category;
     const matchStart = !startDate || r.date >= startDate;
     const matchEnd = !endDate || r.date <= endDate;
-    return matchType && matchMethod && matchCategory && matchStart && matchEnd;
+    const matchStore = !store || r.store === store;
+    return matchType && matchMethod && matchCategory && matchStart && matchEnd && matchStore;
   });
 
   renderTable(filteredRecords);
