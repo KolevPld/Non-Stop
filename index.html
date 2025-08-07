@@ -583,7 +583,8 @@ function renderMethodSummary() {
     `💰 Кеш: ${cash.toFixed(2)} лв | 🏦 Банка: ${bank.toFixed(2)} лв | 💳 Карта: ${card.toFixed(2)} лв | Общо: ${total.toFixed(2)} лв`;
 
   document.getElementById("methodSummaryExtra").innerHTML = 
-    `🧾 <strong>Общо кеш:</strong> ${cash.toFixed(2)} лв | 🧾 <strong>Общо банка:</strong> ${totalBank.toFixed(2)} лв`;
+  `<i class="fa-solid fa-money-bill-wave" style="color:#4caf50;"></i> <strong>Общо кеш:</strong> ${cash.toFixed(2)} лв |
+   <i class="fa-solid fa-building-columns" style="color:#2196f3;"></i> <strong>Общо банка:</strong> ${totalBank.toFixed(2)} лв`;
 }
 
 function renderChart() {
