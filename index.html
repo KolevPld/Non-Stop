@@ -315,6 +315,7 @@
   <div id="screen-report" class="hidden">
   <h3><i class="fa-solid fa-chart-pie"></i> Отчети</h3>
   <div class="summary" id="methodSummary"></div>
+  <div class="summary" id="methodSummaryExtra"></div>
   <div class="summary" id="dailySummary"></div>
   <div class="summary" id="monthlySummary"></div>
   <canvas id="chart" width="400" height="200" style="margin-top:20px;"></canvas>
@@ -568,15 +569,21 @@ function updateSummaries() {
 
 function renderMethodSummary() {
   let cash = 0, bank = 0, card = 0;
-  records.forEach(r=>{
-    const val = r.type==="Приход"?r.amount:-r.amount;
-    if (r.method==="Кеш") cash+=val;
-    if (r.method==="Банка") bank+=val;
-    if (r.method==="Карта") card+=val;
+  records.forEach(r => {
+    const val = r.type === "Приход" ? r.amount : -r.amount;
+    if (r.method === "Кеш") cash += val;
+    if (r.method === "Банка") bank += val;
+    if (r.method === "Карта") card += val;
   });
-  const total = cash+bank+card;
+
+  const total = cash + bank + card;
+  const totalBank = bank + card;
+
   document.getElementById("methodSummary").innerHTML = 
     `💰 Кеш: ${cash.toFixed(2)} лв | 🏦 Банка: ${bank.toFixed(2)} лв | 💳 Карта: ${card.toFixed(2)} лв | Общо: ${total.toFixed(2)} лв`;
+
+  document.getElementById("methodSummaryExtra").innerHTML = 
+    `🧾 <strong>Общо кеш:</strong> ${cash.toFixed(2)} лв | 🧾 <strong>Общо банка:</strong> ${totalBank.toFixed(2)} лв`;
 }
 
 function renderChart() {
