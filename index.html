@@ -323,6 +323,7 @@
   <div class="summary" id="methodSummaryExtra"></div>
   <div class="summary" id="dailySummary"></div>
   <div class="summary" id="monthlySummary"></div>
+  <div class="summary" id="taxSummary"></div>
   <canvas id="chart" width="400" height="200" style="margin-top:20px;"></canvas>
 
   <div class="btn-group" style="margin: 15px 0;">
@@ -441,6 +442,7 @@ async function loadRecords() {
   renderMethodSummary();
   renderChart();
   applyFilters();
+  renderTaxSummary();
 }
 
 async function addRecord() {
@@ -579,6 +581,32 @@ function updateSummaries() {
 
   document.getElementById("monthlySummary").innerHTML = 
     `📆 <strong>Месец:</strong> Приходи: ${monthIncome.toFixed(2)} лв | Разходи: ${monthExpense.toFixed(2)} лв | Салдо: ${saldo} лв`;
+}
+  
+function renderTaxSummary() {
+  const income = records.filter(r => r.type === "Приход").reduce((sum, r) => sum + r.amount, 0);
+  const expense = records.filter(r => r.type === "Разход").reduce((sum, r) => sum + r.amount, 0);
+  const profit = income - expense;
+
+  if (profit <= 0) {
+    document.getElementById("taxSummary").innerHTML = `
+      <strong>📊 Данъчна справка:</strong><br>
+      Няма облагаема печалба.
+    `;
+    return;
+  }
+
+  const vat = profit * 0.2;
+  const profitAfterVAT = profit - vat;
+  const corporateTax = profitAfterVAT * 0.1;
+  const net = profitAfterVAT - corporateTax;
+
+  document.getElementById("taxSummary").innerHTML = `
+    <strong>📊 Данъчна справка:</strong><br>
+    Приходи: ${income.toFixed(2)} лв | Разходи: ${expense.toFixed(2)} лв | Печалба: ${profit.toFixed(2)} лв<br>
+    ДДС (20%): ${vat.toFixed(2)} лв | Данък печалба (10%): ${corporateTax.toFixed(2)} лв<br>
+    👉 <strong>Нетна печалба:</strong> ${net.toFixed(2)} лв
+  `;
 }
 
 function renderMethodSummary() {
