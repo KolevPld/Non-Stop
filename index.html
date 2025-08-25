@@ -12,73 +12,61 @@
   <style>
 * {
   box-sizing: border-box;
-  margin: 0;
-  padding: 0;
 }
-
 html, body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background: #121212;
   color: #e0e0e0;
-  width: 100%;
-  max-width: 1000px;
-  margin: 0 auto;
   padding: 20px;
+  margin: 0 auto;
+  max-width: 800px;
+  width: 100%;
   overflow-x: hidden;
-  overscroll-behavior-x: none;
 }
 
 h2, h3 {
-  color: #fff;
-  margin-bottom: 12px;
+  color: #ffffff;
+  margin-bottom: 10px;
 }
 
 input, select, button, textarea {
   width: 100%;
-  font-size: 16px;
   padding: 12px;
-  margin: 8px 0;
+  margin: 6px 0;
+  font-size: 16px;
   border-radius: 8px;
   background: #1f1f1f;
   color: #e0e0e0;
   border: 1px solid #4caf50;
+  -webkit-appearance: none;
+  appearance: none;
   transition: 0.2s;
 }
 
 input:focus, select:focus, textarea:focus {
-  background: #2c2c2c;
   outline: none;
+  background: #2c2c2c;
   box-shadow: 0 0 0 2px #66bb6a;
 }
 
 button {
+  cursor: pointer;
   background: #4caf50;
   color: #fff;
-  font-size: 16px;
-  padding: 12px;
+  font-weight: bold;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+  transition: background 0.3s, transform 0.1s;
   border: none;
   border-radius: 8px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: 0.2s;
-  box-shadow: 0 3px 5px rgba(0,0,0,0.3);
+  padding: 12px;
 }
 
-button:hover {
-  background: #66bb6a;
-}
-
-button:active {
-  transform: scale(0.98);
-}
-
-.table-responsive {
-  overflow-x: auto;
-  margin-top: 20px;
-}
+button:hover { background: #66bb6a; }
+button:active { transform: scale(0.98); }
 
 table {
   width: 100%;
+  margin-top: 20px;
   border-collapse: collapse;
   background: #1e1e1e;
   border-radius: 8px;
@@ -86,9 +74,9 @@ table {
 }
 
 th, td {
-  padding: 10px;
-  text-align: left;
+  padding: 12px;
   border-bottom: 1px solid #333;
+  text-align: left;
   word-break: break-word;
 }
 
@@ -96,17 +84,22 @@ th {
   background: #2c2c2c;
 }
 
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .summary {
   background: #1f1f1f;
   padding: 12px;
-  margin: 15px 0;
+  margin-top: 15px;
   border-radius: 8px;
-  box-shadow: 0 2px 3px rgba(0,0,0,0.4);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.5);
 }
 
 .btn-group {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
@@ -134,12 +127,12 @@ th {
   padding: 20px;
   background: #1f1f1f;
   border-radius: 8px;
-  width: 100%;
 }
 
 #login input[type="password"],
 #login button {
   width: 100%;
+  max-width: 280px;
   font-size: 18px;
   padding: 10px;
 }
@@ -157,6 +150,8 @@ th {
 #screen-add textarea,
 #screen-add button {
   width: 100%;
+  max-width: 500px;
+  margin: auto;
   margin-bottom: 10px;
   display: block;
 }
@@ -199,40 +194,41 @@ th {
   white-space: nowrap;
 }
 
-@media (max-width: 768px) {
-  html, body {
-    padding: 12px;
+@media (max-width: 600px) {
+  body {
+    padding: 10px;
     font-size: 14px;
-    width: 100%;
     max-width: 100%;
-    overflow-x: hidden !important;
   }
 
   input, select, button, textarea {
     font-size: 14px;
-    padding: 10px;
-  }
-
-  h2, h3 {
-    font-size: 1.2em;
   }
 
   table, th, td {
     font-size: 13px;
   }
 
-  button {
-    font-size: 14px;
-    padding: 10px;
+  canvas {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  #login {
+    max-width: 95%;
+    margin: 20px auto;
+    padding: 16px;
   }
 
   .btn-group {
     flex-direction: column;
+    gap: 8px;
   }
 
-  #login {
-    max-width: 100%;
-    padding: 16px;
+  .btn-group button {
+    width: 100%;
+    font-size: 15px;
+    padding: 10px;
   }
 
   .date-range-group {
