@@ -10,14 +10,21 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-  html, body {
+  * {
+  box-sizing: border-box;
+}
+
+html, body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background: #121212;
   color: #e0e0e0;
   padding: 20px;
-  max-width: 1000px;
   margin: 0 auto;
-  overflow-x: hidden;
+  max-width: 1000px;
+  width: 100%;
+  overflow-x: hidden !important;
+  overscroll-behavior-x: none;
+  position: relative;
 }
 
 h2, h3 {
@@ -35,9 +42,7 @@ input, select, button, textarea {
   background: #1f1f1f;
   color: #e0e0e0;
   border: 1px solid #4caf50;
-  box-sizing: border-box;
   transition: all 0.2s;
-  -webkit-appearance: none;
   appearance: none;
 }
 
@@ -149,7 +154,6 @@ th {
   width: 100%;
   margin-bottom: 10px;
   display: block;
-  box-sizing: border-box;
 }
 
 #filterSummary {
@@ -178,7 +182,6 @@ th {
   font-size: 15px;
   padding: 8px 10px;
   border-radius: 6px;
-  box-sizing: border-box;
 }
 
 .date-range-group button {
