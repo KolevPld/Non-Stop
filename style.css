@@ -402,20 +402,14 @@ tr:hover {
   color: #ccc;
   font-size: 14px;
 }
-/* --- Подредени и адаптивни таблици --- */
-.table-responsive {
-  width: 100%;
-  overflow-x: auto;
-  margin-top: 20px;
-}
-
+/* --- Таблици и обобщения (оригинален стил) --- */
 table {
   width: 100%;
-  table-layout: fixed;
   border-collapse: collapse;
+  margin-top: 10px;
   background: #1f1f1f;
   color: #fff;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 thead {
@@ -427,14 +421,8 @@ th, td {
   padding: 10px;
   text-align: left;
   border-bottom: 1px solid #333;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-th:nth-child(1), td:nth-child(1) { width: 15%; } /* Дата */
-th:nth-child(2), td:nth-child(2) { width: 15%; } /* Тип */
-th:nth-child(3), td:nth-child(3) { width: 15%; } /* Сума */
-th:nth-child(4), td:nth-child(4) { width: 20%; } /* Метод */
-th:nth-child(5), td:nth-child(5) { width: 25%; white-space: normal; } /* Бележка */
-th:nth-child(6), td:nth-child(6) { width: 10%; text-align: center; white-space: normal; } /* Действие */
+tr:hover {
+  background-color: #2a2a2a;
+}
