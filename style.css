@@ -402,14 +402,20 @@ tr:hover {
   color: #ccc;
   font-size: 14px;
 }
-/* --- Tables and summaries --- */
+/* --- Подредени и адаптивни таблици --- */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  margin-top: 20px;
+}
+
 table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
-  margin-top: 10px;
   background: #1f1f1f;
   color: #fff;
-  font-size: 15px;
+  font-size: 14px;
 }
 
 thead {
@@ -421,58 +427,14 @@ th, td {
   padding: 10px;
   text-align: left;
   border-bottom: 1px solid #333;
-}
-
-tr:hover {
-  background-color: #2a2a2a;
-}
-
-.summary {
-  background: #2c2c2c;
-  padding: 16px;
-  margin-top: 20px;
-  border-radius: 10px;
-  color: #ddd;
-  box-shadow: 0 0 6px rgba(0,0,0,0.3);
-}
-/* --- Равномерни таблици и адаптивни колони --- */
-table {
-  table-layout: auto; /* Позволява на колоните да се нагласят спрямо съдържанието */
-  width: 100%;
-}
-
-th, td {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* Позволи пренасяне само при нужда на избрани колони */
-td:nth-child(1),  /* Дата */
-td:nth-child(5),  /* Бележка */
-td:nth-child(6) { /* Действие */
-  white-space: normal;
-  overflow: visible;
-  text-overflow: unset;
-}
-/* ------ Еднакво разпределени таблици ------- */
-table {
-  table-layout: fixed;
-  width: 100%;
-}
-
-th:nth-child(1), td:nth-child(1) { width: 15%; }
-th:nth-child(2), td:nth-child(2) { width: 15%; }
-th:nth-child(3), td:nth-child(3) { width: 15%; }
-th:nth-child(4), td:nth-child(4) { width: 25%; }
-th:nth-child(5), td:nth-child(5) { width: 20%; }
-th:nth-child(6), td:nth-child(6) { width: 10%; }
-
-th, td {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-
-
+th:nth-child(1), td:nth-child(1) { width: 15%; } /* Дата */
+th:nth-child(2), td:nth-child(2) { width: 15%; } /* Тип */
+th:nth-child(3), td:nth-child(3) { width: 15%; } /* Сума */
+th:nth-child(4), td:nth-child(4) { width: 20%; } /* Метод */
+th:nth-child(5), td:nth-child(5) { width: 25%; white-space: normal; } /* Бележка */
+th:nth-child(6), td:nth-child(6) { width: 10%; text-align: center; white-space: normal; } /* Действие */
