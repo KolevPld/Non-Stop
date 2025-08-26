@@ -668,23 +668,29 @@ function renderTaxSummary() {
 }
 
 function renderMethodSummary() {
-  let cash = 0, bank = 0, card = 0;
+  const totals = { Кеш: 0, Банка: 0, Карта: 0 };
+
   records.forEach(r => {
-    const val = r.type === "Приход" ? r.amount : -r.amount;
-    if (r.method === "Кеш") cash += val;
-    if (r.method === "Банка") bank += val;
-    if (r.method === "Карта") card += val;
+    const amount = r.type === "Приход" ? r.amount : -r.amount;
+    if (totals.hasOwnProperty(r.method)) {
+      totals[r.method] += amount;
+    }
   });
 
-  const total = cash + bank + card;
-  const totalBank = bank + card;
+  const totalSum = totals.Кеш + totals.Банка + totals.Карта;
+  const totalBank = totals.Банка + totals.Карта;
 
-  document.getElementById("methodSummary").innerHTML = 
-    `💰 Кеш: ${cash.toFixed(2)} лв | 🏦 Банка: ${bank.toFixed(2)} лв | 💳 Карта: ${card.toFixed(2)} лв | Общо: ${total.toFixed(2)} лв`;
+  document.getElementById("methodSummary").innerHTML = `
+    💰 Кеш: ${totals.Кеш.toFixed(2)} лв |
+    🏦 Банка: ${totals.Банка.toFixed(2)} лв |
+    💳 Карта: ${totals.Карта.toFixed(2)} лв |
+    Общо: ${totalSum.toFixed(2)} лв
+  `;
 
-  document.getElementById("methodSummaryExtra").innerHTML = 
-  `<i class="fa-solid fa-money-bill-wave" style="color:#4caf50;"></i> <strong>Общо кеш:</strong> ${cash.toFixed(2)} лв |
-   <i class="fa-solid fa-building-columns" style="color:#2196f3;"></i> <strong>Общо банка:</strong> ${totalBank.toFixed(2)} лв`;
+  document.getElementById("methodSummaryExtra").innerHTML = `
+    <i class="fa-solid fa-money-bill-wave" style="color:#4caf50;"></i> <strong>Общо кеш:</strong> ${totals.Кеш.toFixed(2)} лв |
+    <i class="fa-solid fa-building-columns" style="color:#2196f3;"></i> <strong>Общо банка:</strong> ${totalBank.toFixed(2)} лв
+  `;
 }
 
 function renderChart() {
