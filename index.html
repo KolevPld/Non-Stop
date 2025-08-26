@@ -615,19 +615,20 @@ function renderRecentTable() {
 }
 
 function updateSummaries() {
-  console.log("updateSummaries invoked");
-  let todayIncome = 0, todayExpense = 0, monthIncome = 0, monthExpense = 0;
-  const today = new Date().toISOString().slice(0,10);
-  const month = today.slice(0,7);
+  const today = new Date().toISOString().slice(0, 10);
+  const currentMonth = today.slice(0, 7);
 
-  records.forEach(r => {
-    if (r.date === today) {
-      if (r.type === "Приход") todayIncome += r.amount;
-      else todayExpense += r.amount;
+  let todayIncome = 0, todayExpense = 0;
+  let monthIncome = 0, monthExpense = 0;
+
+  records.forEach(({ date, type, amount }) => {
+    if (date === today) {
+      if (type === "Приход") todayIncome += amount;
+      else todayExpense += amount;
     }
-    if (r.date.startsWith(month)) {
-      if (r.type === "Приход") monthIncome += r.amount;
-      else monthExpense += r.amount;
+    if (date.startsWith(currentMonth)) {
+      if (type === "Приход") monthIncome += amount;
+      else monthExpense += amount;
     }
   });
 
@@ -639,7 +640,7 @@ function updateSummaries() {
   document.getElementById("monthlySummary").innerHTML = 
     `📆 <strong>Месец:</strong> Приходи: ${monthIncome.toFixed(2)} лв | Разходи: ${monthExpense.toFixed(2)} лв | Салдо: ${saldo} лв`;
 }
-  
+ 
 function renderTaxSummary() {
   const income = records.filter(r => r.type === "Приход").reduce((sum, r) => sum + r.amount, 0);
   const expense = records.filter(r => r.type === "Разход").reduce((sum, r) => sum + r.amount, 0);
