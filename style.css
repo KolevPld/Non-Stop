@@ -402,6 +402,46 @@ tr:hover {
   color: #ccc;
   font-size: 14px;
 }
+/* --- Tables and summaries --- */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  background: #1f1f1f;
+  color: #fff;
+  font-size: 15px;
+}
+
+thead {
+  background: #4caf50;
+  color: white;
+}
+
+th, td {
+  padding: 10px;
+  text-align: left;
+  border-bottom: 1px solid #333;
+}
+
+tr:hover {
+  background-color: #2a2a2a;
+}
+
+.summary {
+  background: #2c2c2c;
+  padding: 16px;
+  margin-top: 20px;
+  border-radius: 10px;
+  color: #ddd;
+  box-shadow: 0 0 6px rgba(0,0,0,0.3);
+}
+
+.summary h3 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 18px;
+  color: #4caf50;
+}
 
 
 
