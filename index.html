@@ -654,16 +654,16 @@ function renderTaxSummary() {
     return;
   }
 
-  const vat = profit * 0.2;
-  const profitAfterVAT = profit - vat;
-  const corporateTax = profitAfterVAT * 0.1;
-  const net = profitAfterVAT - corporateTax;
+  const vat = +(profit * 0.2).toFixed(2);
+  const taxableProfit = +(profit - vat).toFixed(2);
+  const corporateTax = +(taxableProfit * 0.1).toFixed(2);
+  const netProfit = +(taxableProfit - corporateTax).toFixed(2);
 
   document.getElementById("taxSummary").innerHTML = `
     <strong>📊 Данъчна справка:</strong><br>
     Приходи: ${income.toFixed(2)} лв | Разходи: ${expense.toFixed(2)} лв | Печалба: ${profit.toFixed(2)} лв<br>
     ДДС (20%): ${vat.toFixed(2)} лв | Данък печалба (10%): ${corporateTax.toFixed(2)} лв<br>
-    👉 <strong>Нетна печалба:</strong> ${net.toFixed(2)} лв
+    👉 <strong>Нетна печалба:</strong> ${netProfit.toFixed(2)} лв
   `;
 }
 
