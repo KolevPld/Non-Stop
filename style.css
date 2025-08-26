@@ -442,6 +442,16 @@ tr:hover {
   font-size: 18px;
   color: #4caf50;
 }
+/* --- Равномерни таблици и по-добро подравняване --- */
+table {
+  table-layout: fixed;
+}
+
+th, td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 
 
