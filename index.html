@@ -535,12 +535,12 @@ function clearForm() {
 }
 
 function applyFilters() {
-  const type = document.getElementById("filterType").value;
-  const method = document.getElementById("filterMethod").value;
-  const category = document.getElementById("filterCategory").value;
-  const startDate = document.getElementById("startDate").value;
-  const endDate = document.getElementById("endDate").value;
-  const store = document.getElementById("filterStore").value;
+  const type = filters.type.value;
+  const method = filters.method.value;
+  const category = filters.category.value;
+  const startDate = filters.startDate.value;
+  const endDate = filters.endDate.value;
+  const store = filters.store.value;
 
   filteredRecords = records.filter(r => {
     const matchType = !type || r.type === type;
@@ -554,7 +554,6 @@ function applyFilters() {
 
   renderTable(filteredRecords);
   updateFilterSummary(filteredRecords);
-
 }
 
 function renderTable(data = records) {
