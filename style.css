@@ -233,4 +233,45 @@ th {
     width: 100%;
   }
 }
+/* --- Mobile-friendly form styling --- */
+#screen-add form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 16px;
+  background: #1f1f1f;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  margin-bottom: 30px;
+}
+
+#screen-add input,
+#screen-add select,
+#screen-add button {
+  font-size: 18px;
+  padding: 12px;
+  min-height: 48px;
+  border-radius: 8px;
+  border: 1px solid #4caf50;
+  background: #2a2a2a;
+  color: #fff;
+}
+
+#screen-add input:focus,
+#screen-add select:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #66bb6a;
+}
+
+#screen-add button {
+  background: #4caf50;
+  color: white;
+  font-weight: bold;
+  transition: background 0.3s ease;
+}
+
+#screen-add button:hover {
+  background: #66bb6a;
+}
+
 
