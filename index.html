@@ -588,13 +588,13 @@ function updateFilterSummary(data) {
   `;
 }
 
-
-function clearFilters() {
-  document.getElementById("filterType").value = "";
-  document.getElementById("filterMethod").value = "";
-  document.getElementById("filterCategory").value = "";
-  document.getElementById("startDate").value = "";
-  document.getElementById("endDate").value = "";
+  function clearFilters() {
+  filters.type.value = "";
+  filters.method.value = "";
+  filters.category.value = "";
+  filters.startDate.value = "";
+  filters.endDate.value = "";
+  filters.store.value = "";
   applyFilters();
 }
 
