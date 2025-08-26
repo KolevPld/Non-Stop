@@ -435,22 +435,25 @@ tr:hover {
   color: #ddd;
   box-shadow: 0 0 6px rgba(0,0,0,0.3);
 }
-
-.summary h3 {
-  margin-top: 0;
-  margin-bottom: 10px;
-  font-size: 18px;
-  color: #4caf50;
-}
-/* --- Равномерни таблици и по-добро подравняване --- */
+/* --- Равномерни таблици и адаптивни колони --- */
 table {
-  table-layout: fixed;
+  table-layout: auto; /* Позволява на колоните да се нагласят спрямо съдържанието */
+  width: 100%;
 }
 
 th, td {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Позволи пренасяне само при нужда на избрани колони */
+td:nth-child(1),  /* Дата */
+td:nth-child(5),  /* Бележка */
+td:nth-child(6) { /* Действие */
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
 }
 
 
