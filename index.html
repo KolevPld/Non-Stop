@@ -22,65 +22,78 @@
 
 <div id="app" class="hidden">
   <div id="screen-add">
-    <h2><i class="fa-solid fa-cash-register"></i> Нон Стоп Отчет</h2>
-    <label>📅 Дата</label><input type="date" id="date">
-    <label>💵 Тип</label>
-    <select id="type">
-      <option>Приход</option>
-      <option>Разход</option>
-    </select>
-    <label>💳 Метод</label>
-    <select id="method">
-      <option>Кеш 💰</option>
-      <option>Банка 🏦</option>
-      <option>Карта 💳</option>
-    </select>
-    <label>🏬 Магазин</label>
-    <select id="store">
-      <option value="1">Магазин 1</option>
-      <option value="2">Магазин 2</option>
-      <option value="Каса">Каса</option>
-    </select>
+  <h2><i class="fa-solid fa-cash-register"></i> Нон Стоп Отчет</h2>
 
-    <label>🏷️ Категория</label>
-    <select id="category" onchange="toggleCustomCategory()">
-      <option>Оборот</option>
-      <option>Стока</option>
-      <option>Заплати</option>
-      <option>Наеми</option>
-      <option>Друго</option>
-      <option value="custom">Въведи ръчно...</option>
-    </select>
+  <form id="addForm">
+    <fieldset>
+      <legend>Добавяне на запис</legend>
 
-    <label>💸 Сума</label><input type="number" id="amount">
+      <label for="date">📅 Дата</label>
+      <input type="date" id="date">
 
-    <label>📝 Бележка</label>
-    <select id="noteSelect" onchange="toggleCustomNote()">
-      <option value="М1">М1</option>
-      <option value="М2">М2</option>
-      <option value="custom">Въведи ръчно...</option>
-    </select>
-    <input type="text" id="customNote" placeholder="Въведи бележка..." class="hidden">
+      <label for="type">💵 Тип</label>
+      <select id="type">
+        <option>Приход</option>
+        <option>Разход</option>
+      </select>
 
-    <div class="btn-group">
-      <button onclick="addRecord()"><i class="fa-solid fa-plus"></i> Добави запис</button>
-    </div>
-    <div class="btn-group">
-      <button onclick="showScreen('report')">📊 Отчети</button>
-    </div>
+      <label for="method">💳 Метод</label>
+      <select id="method">
+        <option>Кеш 💰</option>
+        <option>Банка 🏦</option>
+        <option>Карта 💳</option>
+      </select>
 
-    <div class="summary" id="totalSummary"></div>
+      <label for="store">🏬 Магазин</label>
+      <select id="store">
+        <option value="1">Магазин 1</option>
+        <option value="2">Магазин 2</option>
+        <option value="Каса">Каса</option>
+      </select>
 
-    <div class="summary">
-      <h3><i class="fa-solid fa-clock-rotate-left"></i> Последни 5 записа</h3>
-      <table id="recentTable">
-        <thead>
-          <tr><th>Дата</th><th>Тип</th><th>Сума</th><th>Метод</th><th>Бележка</th><th>Действие</th></tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
+      <label for="category">🏷️ Категория</label>
+      <select id="category" onchange="toggleCustomCategory()">
+        <option>Оборот</option>
+        <option>Стока</option>
+        <option>Заплати</option>
+        <option>Наеми</option>
+        <option>Друго</option>
+        <option value="custom">Въведи ръчно...</option>
+      </select>
+
+      <label for="amount">💸 Сума</label>
+      <input type="number" id="amount">
+
+      <label for="noteSelect">📝 Бележка</label>
+      <select id="noteSelect" onchange="toggleCustomNote()">
+        <option value="М1">М1</option>
+        <option value="М2">М2</option>
+        <option value="custom">Въведи ръчно...</option>
+      </select>
+
+      <input type="text" id="customNote" placeholder="Въведи бележка..." class="hidden">
+    </fieldset>
+  </form>
+
+  <div class="btn-group">
+    <button onclick="addRecord()"><i class="fa-solid fa-plus"></i> Добави запис</button>
   </div>
+  <div class="btn-group">
+    <button onclick="showScreen('report')">📊 Отчети</button>
+  </div>
+
+  <div class="summary" id="totalSummary"></div>
+
+  <div class="summary">
+    <h3><i class="fa-solid fa-clock-rotate-left"></i> Последни 5 записа</h3>
+    <table id="recentTable">
+      <thead>
+        <tr><th>Дата</th><th>Тип</th><th>Сума</th><th>Метод</th><th>Бележка</th><th>Действие</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
 
   <div id="screen-report" class="hidden">
     <h3><i class="fa-solid fa-chart-pie"></i> Отчети</h3>
