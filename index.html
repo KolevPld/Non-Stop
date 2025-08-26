@@ -415,7 +415,16 @@ let chartRef = null;
 
 const statusDiv = document.getElementById("status");
 statusDiv.textContent = "⏳ Свързване с Firestore...";
-
+  
+const filters = {
+  type: document.getElementById("filterType"),
+  method: document.getElementById("filterMethod"),
+  category: document.getElementById("filterCategory"),
+  store: document.getElementById("filterStore"),
+  startDate: document.getElementById("startDate"),
+  endDate: document.getElementById("endDate"),
+};
+  
 signInAnonymously(auth)
   .then(() => console.log("Signed in anonymously"))
   .catch(console.error);
