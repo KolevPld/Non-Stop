@@ -537,6 +537,46 @@ tr:hover {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* Заглавията на таблиците стоят отгоре при скрол */
+.table-responsive thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #2c2c2c; /* същия фон като при теб */
+}
+
+/* Леки ивици за четимост */
+#recordsTable tbody tr:nth-child(even),
+#recentTable  tbody tr:nth-child(even) {
+  background-color: #262626;
+}
+/* Добави клас .table-dense към таблицата/контейнера, за по-компактна визия */
+.table-dense th, .table-dense td { padding: 6px 8px; }
+.table-dense { font-size: 12.5px; }
+
+@media (max-width: 600px) {
+  .table-dense th, .table-dense td { padding: 6px; }
+  .table-dense { font-size: 12px; }
+}
+@media (max-width: 380px) {
+  /* Скрий 5-та колона (Категория) в основната таблица */
+  #recordsTable th:nth-child(5),
+  #recordsTable td:nth-child(5) { display: none; }
+}
+@media (max-width: 380px) {
+  /* Скрий 5-та колона (Категория) в основната таблица */
+  #recordsTable th:nth-child(5),
+  #recordsTable td:nth-child(5) { display: none; }
+}
+@media print {
+  body { background: #fff; color: #000; }
+  /* Скрий UI елементи, остави само таблиците */
+  .summary, #status, #login, .btn-group, .date-range-group { display: none !important; }
+
+  table { font-size: 12px; }
+  /* Показвай целия текст при печат */
+  td.truncate { white-space: normal; overflow: visible; text-overflow: clip; }
+}
 
 
 
