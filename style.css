@@ -511,6 +511,32 @@ tr:hover {
 }
 
 /* 4) Изчистване на конфликтни дефиниции – избягвай много повторения на `table{...}` */
+/* === Fine-tune widths (digits-friendly) — AFTER your table override === */
+:root{
+  --col-date: 10ch;     /* YYYY-MM-DD ~ 10 символа */
+  --col-type: 8.5rem;
+  --col-amount: 9ch;    /* ~ 6 цифри + " лв" */
+  --col-method: 8rem;
+  --col-category: 9rem;
+  --col-actions: 4.5rem;
+}
+
+@media (max-width: 600px) {
+  :root{
+    --col-date: 9ch;
+    --col-type: 6.5rem;
+    --col-amount: 8ch;
+    --col-method: 7rem;
+    --col-category: 7rem;
+    --col-actions: 3.25rem;
+  }
+}
+/* Текст, който се реже с троеточие, но показва пълното съдържание с title */
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 
 
