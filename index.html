@@ -28,7 +28,8 @@
   <button onclick="checkPassword()">Вход</button>
 </div>
 
-<div id="app" class="hidden">
+<div id="main-container" style="display: none;">
+  <div id="app" class="hidden">
   <div id="screen-add">
   <h2><i class="fa-solid fa-cash-register"></i> Нон Стоп Отчет</h2>
 
@@ -170,7 +171,7 @@
         
     <div id="filterSummary" class="summary" style="margin-top:10px;"></div>
 
-    <div class="table-responsive">
+        <div class="table-responsive">
       <table id="recordsTable">
         <thead>
           <tr><th>Дата</th><th>Тип</th><th>Сума</th><th>Метод</th><th>Кат.</th><th>Бележка</th><th>Действия</th></tr>
@@ -178,10 +179,11 @@
         <tbody></tbody>
       </table>
     </div>
-  </div>
-</div>
-<script src="main.js" type="module"></script>
+  </div> <!-- край на #screen-report -->
 
+</div> <!-- край на #main-container -->
+
+<script src="main.js" type="module"></script>
 </body>
 </html>
 
