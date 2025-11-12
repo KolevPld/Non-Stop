@@ -12,6 +12,14 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
+  <div id="auth-container">
+  <h2>Регистрация / Вход</h2>
+  <input type="email" id="email" placeholder="Имейл">
+  <input type="password" id="password" placeholder="Парола">
+  <button onclick="register()">Регистрация</button>
+  <button onclick="login()">Вход</button>
+  <button onclick="logout()">Изход</button>
+</div>
 <div id="status">⏳ Свързване с Firestore...</div>
 
 <div id="login">
