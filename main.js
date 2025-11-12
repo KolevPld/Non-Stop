@@ -1,7 +1,3 @@
-/* ===============================
-   NON‑STOP отчет – нов main.js
-   =============================== */
-
 import {
   initializeApp
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
@@ -32,14 +28,12 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 
 let records = [];
-let filteredRecords = [];
 let chartRef = null;
 
 /* ===============================
    🧩 АВТЕНТИКАЦИЯ
    =============================== */
 
-// Регистрация
 async function register() {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
@@ -51,7 +45,6 @@ async function register() {
   }
 }
 
-// Вход
 async function login() {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
@@ -63,32 +56,27 @@ async function login() {
   }
 }
 
-// Изход
 async function logout() {
   await signOut(auth);
   alert("🚪 Излезе от акаунта.");
 }
 
-// Следене на състоянието
 onAuthStateChanged(auth, (user) => {
   if (user) {
-    console.log("Влязъл потребител:", user.email);
     document.getElementById("auth-container").style.display = "none";
     document.getElementById("main-container").style.display = "block";
     loadRecords();
     loadRecentTransactions();
   } else {
-    console.log("Няма логнат потребител.");
     document.getElementById("auth-container").style.display = "block";
     document.getElementById("main-container").style.display = "none";
   }
 });
 
 /* ===============================
-   💾 CRUD операции
+   📊 ДАННИ
    =============================== */
 
-// Добавяне на запис
 async function addRecord() {
   const user = auth.currentUser;
   if (!user) return alert("Моля, влез в акаунта си.");
@@ -122,7 +110,6 @@ async function addRecord() {
   loadRecentTransactions();
 }
 
-// Изтриване на запис
 async function deleteTransaction(id) {
   const user = auth.currentUser;
   if (!user) return;
@@ -131,10 +118,6 @@ async function deleteTransaction(id) {
   loadRecords();
   loadRecentTransactions();
 }
-
-/* ===============================
-   📊 Зареждане и визуализация
-   =============================== */
 
 async function loadRecords() {
   const user = auth.currentUser;
@@ -145,7 +128,7 @@ async function loadRecords() {
   const snap = await getDocs(q);
   snap.forEach(docSnap => records.push({ id: docSnap.id, ...docSnap.data() }));
   renderTable();
-  loadSummaries();
+  renderSummaries();
 }
 
 function renderTable(data = records) {
@@ -199,17 +182,13 @@ async function loadRecentTransactions() {
   });
 }
 
-function loadSummaries() {
-  const today = new Date().toISOString().slice(0, 10);
-  const month = today.slice(0, 7);
-  let income = 0, expense = 0;
-  records.forEach(r => {
-    if (r.type === "Приход") income += r.amount;
-    if (r.type === "Разход") expense += r.amount;
-  });
+function renderSummaries() {
+  const income = records.filter(r => r.type === "Приход").reduce((s, r) => s + r.amount, 0);
+  const expense = records.filter(r => r.type === "Разход").reduce((s, r) => s + r.amount, 0);
   const net = income - expense;
+
   document.getElementById("monthlySummary").innerHTML =
-    `💰 Приходи: ${income.toFixed(2)} лв | 💸 Разходи: ${expense.toFixed(2)} лв | 🧾 Нетно: ${net.toFixed(2)} лв`;
+    `📊 Общо: Приходи: ${income.toFixed(2)} лв | Разходи: ${expense.toFixed(2)} лв | Нетно: ${net.toFixed(2)} лв`;
 }
 
 /* ===============================
