@@ -127,6 +127,45 @@ if (category === "custom") {
 });
  loadRecords(); clearForm();
 }
+function loadRecentTransactions() {
+  const user = firebase.auth().currentUser;
+  if (!user) return;
+
+  const tableBody = document.querySelector("#recentTable tbody");
+  tableBody.innerHTML = "Зареждане...";
+
+  db.collection("users")
+    .doc(user.uid)
+    .collection("transactions")
+    .orderBy("date", "desc")
+    .limit(5)
+    .get()
+    .then((querySnapshot) => {
+      tableBody.innerHTML = ""; // Изчистваме
+      if (querySnapshot.empty) {
+        tableBody.innerHTML = "<tr><td colspan='6'>Няма записи.</td></tr>";
+        return;
+      }
+
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${data.date.toDate().toLocaleDateString()}</td>
+          <td>${data.type}</td>
+          <td>${data.amount.toFixed(2)}</td>
+          <td>${data.method}</td>
+          <td>${data.note || ""}</td>
+          <td><button onclick="deleteTransaction('${doc.id}')">❌</button></td>
+        `;
+        tableBody.appendChild(row);
+      });
+    })
+    .catch((error) => {
+      console.error("Грешка при зареждане на записи:", error);
+      tableBody.innerHTML = "<tr><td colspan='6'>Грешка при зареждане.</td></tr>";
+    });
+}
 
 async function deleteRecord(id) {
   if (!confirm("Сигурен ли си?")) return;
