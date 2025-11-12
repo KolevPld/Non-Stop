@@ -472,4 +472,39 @@ window.exportFilteredToExcel = () => {
   XLSX.utils.book_append_sheet(wb, ws, "Филтрирани");
   XLSX.writeFile(wb, "filtrirani_danni.xlsx");
 };
+// Регистрация
+function register() {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  firebase.auth().createUserWithEmailAndPassword(email, password)
+    .then((userCredential) => {
+      alert("Успешна регистрация!");
+      console.log("User registered:", userCredential.user);
+    })
+    .catch((error) => {
+      alert("Грешка: " + error.message);
+    });
+}
+
+// Вход
+function login() {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  firebase.auth().signInWithEmailAndPassword(email, password)
+    .then((userCredential) => {
+      alert("Успешен вход!");
+      console.log("User logged in:", userCredential.user);
+    })
+    .catch((error) => {
+      alert("Грешка: " + error.message);
+    });
+}
+
+// Изход
+function logout() {
+  firebase.auth().signOut()
+    .then(() => {
+      alert("Излезе от акаунта.");
+    });
+}
 
