@@ -507,4 +507,15 @@ function logout() {
       alert("Излезе от акаунта.");
     });
 }
+firebase.auth().onAuthStateChanged(function(user) {
+  if (user) {
+    console.log("Влязъл потребител:", user.uid);
+    document.getElementById("auth-container").style.display = "none";
+    // Покажи UI-то за транзакции тук
+  } else {
+    console.log("Няма логнат потребител.");
+    document.getElementById("auth-container").style.display = "block";
+    // Скрий UI-то за транзакции тук
+  }
+});
 
