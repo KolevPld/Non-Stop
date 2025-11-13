@@ -31,10 +31,6 @@ const filters = {
   endDate: document.getElementById("endDate"),
 };
 
-signInAnonymously(auth)
-  .then(() => console.log("Signed in anonymously"))
-  .catch(console.error);
-
 onAuthStateChanged(auth, user => {
   if (user) {
     statusDiv.textContent = "✅ Свързан с Firestore";
@@ -328,4 +324,30 @@ firebase.auth().onAuthStateChanged(function(user) {
     document.getElementById("app").classList.add("hidden");
   }
 });
+window.register = async function() {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  try {
+    await auth.createUserWithEmailAndPassword(email, password);
+    alert("✅ Успешна регистрация!");
+  } catch (error) {
+    alert("⚠️ Грешка при регистрация: " + error.message);
+  }
+};
+
+window.login = async function() {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  try {
+    await auth.signInWithEmailAndPassword(email, password);
+    alert("✅ Успешен вход!");
+  } catch (error) {
+    alert("⚠️ Грешка при вход: " + error.message);
+  }
+};
+
+window.logout = async function() {
+  await auth.signOut();
+  alert("🚪 Излезе от профила.");
+};
 
