@@ -1,9 +1,9 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-import { 
-  getFirestore, collection, addDoc, getDocs, query, orderBy, deleteDoc, doc 
+import {
+  getFirestore, collection, addDoc, getDocs, query, orderBy, deleteDoc, doc
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
-import { 
-  getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut 
+import {
+  getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
 const firebaseConfig = {
@@ -22,7 +22,6 @@ const auth = getAuth(app);
 let records = [];
 let filteredRecords = [];
 
-// UI elements
 const statusDiv = document.getElementById("status");
 const filters = {
   type: document.getElementById("filterType"),
@@ -35,27 +34,27 @@ const filters = {
 
 statusDiv.textContent = "⏳ Свързване с Firestore...";
 
-// Автентикация: следене на статус
 onAuthStateChanged(auth, user => {
   if (user) {
     document.getElementById("auth-container").style.display = "none";
-    document.getElementById("app").classList.remove("hidden");
+    document.getElementById("main-container").style.display = "block";
     statusDiv.textContent = "✅ Влязъл: " + user.email;
     loadRecords();
   } else {
     document.getElementById("auth-container").style.display = "block";
-    document.getElementById("app").classList.add("hidden");
+    document.getElementById("main-container").style.display = "none";
     statusDiv.textContent = "❌ Не е логнат потребител";
   }
 });
 
-// Добавяне на запис
 async function addRecord() {
   const date = document.getElementById("date").value;
   const type = document.getElementById("type").value;
   const method = document.getElementById("method").value;
   const amount = parseFloat(document.getElementById("amount").value);
-  const note = document.getElementById("note").value || "";
+  const noteSelect = document.getElementById("noteSelect");
+  const customNoteEl = document.getElementById("customNote");
+  const note = (noteSelect.value === "custom" ? customNoteEl.value : noteSelect.value) || "";
 
   if (!date || isNaN(amount)) {
     alert("Попълни дата и валидна сума");
@@ -75,7 +74,6 @@ async function addRecord() {
   clearForm();
 }
 
-// Зареждане на записи
 async function loadRecords() {
   records = [];
   const q = query(collection(db, "records"), orderBy("date", "desc"));
@@ -84,14 +82,12 @@ async function loadRecords() {
   renderTable();
 }
 
-// Изтриване на запис
 async function deleteRecord(id) {
   if (!confirm("Сигурен ли си?")) return;
   await deleteDoc(doc(db, "records", id));
   loadRecords();
 }
 
-// Рендер на таблица
 function renderTable(data = records) {
   const tbody = document.querySelector("#recordsTable tbody");
   tbody.innerHTML = "";
@@ -106,31 +102,27 @@ function renderTable(data = records) {
       <td>${r.type}</td>
       <td>${r.amount.toFixed(2)}</td>
       <td>${r.method}</td>
-      <td>${r.note}</td>
+      <td>${r.note || ''}</td>
       <td><button onclick="deleteRecord('${r.id}')">🗑️</button></td>
     `;
     tbody.appendChild(tr);
   });
 }
 
-// Форматиране на формата
 function clearForm() {
   document.getElementById("date").value = "";
   document.getElementById("amount").value = "";
   document.getElementById("note").value = "";
+  document.getElementById("customNote").value = "";
 }
 
-// Филтриране
 function applyFilters() {
   const type = filters.type.value;
   const method = filters.method.value;
-  filteredRecords = records.filter(r => {
-    return (!type || r.type === type) && (!method || r.method === method);
-  });
+  filteredRecords = records.filter(r => (!type || r.type === type) && (!method || r.method === method));
   renderTable(filteredRecords);
 }
 
-// Автентикация – глобални функции
 window.register = async function() {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
@@ -161,6 +153,17 @@ window.logout = async function() {
 window.addRecord = addRecord;
 window.deleteRecord = deleteRecord;
 window.applyFilters = applyFilters;
-window.clearFilters = applyFilters;  // Сега clearFilters просто извиква applyFilters
+
+function clearFilters() {
+  filters.type.value = "";
+  filters.method.value = "";
+  filters.category.value = "";
+  filters.store.value = "";
+  filters.startDate.value = "";
+  filters.endDate.value = "";
+  applyFilters();
+}
+
+window.clearFilters = clearFilters;
 
 
