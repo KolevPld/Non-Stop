@@ -317,3 +317,15 @@ window.exportToExcel = () => { /* … остава както е … */ };
 window.applyFilters = applyFilters;
 window.clearFilters = clearFilters;
 
+firebase.auth().onAuthStateChanged(function(user) {
+  if (user) {
+    console.log("Влязъл потребител:", user.uid);
+    document.getElementById("auth-container").style.display = "none";
+    document.getElementById("app").classList.remove("hidden");
+  } else {
+    console.log("Няма логнат потребител.");
+    document.getElementById("auth-container").style.display = "block";
+    document.getElementById("app").classList.add("hidden");
+  }
+});
+
