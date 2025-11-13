@@ -190,7 +190,17 @@ window.logout = async function() {
 window.addRecord = addRecord;
 window.deleteRecord = deleteRecord;
 window.applyFilters = applyFilters;
-window.clearFilters = applyFilters;  // Сега clearFilters просто извиква applyFilters
+function clearFilters() {
+  filters.type.value = "";
+  filters.method.value = "";
+  filters.category.value = "";
+  filters.store.value = "";
+  filters.startDate.value = "";
+  filters.endDate.value = "";
+  applyFilters();
+}
+
+window.clearFilters = clearFilters;
 
   <div class="btn-group">
     <button onclick="addRecord()"><i class="fa-solid fa-plus"></i> Добави запис</button>
