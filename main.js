@@ -84,7 +84,9 @@ const statusDiv = document.getElementById("status");
 
 onAuthStateChanged(auth, user => {
   if (user) {
-    statusDiv.textContent = "🔓 Влязъл: " + (user.email || "Потребител");
+    statusDiv.textContent = user.email
+  ? `🔓 Влязъл: ${user.email}`
+  : "🕵️ Влязъл анонимно (без акаунт)";
     document.getElementById("loginScreen").classList.add("hidden");
     document.getElementById("app").classList.remove("hidden");
     loadRecords();
