@@ -83,20 +83,19 @@ let chartRef = null;
 const statusDiv = document.getElementById("status");
 
 onAuthStateChanged(auth, user => {
-  if (user) {
-    statusDiv.textContent = user.email
-  ? `🔓 Влязъл: ${user.email}`
-  : "🕵️ Влязъл анонимно (без акаунт)";
+  const isAnonymous = user && user.isAnonymous;
+
+  if (user && !isAnonymous) {
+    statusDiv.textContent = `🔓 Влязъл: ${user.email}`;
     document.getElementById("loginScreen").classList.add("hidden");
     document.getElementById("app").classList.remove("hidden");
     loadRecords();
   } else {
-    statusDiv.textContent = "🔐 Моля влез.";
+    statusDiv.textContent = "🔐 Моля, влез с имейл и парола.";
     document.getElementById("loginScreen").classList.remove("hidden");
     document.getElementById("app").classList.add("hidden");
   }
 });
-
 
 // --------------------------------------------------
 // 🔥 FIRESTORE: Зареждане
