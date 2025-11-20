@@ -12,21 +12,18 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <div id="auth-container">
-  <h2>Регистрация / Вход</h2>
-  <input type="email" id="email" placeholder="Имейл">
-  <input type="password" id="password" placeholder="Парола">
-  <button onclick="register()">Регистрация</button>
-  <button onclick="login()">Вход</button>
-  <button onclick="logout()">Изход</button>
+  <!-- 🔐 Login/Register секция -->
+<div id="loginScreen">
+  <h2><i class="fa-solid fa-user-lock"></i> Вход / Регистрация</h2>
+  <input type="email" id="loginEmail" placeholder="Имейл">
+  <input type="password" id="loginPassword" placeholder="Парола">
+  <div style="margin: 10px 0;">
+    <button onclick="loginEmail()">🔑 Вход</button>
+    <button onclick="registerEmail()">📝 Регистрация</button>
+  </div>
 </div>
-<div id="status">⏳ Свързване с Firestore...</div>
 
-<div id="login">
-  <h2><i class="fa-solid fa-lock"></i> Въведи парола</h2>
-  <input type="password" id="password" placeholder="Парола">
-  <button onclick="checkPassword()">Вход</button>
-</div>
+<div id="status" style="margin:10px 0;">⏳ Изчакване за връзка...</div>
 
 <div id="app" class="hidden">
   <div id="screen-add">
