@@ -41,8 +41,8 @@ const auth = getAuth(app);
 // --------------------------------------------------
 
 window.registerEmail = async function () {
-  const email = document.getElementById("regEmail").value.trim();
-  const password = document.getElementById("regPassword").value.trim();
+  const email = document.getElementById("loginEmail").value.trim();
+  const password = document.getElementById("loginPassword").value.trim();
 
   try {
     await createUserWithEmailAndPassword(auth, email, password);
