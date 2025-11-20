@@ -249,7 +249,11 @@ function renderTable(data = records) {
       <td>${r.method}</td>
       <td>${r.category || ''}</td>
       <td>${r.note}</td>
-      <td><button onclick="deleteRecord('${r.id}')" style="background:#f44336;font-size:12px;padding:4px 6px;">🗑️</button></td>
+      <td>
+  <button class="admin-only" onclick="deleteRecord('${r.id}')" style="background:#f44336;font-size:12px;padding:4px 6px;">
+    🗑️
+  </button>
+</td>
     `;
     tbody.appendChild(tr);
   });
