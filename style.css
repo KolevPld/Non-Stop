@@ -511,3 +511,10 @@ tr:hover {
 }
 
 /* 4) Изчистване на конфликтни дефиниции – избягвай много повторения на `table{...}` */
+.admin-only {
+  display: none;
+}
+
+body.admin .admin-only {
+  display: block; /* или inline-block, ако е бутон */
+}
