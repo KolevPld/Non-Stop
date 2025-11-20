@@ -112,7 +112,7 @@ async function loadRecords() {
   snapshot.forEach(docSnap =>
     records.push({ id: docSnap.id, ...docSnap.data() })
   );
-
+if (document.body.classList.contains("admin")) {
   renderTable();
   renderRecentTable();
   updateSummaries();
