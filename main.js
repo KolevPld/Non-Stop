@@ -49,6 +49,8 @@ window.registerEmail = async function () {
     alert("Регистрация успешна!");
   } catch (err) {
     alert("Грешка при регистрация: " + err.message);
+    document.getElementById("loginEmail").value = "";
+    document.getElementById("loginPassword").value = "";
   }
 };
 
@@ -60,6 +62,8 @@ window.loginEmail = async function () {
     await signInWithEmailAndPassword(auth, email, password);
   } catch (err) {
     alert("Грешка при вход: " + err.message);
+    document.getElementById("loginEmail").value = "";
+    document.getElementById("loginPassword").value = "";
   }
 };
 
