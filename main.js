@@ -439,6 +439,21 @@ function updateNoteOptions() {
     opt.textContent = note;
     noteSelect.insertBefore(opt, noteSelect.querySelector('option[value="custom"]'));
   });
+  
+window.showScreen = function(screen) {
+  const addScreen = document.getElementById("screen-add");
+  const reportScreen = document.getElementById("screen-report");
 
+  if (screen === "report") {
+    addScreen.classList.add("hidden");
+    reportScreen.classList.remove("hidden");
+  } else {
+    addScreen.classList.remove("hidden");
+    reportScreen.classList.add("hidden");
+  }
+};
   noteSelect.value = currentValue;
 }
+
+
+
