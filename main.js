@@ -1,7 +1,27 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, query, orderBy, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
-import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  orderBy,
+  deleteDoc,
+  doc
+} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+
+
+// --------------------------------------------------
+// 🔥 Firebase Config
+// --------------------------------------------------
 const firebaseConfig = {
   apiKey: "AIzaSyD692ktQboNPavUgo9XiANtaqm-8tUOB6c",
   authDomain: "nonstopapp-c30b1.firebaseapp.com",
@@ -13,42 +33,78 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const auth = getAuth();
+const auth = getAuth(app);
+
+
+// --------------------------------------------------
+// 👤 Email Login / Register
+// --------------------------------------------------
+
+window.registerEmail = async function () {
+  const email = document.getElementById("regEmail").value.trim();
+  const password = document.getElementById("regPassword").value.trim();
+
+  try {
+    await createUserWithEmailAndPassword(auth, email, password);
+    alert("Регистрация успешна!");
+  } catch (err) {
+    alert("Грешка при регистрация: " + err.message);
+  }
+};
+
+window.loginEmail = async function () {
+  const email = document.getElementById("loginEmail").value.trim();
+  const password = document.getElementById("loginPassword").value.trim();
+
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+  } catch (err) {
+    alert("Грешка при вход: " + err.message);
+  }
+};
+
+window.logout = function () {
+  signOut(auth);
+};
+
+
+// --------------------------------------------------
+// 🔄 При вход показваш app + зареждаш DB
+// --------------------------------------------------
 
 let records = [];
 let filteredRecords = [];
 let chartRef = null;
 
 const statusDiv = document.getElementById("status");
-statusDiv.textContent = "⏳ Свързване с Firestore...";
-  
-const filters = {
-  type: document.getElementById("filterType"),
-  method: document.getElementById("filterMethod"),
-  category: document.getElementById("filterCategory"),
-  store: document.getElementById("filterStore"),
-  startDate: document.getElementById("startDate"),
-  endDate: document.getElementById("endDate"),
-};
-  
-signInAnonymously(auth)
-  .then(() => console.log("Signed in anonymously"))
-  .catch(console.error);
 
-onAuthStateChanged(auth, user => { 
-  if (user) { 
-    statusDiv.textContent = "✅ Свързан с Firestore";
+onAuthStateChanged(auth, user => {
+  if (user) {
+    statusDiv.textContent = "🔓 Влязъл: " + (user.email || "Потребител");
+    document.getElementById("loginScreen").classList.add("hidden");
+    document.getElementById("app").classList.remove("hidden");
     loadRecords();
   } else {
-    statusDiv.textContent = "❌ Неуспешно свързване!";
+    statusDiv.textContent = "🔐 Моля влез.";
+    document.getElementById("loginScreen").classList.remove("hidden");
+    document.getElementById("app").classList.add("hidden");
   }
 });
+
+
+// --------------------------------------------------
+// 🔥 FIRESTORE: Зареждане
+// --------------------------------------------------
 
 async function loadRecords() {
   records = [];
   const q = query(collection(db, "records"), orderBy("date", "desc"));
   const snapshot = await getDocs(q);
-  snapshot.forEach(docSnap => records.push({ id: docSnap.id, ...docSnap.data() }));
+
+  snapshot.forEach(docSnap =>
+    records.push({ id: docSnap.id, ...docSnap.data() })
+  );
+
   renderTable();
   renderRecentTable();
   updateSummaries();
@@ -58,75 +114,59 @@ async function loadRecords() {
   renderTaxSummary();
   updateNoteOptions();
 }
-function toggleCustomNote() {
-  const noteSelect = document.getElementById("noteSelect");
-  const customNoteInput = document.getElementById("customNote");
 
-  if (noteSelect.value === "custom") {
-    customNoteInput.classList.remove("hidden");
-    customNoteInput.focus();
-  } else {
-    customNoteInput.classList.add("hidden");
-    customNoteInput.value = ""; // изчистване на полето
-  }
-}
 
-function saveCustomNote(note) {
-  let savedNotes = JSON.parse(localStorage.getItem("customNotes")) || [];
-  if (!note || savedNotes.includes(note)) return;
-  savedNotes.unshift(note);
-  if (savedNotes.length > 5) savedNotes = savedNotes.slice(0, 5);
-  localStorage.setItem("customNotes", JSON.stringify(savedNotes));
-  updateNoteOptions();
-}
+// --------------------------------------------------
+// 🔥 Добавяне на запис
+// --------------------------------------------------
 
-function updateNoteOptions() {
-  const noteSelect = document.getElementById("noteSelect");
-  const savedNotes = JSON.parse(localStorage.getItem("customNotes")) || [];
-
-  const currentValue = noteSelect.value;
-
-  noteSelect.innerHTML = `
-    <option value="М1">М1</option>
-    <option value="М2">М2</option>
-    <option value="custom">Въведи ръчно...</option>
-  `;
-
-  savedNotes.forEach(note => {
-    const opt = document.createElement("option");
-    opt.value = note;
-    opt.textContent = note;
-    noteSelect.insertBefore(opt, noteSelect.querySelector('option[value="custom"]'));
-  });
-
-  noteSelect.value = currentValue;
-}
 async function addRecord() {
   const date = document.getElementById("date").value;
   const type = document.getElementById("type").value;
   const method = document.getElementById("method").value.split(" ")[0];
   const amount = parseFloat(document.getElementById("amount").value);
+
   let note;
-const noteSelectEl = document.getElementById("noteSelect");
-const noteSelect = noteSelectEl.value;
-if (noteSelect === "custom") {
-  note = document.getElementById("customNote").value.trim();
-  if (note) saveCustomNote(note);
-} else {
-  note = noteSelect;
-}
-  const categorySelect = document.getElementById("category");
+  const noteSelectEl = document.getElementById("noteSelect");
+  const noteSelect = noteSelectEl.value;
+
+  if (noteSelect === "custom") {
+    note = document.getElementById("customNote").value.trim();
+    if (note) saveCustomNote(note);
+  } else {
+    note = noteSelect;
+  }
+
   const store = document.getElementById("store").value;
-let category = categorySelect.value;
-if (category === "custom") {
-  category = document.getElementById("customCategory").value;
-}
+
+  let category = document.getElementById("category").value;
+  if (category === "custom") {
+    category = document.getElementById("customCategory").value;
+  }
 
   if (!date || isNaN(amount)) return alert("Попълни дата и сума.");
-  await addDoc(collection(db, "records"), {date, type, method, amount, note, category, store
-});
- loadRecords(); clearForm();
+
+  await addDoc(collection(db, "records"), {
+    date,
+    type,
+    method,
+    amount,
+    note,
+    category,
+    store
+  });
+
+  loadRecords();
+  clearForm();
 }
+
+window.addRecord = addRecord;
+window.deleteRecord = deleteRecord;
+
+
+// --------------------------------------------------
+// 🔥 Изтриване
+// --------------------------------------------------
 
 async function deleteRecord(id) {
   if (!confirm("Сигурен ли си?")) return;
@@ -139,6 +179,23 @@ function clearForm() {
   document.getElementById("amount").value = "";
   document.getElementById("note").value = "";
 }
+
+
+// --------------------------------------------------
+// 🔄 Филтри
+// --------------------------------------------------
+
+const filters = {
+  type: document.getElementById("filterType"),
+  method: document.getElementById("filterMethod"),
+  category: document.getElementById("filterCategory"),
+  store: document.getElementById("filterStore"),
+  startDate: document.getElementById("startDate"),
+  endDate: document.getElementById("endDate")
+};
+
+window.applyFilters = applyFilters;
+window.clearFilters = clearFilters;
 
 function applyFilters() {
   const type = filters.type.value;
@@ -162,6 +219,15 @@ function applyFilters() {
   updateFilterSummary(filteredRecords);
 }
 
+function clearFilters() {
+  filters.type.value = "";
+  filters.method.value = "";
+  filters.category.value = "";
+  filters.startDate.value = "";
+  filters.endDate.value = "";
+  filters.store.value = "";
+  applyFilters();
+}
 function renderTable(data = records) {
   const tbody = document.querySelector("#recordsTable tbody");
   tbody.innerHTML = "";
@@ -180,7 +246,7 @@ function renderTable(data = records) {
     tbody.appendChild(tr);
   });
 }
-  
+
 function updateFilterSummary(data) {
   const summary = { Приход: 0, Разход: 0 };
 
@@ -198,16 +264,6 @@ function updateFilterSummary(data) {
     Разходи: ${summary["Разход"].toFixed(2)} лв | 
     Нетно: ${net.toFixed(2)} лв
   `;
-}
-
-  function clearFilters() {
-  filters.type.value = "";
-  filters.method.value = "";
-  filters.category.value = "";
-  filters.startDate.value = "";
-  filters.endDate.value = "";
-  filters.store.value = "";
-  applyFilters();
 }
 
 function renderRecentTable() {
@@ -252,7 +308,7 @@ function updateSummaries() {
   document.getElementById("monthlySummary").innerHTML = 
     `📆 <strong>Месец:</strong> Приходи: ${monthIncome.toFixed(2)} лв | Разходи: ${monthExpense.toFixed(2)} лв | Салдо: ${saldo} лв`;
 }
- 
+
 function renderTaxSummary() {
   const income = records.filter(r => r.type === "Приход").reduce((sum, r) => sum + r.amount, 0);
   const expense = records.filter(r => r.type === "Разход").reduce((sum, r) => sum + r.amount, 0);
@@ -308,168 +364,77 @@ function renderMethodSummary() {
 function renderChart() {
   const ctx = document.getElementById('chart').getContext('2d');
   const monthData = {};
-  records.forEach(r=>{
-    const m = r.date?.slice(0,7);
-    if(!m) return;
-    if(!monthData[m]) monthData[m]={income:0,expense:0};
-    if(r.type==="Приход") monthData[m].income+=r.amount;
-    if(r.type==="Разход") monthData[m].expense+=r.amount;
+  records.forEach(r => {
+    const m = r.date?.slice(0, 7);
+    if (!m) return;
+    if (!monthData[m]) monthData[m] = { income: 0, expense: 0 };
+    if (r.type === "Приход") monthData[m].income += r.amount;
+    if (r.type === "Разход") monthData[m].expense += r.amount;
   });
-  const labels = Object.keys(monthData).sort();
-  const incomeData = labels.map(m=>monthData[m].income);
-  const expenseData = labels.map(m=>monthData[m].expense);
 
-  if(chartRef) chartRef.destroy();
+  const labels = Object.keys(monthData).sort();
+  const incomeData = labels.map(m => monthData[m].income);
+  const expenseData = labels.map(m => monthData[m].expense);
+
+  if (chartRef) chartRef.destroy();
   chartRef = new Chart(ctx, {
     type: 'bar',
     data: {
       labels,
       datasets: [
-        { label: 'Приходи', data: incomeData, backgroundColor:'#4caf50' },
-        { label: 'Разходи', data: expenseData, backgroundColor:'#f44336' }
+        { label: 'Приходи', data: incomeData, backgroundColor: '#4caf50' },
+        { label: 'Разходи', data: expenseData, backgroundColor: '#f44336' }
       ]
     },
-    options: { responsive:true, plugins:{ legend:{position:'top'}, title:{display:true,text:'Приходи и разходи по месеци'}}}
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'top' },
+        title: { display: true, text: 'Приходи и разходи по месеци' }
+      }
+    }
   });
 }
-function setCurrentMonth() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  document.getElementById("startDate").value = `${year}-${month}-01`;
-  document.getElementById("endDate").value = `${year}-${month}-${new Date(year, now.getMonth() + 1, 0).getDate()}`;
-  applyFilters();
-}
 
-window.addRecord = addRecord;
-window.deleteRecord = deleteRecord;
-window.showScreen = function(name) {
-  document.getElementById("screen-add").classList.add("hidden");
-  document.getElementById("screen-report").classList.add("hidden");
-  document.getElementById("screen-" + name).classList.remove("hidden");
-};
-window.exportToExcel = () => {
-  const wb = XLSX.utils.book_new();
-  const rows = [["Дата", "Тип", "Сума", "Метод", "Бележка"]];
-  records.forEach(r=>rows.push([r.date, r.type, r.amount.toFixed(2), r.method, r.note]));
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-  XLSX.utils.book_append_sheet(wb, ws, "Отчет");
-  XLSX.writeFile(wb, "nonstop_otchet.xlsx");
-};
+function toggleCustomNote() {
+  const noteSelect = document.getElementById("noteSelect");
+  const customNoteInput = document.getElementById("customNote");
 
-window.applyFilters = applyFilters;
-window.clearFilters = clearFilters;
-
-window.exportToCSV = () => {
-  let csv = "Дата,Тип,Сума,Метод,Бележка\n";
-  records.forEach(r => {
-    csv += `${r.date},${r.type},${r.amount.toFixed(2)},${r.method},${r.note}\n`;
-  });
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = `nonstop_backup_${new Date().toISOString().slice(0,10)}.csv`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-};
-window.exportToJSON = () => {
-  const json = JSON.stringify(records, null, 2);
-  const blob = new Blob([json], { type: "application/json" });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = `nonstop_backup_${new Date().toISOString().slice(0,10)}.json`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-};
-window.checkPassword = () => {
-  const pass = document.getElementById("password").value;
-  if (pass === "7801") {
-    document.getElementById("login").style.display = "none";
-    document.getElementById("app").classList.remove("hidden");
+  if (noteSelect.value === "custom") {
+    customNoteInput.classList.remove("hidden");
+    customNoteInput.focus();
   } else {
-    alert("Грешна парола!");
+    customNoteInput.classList.add("hidden");
+    customNoteInput.value = "";
   }
-};
-  window.printFilteredTable = () => {
-  const printWindow = window.open('', '_blank');
+}
 
-  const income = filteredRecords.filter(r => r.type === "Приход").reduce((sum, r) => sum + r.amount, 0);
-  const expense = filteredRecords.filter(r => r.type === "Разход").reduce((sum, r) => sum + r.amount, 0);
-  const total = income - expense;
+function saveCustomNote(note) {
+  let savedNotes = JSON.parse(localStorage.getItem("customNotes")) || [];
+  if (!note || savedNotes.includes(note)) return;
+  savedNotes.unshift(note);
+  if (savedNotes.length > 5) savedNotes = savedNotes.slice(0, 5);
+  localStorage.setItem("customNotes", JSON.stringify(savedNotes));
+  updateNoteOptions();
+}
 
-  const summaryHtml = `
-    <div style="margin-top:20px; font-weight:bold; font-size:16px;">
-      Сума от филтъра: 
-      Приходи: ${income.toFixed(2)} лв | 
-      Разходи: ${expense.toFixed(2)} лв | 
-      Нетно: ${total.toFixed(2)} лв
-    </div>
+function updateNoteOptions() {
+  const noteSelect = document.getElementById("noteSelect");
+  const savedNotes = JSON.parse(localStorage.getItem("customNotes")) || [];
+  const currentValue = noteSelect.value;
+
+  noteSelect.innerHTML = `
+    <option value="М1">М1</option>
+    <option value="М2">М2</option>
+    <option value="custom">Въведи ръчно...</option>
   `;
 
-  const rows = filteredRecords.map(r =>
-    `<tr>
-      <td>${r.date}</td>
-      <td>${r.type}</td>
-      <td>${r.amount.toFixed(2)} лв</td>
-      <td>${r.method}</td>
-      <td>${r.category || ''}</td>
-      <td>${r.note}</td>
-    </tr>`
-  ).join("");
-
-  const html = `
-    <html>
-    <head>
-      <title>Принтиране на записи</title>
-      <style>
-        body { font-family: sans-serif; padding: 20px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #999; padding: 8px; text-align: left; }
-        th { background: #eee; }
-      </style>
-    </head>
-    <body>
-      <h2>Филтрирани записи</h2>
-      <table>
-        <thead>
-          <tr><th>Дата</th><th>Тип</th><th>Сума</th><th>Метод</th><th>Категория</th><th>Бележка</th></tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>
-      ${summaryHtml}
-    </body>
-    </html>
-  `;
-
-  printWindow.document.write(html);
-  printWindow.document.close();
-  printWindow.focus();
-  printWindow.print();
-};
-
-window.exportFilteredToExcel = () => {
-  const wb = XLSX.utils.book_new();
-  const rows = [["Дата", "Тип", "Сума", "Метод", "Категория", "Бележка"]];
-
-  let income = 0, expense = 0;
-
-  filteredRecords.forEach(r => {
-    const amount = parseFloat(r.amount);
-    rows.push([r.date, r.type, amount.toFixed(2), r.method, r.category || '', r.note]);
-
-    if (r.type === "Приход") income += amount;
-    if (r.type === "Разход") expense += amount;
+  savedNotes.forEach(note => {
+    const opt = document.createElement("option");
+    opt.value = note;
+    opt.textContent = note;
+    noteSelect.insertBefore(opt, noteSelect.querySelector('option[value="custom"]'));
   });
 
-  const total = income - expense;
-
-  rows.push([]);
-  rows.push(["", "Сума от филтъра:", `Приходи: ${income.toFixed(2)} лв`, `Разходи: ${expense.toFixed(2)} лв`, `Нетно: ${total.toFixed(2)} лв`]);
-
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-  XLSX.utils.book_append_sheet(wb, ws, "Филтрирани");
-  XLSX.writeFile(wb, "filtrirani_danni.xlsx");
-};
-
+  noteSelect.value = currentValue;
+}
