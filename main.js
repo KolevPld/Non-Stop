@@ -83,15 +83,18 @@ let chartRef = null;
 const statusDiv = document.getElementById("status");
 
 onAuthStateChanged(auth, user => {
-  const isAnonymous = user && user.isAnonymous;
+  const isLoggedIn = user && !user.isAnonymous;
+  const isAdmin = isLoggedIn && user.email === ADMIN_EMAIL;
 
-  if (user && !isAnonymous) {
-    statusDiv.textContent = `🔓 Влязъл: ${user.email}`;
+  if (isLoggedIn) {
+    statusDiv.textContent = `🔓 Влязъл: ${user.email}${isAdmin ? " (админ)" : ""}`;
+    document.body.classList.toggle("admin", isAdmin);
     document.getElementById("loginScreen").classList.add("hidden");
     document.getElementById("app").classList.remove("hidden");
     loadRecords();
   } else {
     statusDiv.textContent = "🔐 Моля, влез с имейл и парола.";
+    document.body.classList.remove("admin");
     document.getElementById("loginScreen").classList.remove("hidden");
     document.getElementById("app").classList.add("hidden");
   }
