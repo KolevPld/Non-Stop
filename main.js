@@ -430,7 +430,6 @@ function saveCustomNote(note) {
   localStorage.setItem("customNotes", JSON.stringify(savedNotes));
   updateNoteOptions();
 }
-
 function updateNoteOptions() {
   const noteSelect = document.getElementById("noteSelect");
   const savedNotes = JSON.parse(localStorage.getItem("customNotes")) || [];
@@ -441,13 +440,17 @@ function updateNoteOptions() {
     <option value="М2">М2</option>
     <option value="custom">Въведи ръчно...</option>
   `;
+
   savedNotes.forEach(note => {
     const opt = document.createElement("option");
     opt.value = note;
     opt.textContent = note;
     noteSelect.insertBefore(opt, noteSelect.querySelector('option[value="custom"]'));
   });
-  }
+
+  noteSelect.value = currentValue;
+}
+
 window.showScreen = function(screen) {
   const addScreen = document.getElementById("screen-add");
   const reportScreen = document.getElementById("screen-report");
