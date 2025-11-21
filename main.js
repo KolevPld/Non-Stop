@@ -103,7 +103,6 @@ onAuthStateChanged(auth, user => {
 // --------------------------------------------------
 // 🔥 FIRESTORE: Зареждане
 // --------------------------------------------------
-
 async function loadRecords() {
   records = [];
   const q = query(collection(db, "records"), orderBy("date", "desc"));
@@ -112,18 +111,22 @@ async function loadRecords() {
   snapshot.forEach(docSnap =>
     records.push({ id: docSnap.id, ...docSnap.data() })
   );
-if (document.body.classList.contains("admin")) {
-  renderTable();
-  renderRecentTable();
-  updateSummaries();
-  renderMethodSummary();
-  renderChart();
-  applyFilters();
-  renderTaxSummary();
-  updateNoteOptions();
+
+  if (document.body.classList.contains("admin")) {
+    renderTable();
+    renderRecentTable();
+    updateSummaries();
+    renderMethodSummary();
+    renderChart();
+    applyFilters();
+    renderTaxSummary();
+    updateNoteOptions();
+  } else {
+    renderRecentTable();       // 🟢 Покажи последните 5 записа
+    showScreen("add");         // 🟢 Потребителят остава само на екран 1
+    document.querySelector("#totalSummary").innerHTML = ""; // скриваме излишна инфо
   }
 }
-
 
 // --------------------------------------------------
 // 🔥 Добавяне на запис
