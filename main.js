@@ -441,7 +441,7 @@ function updateNoteOptions() {
     <option value="М2">М2</option>
     <option value="custom">Въведи ръчно...</option>
   `;
-
+}
   savedNotes.forEach(note => {
     const opt = document.createElement("option");
     opt.value = note;
