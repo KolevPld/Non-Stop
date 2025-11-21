@@ -450,7 +450,6 @@ function updateNoteOptions() {
 
   noteSelect.value = currentValue;
 }
-
 window.showScreen = function(screen) {
   const addScreen = document.getElementById("screen-add");
   const reportScreen = document.getElementById("screen-report");
@@ -463,8 +462,6 @@ window.showScreen = function(screen) {
     reportScreen.classList.add("hidden");
   }
 };
-  noteSelect.value = currentValue;
-}
 
 
 
