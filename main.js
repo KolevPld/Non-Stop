@@ -91,6 +91,7 @@ onAuthStateChanged(auth, user => {
     document.body.classList.toggle("admin", isAdmin);
     document.getElementById("loginScreen").classList.add("hidden");
     document.getElementById("app").classList.remove("hidden");
+    showScreen("add"); // Принудително показва само екран 1
     loadRecords();
   } else {
     statusDiv.textContent = "🔐 Моля, влез с имейл и парола.";
