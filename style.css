@@ -510,11 +510,11 @@ tr:hover {
   #recordsTable, #recentTable { font-size: 13px; }
 }
 
-/* 4) Изчистване на конфликтни дефиниции – избягвай много повторения на `table{...}` */
 .admin-only {
-  display: none;
+  display: none !important;
 }
 
 body.admin .admin-only {
-  display: block; /* или inline-block, ако е бутон */
+  display: block !important;
 }
+
