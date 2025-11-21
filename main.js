@@ -121,6 +121,7 @@ if (document.body.classList.contains("admin")) {
   applyFilters();
   renderTaxSummary();
   updateNoteOptions();
+  }
 }
 
 
