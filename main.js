@@ -114,9 +114,7 @@ async function loadRecords() {
   );
 
   if (document.body.classList.contains("admin")) {
-    renderTable();
     renderRecentTable();
-    updateSummaries();
     renderMethodSummary();
     renderChart();
     applyFilters();
@@ -454,6 +452,7 @@ function updateNoteOptions() {
 
   noteSelect.value = currentValue;
 }
+
 window.showScreen = function(screen) {
   const addScreen = document.getElementById("screen-add");
   const reportScreen = document.getElementById("screen-report");
@@ -461,11 +460,16 @@ window.showScreen = function(screen) {
   if (screen === "report") {
     addScreen.classList.add("hidden");
     reportScreen.classList.remove("hidden");
+    renderTable(); // за отчети
+    updateSummaries();
+    renderMethodSummary();
+    renderChart();
+    applyFilters();
+    renderTaxSummary();
   } else {
     addScreen.classList.remove("hidden");
     reportScreen.classList.add("hidden");
+    renderRecentTable();  // показва само последните 5 записа
   }
 };
-
-
 
