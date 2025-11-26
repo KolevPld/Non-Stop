@@ -113,18 +113,22 @@ async function loadRecords() {
     records.push({ id: docSnap.id, ...docSnap.data() })
   );
 
-  if (document.body.classList.contains("admin")) {
-    renderRecentTable();
-    renderMethodSummary();
-    renderChart();
-    applyFilters();
-    renderTaxSummary();
-    updateNoteOptions();
-  } else {
-    renderRecentTable();       // 🟢 Покажи последните 5 записа
-    showScreen("add");         // 🟢 Потребителят остава само на екран 1
-    document.querySelector("#totalSummary").innerHTML = ""; // скриваме излишна инфо
-  }
+ if (document.body.classList.contains("admin")) {
+  renderTable();
+  renderRecentTable();
+  updateSummaries();
+  renderMethodSummary();
+  renderChart();
+  applyFilters();
+  renderTaxSummary();
+  updateNoteOptions();
+
+  // Винаги показваме само екран 1 при вход
+  showScreen("add");
+} else {
+  renderRecentTable();       
+  showScreen("add");         
+  document.querySelector("#totalSummary").innerHTML = "";
 }
 
 // --------------------------------------------------
