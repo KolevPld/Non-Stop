@@ -509,12 +509,16 @@ tr:hover {
   /* по-малки шрифтове в таблиците */
   #recordsTable, #recentTable { font-size: 13px; }
 }
-
-.admin-only {
+.hidden {
   display: none !important;
 }
 
-body.admin .admin-only {
-  display: block !important;
+#screen-add, #screen-report {
+  width: 100%;
 }
 
+#screen-add .summary,
+#screen-add table,
+#screen-add form {
+  margin-bottom: 20px;
+}
