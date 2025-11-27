@@ -129,8 +129,8 @@ async function loadRecords() {
   renderRecentTable();       
   showScreen("add");         
   document.querySelector("#totalSummary").innerHTML = "";
+  }
 }
-
 // --------------------------------------------------
 // 🔥 Добавяне на запис
 // --------------------------------------------------
