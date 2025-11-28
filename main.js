@@ -18,6 +18,13 @@ import {
   signOut
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
+import {
+  getStorage,
+  ref,
+  uploadBytes,
+  getDownloadURL
+} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-storage.js";
+
 
 // --------------------------------------------------
 // 🔥 Firebase Config
@@ -34,6 +41,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
+const storage = getStorage(app);
 const ADMIN_EMAIL = "kmet.zapaden@gmail.com";
 
 // --------------------------------------------------
