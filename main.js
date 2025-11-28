@@ -169,6 +169,16 @@ async function addRecord() {
 
   if (!date || isNaN(amount)) return alert("Попълни дата и сума.");
 
+  const fileInput = document.getElementById("receiptFile");
+  let receiptUrl = "";
+
+  if (fileInput.files.length > 0) {
+    const file = fileInput.files[0];
+    const storageRef = ref(storage, `receipts/${Date.now()}-${file.name}`);
+    await uploadBytes(storageRef, file);
+    receiptUrl = await getDownloadURL(storageRef);
+  }
+
   await addDoc(collection(db, "records"), {
     date,
     type,
@@ -176,7 +186,8 @@ async function addRecord() {
     amount,
     note,
     category,
-    store
+    store,
+    receiptUrl // добавяме линка към разписката
   });
 
   loadRecords();
@@ -201,6 +212,7 @@ function clearForm() {
   document.getElementById("date").value = "";
   document.getElementById("amount").value = "";
   document.getElementById("note").value = "";
+  document.getElementById("receiptFile").value = "";
 }
 
 
