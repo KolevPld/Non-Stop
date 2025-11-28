@@ -263,11 +263,13 @@ function clearFilters() {
   filters.store.value = "";
   applyFilters();
 }
+
 function renderTable(data = records) {
   const tbody = document.querySelector("#recordsTable tbody");
   tbody.innerHTML = "";
 
   data.forEach(r => {
+    const hasReceipt = r.receiptUrl && r.receiptUrl !== "";
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${r.date}</td>
@@ -275,12 +277,15 @@ function renderTable(data = records) {
       <td>${r.amount.toFixed(2)} лв</td>
       <td>${r.method}</td>
       <td>${r.category || ''}</td>
-      <td>${r.note}</td>
       <td>
-  <button class="admin-only" onclick="deleteRecord('${r.id}')" style="background:#f44336;font-size:12px;padding:4px 6px;">
-    🗑️
-  </button>
-</td>
+        ${r.note}
+        ${hasReceipt ? `<br><a href="${r.receiptUrl}" target="_blank" style="font-size:12px; color:#2196f3;">📎 Разписка</a>` : ''}
+      </td>
+      <td>
+        <button class="admin-only" onclick="deleteRecord('${r.id}')" style="background:#f44336;font-size:12px;padding:4px 6px;">
+          🗑️
+        </button>
+      </td>
     `;
     tbody.appendChild(tr);
   });
