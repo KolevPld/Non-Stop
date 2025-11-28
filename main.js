@@ -460,11 +460,16 @@ function updateNoteOptions() {
 window.showScreen = function(screen) {
   const addScreen = document.getElementById("screen-add");
   const reportScreen = document.getElementById("screen-report");
+  const isAdmin = document.body.classList.contains("admin");
 
   if (screen === "report") {
+    if (!isAdmin) {
+      alert("Нямаш достъп до този екран.");
+      return;
+    }
     addScreen.classList.add("hidden");
     reportScreen.classList.remove("hidden");
-    renderTable(); // за отчети
+    renderTable(); 
     updateSummaries();
     renderMethodSummary();
     renderChart();
@@ -473,7 +478,8 @@ window.showScreen = function(screen) {
   } else {
     addScreen.classList.remove("hidden");
     reportScreen.classList.add("hidden");
-    renderRecentTable();  // показва само последните 5 записа
+    renderRecentTable();  
   }
 };
+
 
