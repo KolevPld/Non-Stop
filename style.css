@@ -522,3 +522,15 @@ tr:hover {
 #screen-add form {
   margin-bottom: 20px;
 }
+body {
+  scroll-behavior: smooth;
+}
+
+::selection {
+  background: #4caf50;
+  color: #fff;
+}
+table {
+  word-wrap: break-word;
+  table-layout: auto;
+}
