@@ -193,8 +193,9 @@ function clearForm() {
   document.getElementById("date").value = "";
   document.getElementById("amount").value = "";
   document.getElementById("note").value = "";
+  document.getElementById("customNote").value = "";
+  document.getElementById("customCategory").value = ""; // ➕ Добави това
 }
-
 
 // --------------------------------------------------
 // 🔄 Филтри
