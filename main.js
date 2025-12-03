@@ -192,9 +192,11 @@ async function deleteRecord(id) {
 function clearForm() {
   document.getElementById("date").value = "";
   document.getElementById("amount").value = "";
-  document.getElementById("note").value = "";
-  document.getElementById("customNote").value = "";
-  document.getElementById("customCategory").value = ""; // ➕ Добави това
+  const noteInput = document.getElementById("customNote");
+  if (noteInput) noteInput.value = "";
+  
+  const categoryInput = document.getElementById("customCategory");
+  if (categoryInput) categoryInput.value = "";
 }
 
 // --------------------------------------------------
