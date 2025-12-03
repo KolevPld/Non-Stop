@@ -427,6 +427,7 @@ function toggleCustomNote() {
     customNoteInput.value = "";
   }
 }
+window.toggleCustomNote = toggleCustomNote;
 
 function saveCustomNote(note) {
   let savedNotes = JSON.parse(localStorage.getItem("customNotes")) || [];
