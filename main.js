@@ -482,5 +482,18 @@ window.showScreen = function(screen) {
     renderRecentTable();  
   }
 };
+function toggleCustomCategory() {
+  const select = document.getElementById("category");
+  const input = document.getElementById("customCategory");
+
+  if (select.value === "custom") {
+    input.classList.remove("hidden");
+    input.focus();
+  } else {
+    input.classList.add("hidden");
+    input.value = "";
+  }
+}
+window.toggleCustomCategory = toggleCustomCategory;
 
 
