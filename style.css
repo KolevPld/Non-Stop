@@ -20,37 +20,24 @@ body.dark {
 * {box-sizing: border-box;
 }
 html, body {
-  body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: #121212;
-  color: #e0e0e0;
+  background: var(--bg-color);
+  color: var(--text-color);
   padding: 20px;
   margin: 0 auto;
-  max-width: 1200px; /* беше 800px */
+  max-width: 1200px;
   width: 100%;
   overflow-x: hidden;
-}
-    
+}    
 h2, h3 {
   color: #ffffff;
   margin-bottom: 10px;
 }
-
 input, select, button, textarea {
   background: var(--input-bg);
   color: var(--text-color);
   border: 1px solid var(--border-color);
-  width: 100%;
-  padding: 12px;
-  margin: 6px 0;
-  font-size: 16px;
-  border-radius: 8px;
-  background: #1f1f1f;
-  color: #e0e0e0;
-  border: 1px solid #4caf50;
-  -webkit-appearance: none;
-  appearance: none;
-  transition: 0.2s;
+  ...
 }
 
 input:focus, select:focus, textarea:focus {
