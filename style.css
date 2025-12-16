@@ -20,6 +20,7 @@ body.dark {
 * {box-sizing: border-box;
 }
 html, body {
+  body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background: #121212;
   color: #e0e0e0;
