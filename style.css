@@ -37,6 +37,9 @@ h2, h3 {
 }
 
 input, select, button, textarea {
+  background: var(--input-bg);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
   width: 100%;
   padding: 12px;
   margin: 6px 0;
