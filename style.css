@@ -1,11 +1,16 @@
+/* ================================
+   THEME VARIABLES
+================================ */
 :root {
   --bg-color: #ffffff;
   --text-color: #1a1a1a;
   --card-bg: #f9f9f9;
   --input-bg: #f0f0f0;
-  --border-color: #ccc;
+  --border-color: #cccccc;
   --accent-color: #4caf50;
+  --accent-hover: #66bb6a;
   --danger-color: #e74c3c;
+  --shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
 
 body.dark {
@@ -15,10 +20,18 @@ body.dark {
   --input-bg: #2a2a2a;
   --border-color: #4caf50;
   --accent-color: #66bb6a;
+  --accent-hover: #81c784;
   --danger-color: #e74c3c;
+  --shadow: 0 2px 6px rgba(0,0,0,0.5);
 }
-* {box-sizing: border-box;
+
+/* ================================
+   RESET + BASE
+================================ */
+* {
+  box-sizing: border-box;
 }
+
 html, body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background: var(--bg-color);
@@ -28,286 +41,97 @@ html, body {
   max-width: 1200px;
   width: 100%;
   overflow-x: hidden;
-}    
-.card {
-  background: var(--card-bg);
-  color: var(--text-color);
+  scroll-behavior: smooth;
 }
+
 h2, h3 {
-  color: #ffffff;
+  color: var(--text-color);
   margin-bottom: 10px;
 }
-input, select, button, textarea {
+
+/* ================================
+   CARDS / SECTIONS
+================================ */
+.card,
+.summary {
+  background: var(--card-bg);
+  color: var(--text-color);
+  padding: 16px;
+  margin-top: 15px;
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+}
+
+/* ================================
+   INPUTS
+================================ */
+input,
+select,
+textarea {
+  width: 100%;
+  padding: 12px;
+  margin: 6px 0;
+  font-size: 16px;
+  border-radius: 8px;
   background: var(--input-bg);
   color: var(--text-color);
   border: 1px solid var(--border-color);
-  ...
+  transition: 0.2s;
+  appearance: none;
 }
 
-input:focus, select:focus, textarea:focus {
+input:focus,
+select:focus,
+textarea:focus {
   outline: none;
-  background: #2c2c2c;
-  box-shadow: 0 0 0 2px #66bb6a;
+  background: var(--input-bg);
+  box-shadow: 0 0 0 2px var(--accent-color);
 }
 
+input:focus::placeholder {
+  color: transparent;
+}
+/* ================================
+   BUTTONS
+================================ */
 button {
   cursor: pointer;
-  color: #fff;
+  background: var(--accent-color);
+  color: #ffffff;
   font-weight: bold;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+  border: none;
+  border-radius: 8px;
+  padding: 12px;
   transition: background 0.3s, transform 0.1s;
-  border: none;
-  border-radius: 8px;
-  padding: 12px;
+  box-shadow: var(--shadow);
 }
 
-button:hover { background: #66bb6a; }
-button:active { transform: scale(0.98); }
-
-table {
-  width: 100%;
-  margin-top: 20px;
-  border-collapse: collapse;
-  background: #1e1e1e;
-  border-radius: 8px;
-  overflow: hidden;
+button:hover {
+  background: var(--accent-hover);
 }
 
-th, td {
-  padding: 12px;
-  border-bottom: 1px solid #333;
-  text-align: left;
-  word-break: break-word;
+button:active {
+  transform: scale(0.97);
 }
 
-th {
-  background: #2c2c2c;
-}
-
-.table-responsive {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.summary {
-  background: #1f1f1f;
-  padding: 12px;
+/* ================================
+   BUTTON GROUP
+================================ */
+.btn-group {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
   margin-top: 15px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.5);
-}
-
-.btn-group {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.btn-group button {
-  flex: 1;
-}
-
-.hidden {
-  display: none;
-}
-
-#status {
-  text-align: center;
-  margin-bottom: 15px;
-  font-size: 14px;
-  color: #8bc34a;
-}
-
-#login {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  max-width: 320px;
-  margin: 40px auto;
-  padding: 20px;
-  background: #1f1f1f;
-  border-radius: 8px;
-}
-
-#login input[type="password"],
-#login button {
-  width: 100%;
-  max-width: 280px;
-  font-size: 18px;
-  padding: 10px;
-}
-
-#login input[type="password"] { margin-bottom: 12px; }
-#login button { margin-top: 8px; }
-
-#screen-add label {
-  margin-top: 8px;
-  font-weight: bold;
-}
-
-#screen-add input,
-#screen-add select,
-#screen-add textarea,
-#screen-add button {
-  width: 100%;
-  max-width: 500px;
-  margin: auto;
-  margin-bottom: 10px;
-  display: block;
-}
-
-#filterSummary {
-  font-weight: bold;
-  background: #1e1e1e;
-  padding: 10px;
-  border-radius: 6px;
-  color: #fff;
-  text-align: center;
-}
-
-.date-range-group {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin: 10px 0;
-}
-
-.date-range-group label {
-  flex: 1 1 48%;
-  min-width: 140px;
-}
-
-.date-range-group input[type="date"] {
-  width: 100%;
-  font-size: 15px;
-  padding: 8px 10px;
-  border-radius: 6px;
-}
-
-.date-range-group button {
-  padding: 10px 12px;
-  font-size: 14px;
-  border-radius: 6px;
-  background: #607d8b;
-  color: #fff;
-  border: none;
-  white-space: nowrap;
-}
-
-@media (max-width: 600px) {
-  body {
-    padding: 10px;
-    font-size: 14px;
-    max-width: 100%;
-  }
-
-  input, select, button, textarea {
-    font-size: 14px;
-  }
-
-  table, th, td {
-    font-size: 13px;
-  }
-
-  canvas {
-    max-width: 100% !important;
-    height: auto !important;
-  }
-
-  #login {
-    max-width: 95%;
-    margin: 20px auto;
-    padding: 16px;
-  }
-
-  .btn-group {
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .btn-group button {
-    width: 100%;
-    font-size: 15px;
-    padding: 10px;
-  }
-
-  .date-range-group {
-    flex-direction: column;
-  }
-
-  .date-range-group label,
-  .date-range-group button {
-    font-size: 13px;
-    padding: 8px;
-  }
-
-  #screen-report input[type="date"] {
-    width: 100%;
-  }
-}
-/* --- Mobile-friendly form styling --- */
-#screen-add form {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  padding: 16px;
-  background: #1f1f1f;
-  border-radius: 10px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
-  margin-bottom: 30px;
-}
-
-#screen-add input,
-#screen-add select,
-#screen-add button {
-  font-size: 18px;
-  padding: 12px;
-  min-height: 48px;
-  border-radius: 8px;
-  border: 1px solid #4caf50;
-  background: #2a2a2a;
-  color: #fff;
-}
-
-#screen-add input:focus,
-#screen-add select:focus {
-  outline: none;
-  box-shadow: 0 0 0 2px #66bb6a;
-}
-
-#screen-add button {
-  background: #4caf50;
-  color: white;
-  font-weight: bold;
-  transition: background 0.3s ease;
-}
-
-#screen-add button:hover {
-  background: #66bb6a;
-}
-.btn-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 20px;
 }
 
 .btn-group button {
   flex: 1;
   min-width: 120px;
-  padding: 10px 15px;
-  font-size: 16px;
-  background-color: #2196f3;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
 }
 
-.btn-group button:hover {
-  background-color: #1976d2;
-}
-/* --- Table responsive styling --- */
+/* ================================
+   TABLES
+================================ */
 .table-responsive {
   width: 100%;
   overflow-x: auto;
@@ -317,255 +141,95 @@ th {
 table {
   width: 100%;
   border-collapse: collapse;
-  background: #1e1e1e;
-  color: #fff;
-  font-size: 14px;
-}
-
-th, td {
-  padding: 12px;
-  text-align: left;
-  border-bottom: 1px solid #444;
-}
-
-th {
-  background-color: #2c2c2c;
-}
-
-tr:hover {
-  background-color: #333;
-}
-/* --- Responsive tweaks for small screens --- */
-@media (max-width: 600px) {
-  .btn-group {
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .date-range-group {
-    flex-direction: column;
-  }
-
-  label {
-    font-size: 16px;
-  }
-
-  input, select, button {
-    font-size: 16px;
-  }
-
-  table {
-    font-size: 12px;
-  }
-
-  th, td {
-    padding: 10px;
-  }
-}
-/* --- Login and status styling --- */
-#login {
-  margin: 60px auto;
-  max-width: 320px;
-  padding: 20px;
-  background: #2c2c2c;
-  border-radius: 10px;
-  box-shadow: 0 0 8px rgba(0,0,0,0.3);
-  text-align: center;
-}
-
-#login h2 {
-  margin-bottom: 20px;
-  font-size: 22px;
-  color: #fff;
-}
-
-#login input[type="password"] {
-  width: 100%;
-  padding: 12px;
-  font-size: 16px;
-  margin-bottom: 15px;
-  border: 1px solid #4caf50;
+  background: var(--card-bg);
+  color: var(--text-color);
   border-radius: 8px;
-  background: #1f1f1f;
-  color: #fff;
-}
-
-#login button {
-  width: 100%;
-  padding: 12px;
-  font-size: 16px;
-  background: #4caf50;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background 0.3s ease;
-}
-
-#login button:hover {
-  background: #66bb6a;
-}
-
-#status {
-  text-align: center;
-  padding: 10px;
-  background: #333;
-  color: #ccc;
-  font-size: 14px;
-}
-/* --- Tables and summaries --- */
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 10px;
-  background: #1f1f1f;
-  color: #fff;
-  font-size: 15px;
+  overflow: hidden;
 }
 
 thead {
-  background: #4caf50;
-  color: white;
+  background: var(--accent-color);
+  color: #ffffff;
 }
 
 th, td {
   padding: 10px;
+  border-bottom: 1px solid var(--border-color);
   text-align: left;
-  border-bottom: 1px solid #333;
+  word-break: break-word;
 }
 
 tr:hover {
-  background-color: #2a2a2a;
+  background: rgba(0,0,0,0.05);
 }
 
-.summary {
-  background: #2c2c2c;
-  padding: 16px;
-  margin-top: 20px;
+body.dark tr:hover {
+  background: rgba(255,255,255,0.05);
+}
+
+/* ================================
+   LOGIN
+================================ */
+#login {
+  max-width: 320px;
+  margin: 40px auto;
+  padding: 20px;
+  background: var(--card-bg);
   border-radius: 10px;
-  color: #ddd;
-  box-shadow: 0 0 6px rgba(0,0,0,0.3);
+  box-shadow: var(--shadow);
+  text-align: center;
 }
 
-.summary h3 {
-  margin-top: 0;
-  margin-bottom: 10px;
-  font-size: 18px;
-  color: #4caf50;
-}
-/* === Unified table sizing override (APPLY LAST) === */
-:root{
-  /* desktop базови ширини (можеш да ги пипнеш) */
-  --col-date: 9rem;      /* Дата */
-  --col-type: 7.5rem;    /* Тип */
-  --col-amount: 8.5rem;  /* Сума */
-  --col-method: 8rem;    /* Метод */
-  --col-category: 9rem;  /* Категория */
-  --col-actions: 4.5rem; /* Действия */
+/* ================================
+   STATUS
+================================ */
+#status {
+  text-align: center;
+  padding: 10px;
+  font-size: 14px;
+  color: var(--accent-color);
 }
 
-/* 1) Единно поведение на всички таблици */
-#recordsTable, #recentTable, .table-responsive table {
-  table-layout: fixed;     /* ключово! */
-  width: 100%;
-}
-
-/* 2) Еднакви ширини на колони */
-/* Дата */
-#recordsTable th:nth-child(1), #recordsTable td:nth-child(1),
-#recentTable  th:nth-child(1), #recentTable  td:nth-child(1) { width: var(--col-date); }
-
-/* Тип */
-#recordsTable th:nth-child(2), #recordsTable td:nth-child(2),
-#recentTable  th:nth-child(2), #recentTable  td:nth-child(2) { width: var(--col-type); }
-
-/* Сума */
-#recordsTable th:nth-child(3), #recordsTable td:nth-child(3),
-#recentTable  th:nth-child(3), #recentTable  td:nth-child(3) { width: var(--col-amount); }
-
-/* Метод */
-#recordsTable th:nth-child(4), #recordsTable td:nth-child(4),
-#recentTable  th:nth-child(4), #recentTable  td:nth-child(4) { width: var(--col-method); }
-
-/* Категория – само в recordsTable */
-#recordsTable th:nth-child(5), #recordsTable td:nth-child(5) { width: var(--col-category); }
-
-/* Бележка – заемa остатъка + режем дълги текстове с еллипсис */
-#recordsTable th:nth-child(6), #recordsTable td:nth-child(6),
-#recentTable  th:nth-child(5), #recentTable  td:nth-child(5) {
-  width: auto;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;   /* по-добър мобилен вид */
-}
-
-/* Действия (кошче) */
-#recordsTable th:nth-child(7), #recordsTable td:nth-child(7),
-#recentTable  th:nth-child(6), #recentTable  td:nth-child(6) { width: var(--col-actions); }
-
-/* 3) Мобилни корекции (по-компактно) */
-@media (max-width: 600px) {
-  :root{
-    --col-date: 7.5rem;
-    --col-type: 6.5rem;
-    --col-amount: 7.5rem;
-    --col-method: 7rem;
-    --col-category: 7.5rem;
-    --col-actions: 3.5rem;
-  }
-
-  /* по-малки падинги за повече съдържание в ред */
-  #recordsTable th, #recordsTable td,
-  #recentTable  th, #recentTable  td { padding: 8px; }
-
-  /* по-малки шрифтове в таблиците */
-  #recordsTable, #recentTable { font-size: 13px; }
-}
+/* ================================
+   HELPERS
+================================ */
 .hidden {
   display: none !important;
 }
 
-#screen-add, #screen-report {
-  width: 100%;
+/* ================================
+   ANIMATION
+================================ */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-#screen-add .summary,
-#screen-add table,
-#screen-add form {
-  margin-bottom: 20px;
-}
-body {
-  scroll-behavior: smooth;
-}
-
-::selection {
-  background: #4caf50;
-  color: #fff;
-}
-table {
-  word-wrap: break-word;
-  table-layout: auto;
-}
-input:focus::placeholder {
-  color: transparent;
-}
-#screen-add form,
+.card,
+.summary,
 table,
-.summary {
+form {
   animation: fadeIn 0.3s ease-in-out;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
+/* ================================
+   MOBILE
+================================ */
 @media (max-width: 600px) {
-  .btn-group {
-    position: sticky;
-    bottom: 0;
-    background: #121212;
+  body {
     padding: 10px;
-    z-index: 10;
+    font-size: 14px;
+  }
+
+  .btn-group {
+    flex-direction: column;
+  }
+
+  button {
+    font-size: 15px;
+  }
+
+  table {
+    font-size: 13px;
   }
 }
