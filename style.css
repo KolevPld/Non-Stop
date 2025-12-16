@@ -29,6 +29,10 @@ html, body {
   width: 100%;
   overflow-x: hidden;
 }    
+.card {
+  background: var(--card-bg);
+  color: var(--text-color);
+}
 h2, h3 {
   color: #ffffff;
   margin-bottom: 10px;
@@ -48,7 +52,6 @@ input:focus, select:focus, textarea:focus {
 
 button {
   cursor: pointer;
-  background: #4caf50;
   color: #fff;
   font-weight: bold;
   box-shadow: 0 4px 6px rgba(0,0,0,0.3);
