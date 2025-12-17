@@ -555,8 +555,9 @@ button.theme-toggle {
   border: none;
   
   /* Размери съобразени с останалите сини бутони */
-  padding: 8px 12px;
-  font-size: 14px;
+ button.theme-toggle {
+  padding: 6px 10px;
+  font-size: 18px; /* икона изглежда по‑добре с малко по‑голяма стойност */
   font-weight: bold;
 
   border-radius: 8px;
