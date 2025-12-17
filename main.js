@@ -304,6 +304,33 @@ function renderRecentTable() {
   `).join("");
 }
 
+function updateSummaries() {
+  const today = new Date().toISOString().slice(0, 10);
+  const currentMonth = today.slice(0, 7);
+
+  let todayIncome = 0, todayExpense = 0;
+  let monthIncome = 0, monthExpense = 0;
+
+  records.forEach(({ date, type, amount }) => {
+    if (date === today) {
+      if (type === "Приход") todayIncome += amount;
+      else todayExpense += amount;
+    }
+    if (date.startsWith(currentMonth)) {
+      if (type === "Приход") monthIncome += amount;
+      else monthExpense += amount;
+    }
+  });
+
+  const saldo = (monthIncome - monthExpense).toFixed(2);
+
+  document.getElementById("dailySummary").innerHTML = 
+    `📅 <strong>Днес:</strong> Приходи: ${todayIncome.toFixed(2)} лв | Разходи: ${todayExpense.toFixed(2)} лв`;
+
+  document.getElementById("monthlySummary").innerHTML = 
+    `📆 <strong>Месец:</strong> Приходи: ${monthIncome.toFixed(2)} лв | Разходи: ${monthExpense.toFixed(2)} лв | Салдо: ${saldo} лв`;
+}
+
 function renderTaxSummary() {
   const income = records.filter(r => r.type === "Приход").reduce((sum, r) => sum + r.amount, 0);
   const expense = records.filter(r => r.type === "Разход").reduce((sum, r) => sum + r.amount, 0);
