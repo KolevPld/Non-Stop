@@ -548,16 +548,21 @@ table,
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* ==== Theme Switch Button (compact) ==== */
 button.theme-toggle {
   background: var(--accent-color);
   color: white;
   border: none;
-  padding: 10px 16px;
-  border-radius: 8px;
+  
+  /* Размери съобразени с останалите сини бутони */
+  padding: 8px 12px;
   font-size: 14px;
   font-weight: bold;
+
+  border-radius: 8px;
   cursor: pointer;
   transition: background 0.3s;
+
   position: fixed;
   top: 10px;
   right: 10px;
@@ -565,5 +570,5 @@ button.theme-toggle {
 }
 
 button.theme-toggle:hover {
-  background: #388e3c;
+  background: #388e3c; /* може да стане var(--accent-hover) ако го дефинираме */
 }
