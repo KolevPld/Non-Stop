@@ -304,31 +304,33 @@ function renderRecentTable() {
   `).join("");
 }
 
-function updateSummaries() {
-  const today = new Date().toISOString().slice(0, 10);
-  const currentMonth = today.slice(0, 7);
+function renderTaxSummary() {
+  const income = records.filter(r => r.type === "Приход").reduce((sum, r) => sum + r.amount, 0);
+  const expense = records.filter(r => r.type === "Разход").reduce((sum, r) => sum + r.amount, 0);
+  const profit = income - expense;
 
-  let todayIncome = 0, todayExpense = 0;
-  let monthIncome = 0, monthExpense = 0;
+  if (profit <= 0) {
+    document.getElementById("taxSummary").innerHTML = `
+      <strong>📊 Данъчна справка:</strong><br>
+      Няма облагаема печалба.
+    `;
+    return;
+  }
 
-  records.forEach(({ date, type, amount }) => {
-    if (date === today) {
-      if (type === "Приход") todayIncome += amount;
-      else todayExpense += amount;
-    }
-    if (date.startsWith(currentMonth)) {
-      if (type === "Приход") monthIncome += amount;
-      else monthExpense += amount;
-    }
-  });
+  const vat = +(profit * 0.2).toFixed(2);
+  const taxableProfit = +(profit - vat).toFixed(2);
+  const corporateTax = +(taxableProfit * 0.1).toFixed(2);
+  const netProfit = +(taxableProfit - corporateTax).toFixed(2);
 
-  const saldo = (monthIncome - monthExpense).toFixed(2);
-
-  document.getElementById("dailySummary").innerHTML = 
-    `📅 <strong>Днес:</strong> Приходи: ${todayIncome.toFixed(2)} лв | Разходи: ${todayExpense.toFixed(2)} лв`;
-
-  document.getElementById("monthlySummary").innerHTML = 
-    `📆 <strong>Месец:</strong> Приходи: ${monthIncome.toFixed(2)} лв | Разходи: ${monthExpense.toFixed(2)} лв | Салдо: ${saldo} лв`;
+  document.getElementById("taxSummary").innerHTML = `
+    <div><strong>📊 Данъчна справка:</strong></div>
+    <div>Приходи: ${income.toFixed(2)} лв</div>
+    <div>Разходи: ${expense.toFixed(2)} лв</div>
+    <div>Печалба: ${profit.toFixed(2)} лв</div>
+    <div>ДДС (20%): ${vat.toFixed(2)} лв</div>
+    <div>Данък печалба (10%): ${corporateTax.toFixed(2)} лв</div>
+    <div><strong>👉 Нетна печалба:</strong> ${netProfit.toFixed(2)} лв</div>
+  `;
 }
 
 function renderTaxSummary() {
