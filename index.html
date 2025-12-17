@@ -1,5 +1,51 @@
 <!DOCTYPE html>
 <html lang="bg">
+ <style>
+  :root {
+    --bg-color: #ffffff;
+    --text-color: #1a1a1a;
+    --card-bg: #f9f9f9;
+    --input-bg: #f0f0f0;
+    --border-color: #ccc;
+    --accent-color: #4caf50;
+    --danger-color: #e74c3c;
+  }
+
+  body.dark {
+    --bg-color: #121212;
+    --text-color: #e0e0e0;
+    --card-bg: #1f1f1f;
+    --input-bg: #2a2a2a;
+    --border-color: #4caf50;
+    --accent-color: #66bb6a;
+    --danger-color: #e74c3c;
+  }
+
+  body {
+    background: var(--bg-color);
+    color: var(--text-color);
+    transition: background 0.3s ease, color 0.3s ease;
+  }
+
+  button.theme-toggle {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    background: var(--accent-color);
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 999;
+  }
+
+  button.theme-toggle:hover {
+    background: #388e3c;
+  }
+</style>
+ 
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
@@ -12,7 +58,8 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <!-- 🔐 Login/Register секция -->
+  <button class="theme-toggle" onclick="toggleTheme()">🌗 Смени тема</button>
+ <!-- 🔐 Login/Register секция -->
 <div id="loginScreen">
   <h2><i class="fa-solid fa-user-lock"></i> Вход / Регистрация</h2>
   <input type="email" id="loginEmail" placeholder="Имейл">
@@ -184,6 +231,20 @@
   </div>
 </div>
 <script src="main.js" type="module"></script>
+<script>
+  function toggleTheme() {
+    document.body.classList.toggle("dark");
+    const isDark = document.body.classList.contains("dark");
+    localStorage.setItem("theme", isDark ? "dark" : "light");
+  }
 
+  // Автоматично зареждане на последната избрана тема
+  window.addEventListener("DOMContentLoaded", () => {
+    if (localStorage.getItem("theme") === "dark") {
+      document.body.classList.add("dark");
+    }
+  });
+</script>
+  
 </body>
 </html>
