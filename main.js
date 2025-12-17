@@ -324,11 +324,18 @@ function updateSummaries() {
 
   const saldo = (monthIncome - monthExpense).toFixed(2);
 
-  document.getElementById("dailySummary").innerHTML = 
-    `📅 <strong>Днес:</strong> Приходи: ${todayIncome.toFixed(2)} лв | Разходи: ${todayExpense.toFixed(2)} лв`;
+  document.getElementById("dailySummary").innerHTML = `
+    <div>📅 <strong>Днес:</strong></div>
+    <div>Приходи: ${todayIncome.toFixed(2)} лв</div>
+    <div>Разходи: ${todayExpense.toFixed(2)} лв</div>
+  `;
 
-  document.getElementById("monthlySummary").innerHTML = 
-    `📆 <strong>Месец:</strong> Приходи: ${monthIncome.toFixed(2)} лв | Разходи: ${monthExpense.toFixed(2)} лв | Салдо: ${saldo} лв`;
+  document.getElementById("monthlySummary").innerHTML = `
+    <div>📆 <strong>Месец:</strong></div>
+    <div>Приходи: ${monthIncome.toFixed(2)} лв</div>
+    <div>Разходи: ${monthExpense.toFixed(2)} лв</div>
+    <div><strong>Салдо:</strong> ${saldo} лв</div>
+  `;
 }
 
 function renderTaxSummary() {
