@@ -333,32 +333,6 @@ function renderTaxSummary() {
   `;
 }
 
-function renderTaxSummary() {
-  const income = records.filter(r => r.type === "Приход").reduce((sum, r) => sum + r.amount, 0);
-  const expense = records.filter(r => r.type === "Разход").reduce((sum, r) => sum + r.amount, 0);
-  const profit = income - expense;
-
-  if (profit <= 0) {
-    document.getElementById("taxSummary").innerHTML = `
-      <strong>📊 Данъчна справка:</strong><br>
-      Няма облагаема печалба.
-    `;
-    return;
-  }
-
-  const vat = +(profit * 0.2).toFixed(2);
-  const taxableProfit = +(profit - vat).toFixed(2);
-  const corporateTax = +(taxableProfit * 0.1).toFixed(2);
-  const netProfit = +(taxableProfit - corporateTax).toFixed(2);
-
-  document.getElementById("taxSummary").innerHTML = `
-    <strong>📊 Данъчна справка:</strong><br>
-    Приходи: ${income.toFixed(2)} лв | Разходи: ${expense.toFixed(2)} лв | Печалба: ${profit.toFixed(2)} лв<br>
-    ДДС (20%): ${vat.toFixed(2)} лв | Данък печалба (10%): ${corporateTax.toFixed(2)} лв<br>
-    👉 <strong>Нетна печалба:</strong> ${netProfit.toFixed(2)} лв
-  `;
-}
-
 function renderMethodSummary() {
   const totals = { Кеш: 0, Банка: 0, Карта: 0 };
 
