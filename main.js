@@ -371,17 +371,19 @@ function renderMethodSummary() {
   const totalBank = totals.Банка + totals.Карта;
 
   document.getElementById("methodSummary").innerHTML = `
-    💰 Кеш: ${totals.Кеш.toFixed(2)} лв |
-    🏦 Банка: ${totals.Банка.toFixed(2)} лв |
-    💳 Карта: ${totals.Карта.toFixed(2)} лв |
-    Общо: ${totalSum.toFixed(2)} лв
+    <div>💰 Кеш: <strong>${totals.Кеш.toFixed(2)} лв</strong></div>
+    <div>🏦 Банка: <strong>${totals.Банка.toFixed(2)} лв</strong></div>
+    <div>💳 Карта: <strong>${totals.Карта.toFixed(2)} лв</strong></div>
+    <div><strong>Общо:</strong> ${totalSum.toFixed(2)} лв</div>
   `;
 
   document.getElementById("methodSummaryExtra").innerHTML = `
-    <i class="fa-solid fa-money-bill-wave" style="color:#4caf50;"></i> <strong>Общо кеш:</strong> ${totals.Кеш.toFixed(2)} лв |
-    <i class="fa-solid fa-building-columns" style="color:#2196f3;"></i> <strong>Общо банка:</strong> ${totalBank.toFixed(2)} лв
+    <div><i class="fa-solid fa-money-bill-wave" style="color:#4caf50;"></i> <strong>Общо кеш:</strong> ${totals.Кеш.toFixed(2)} лв</div>
+    <div><i class="fa-solid fa-building-columns" style="color:#2196f3;"></i> <strong>Общо банка:</strong> ${totalBank.toFixed(2)} лв</div>
   `;
 }
+
+
 
 function renderChart() {
   const ctx = document.getElementById('chart').getContext('2d');
