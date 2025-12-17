@@ -555,6 +555,7 @@ table,
     padding: 10px;
     z-index: 10;
   }
+  
   button.theme-toggle {
   background: var(--accent-color);
   color: white;
@@ -574,4 +575,3 @@ table,
 button.theme-toggle:hover {
   background: #388e3c;
 }
-
