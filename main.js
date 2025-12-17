@@ -499,4 +499,28 @@ function toggleCustomCategory() {
 }
 window.toggleCustomCategory = toggleCustomCategory;
 
+// 🖨️ Принтиране на филтрираната таблица
+window.printFilteredTable = function () {
+  const table = document.querySelector('#recordsTable');
+  if (!table) return alert('Таблицата не е намерена.');
+
+  const newWindow = window.open('', '', 'width=900,height=600');
+  newWindow.document.write('<html><head><title>Принтиране</title>');
+  newWindow.document.write('<style>table { width: 100%; border-collapse: collapse; } th, td { border: 1px solid #ccc; padding: 8px; }</style>');
+  newWindow.document.write('</head><body>');
+  newWindow.document.write(table.outerHTML);
+  newWindow.document.write('</body></html>');
+  newWindow.document.close();
+  newWindow.print();
+};
+// 📁 Експорт към Excel с SheetJS
+window.exportFilteredToExcel = function () {
+  const table = document.querySelector('#recordsTable');
+  if (!table) return alert('Таблицата не е намерена.');
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.table_to_sheet(table);
+  XLSX.utils.book_append_sheet(wb, ws, 'Отчет');
+  XLSX.writeFile(wb, 'nonstop-отчет.xlsx');
+};
 
