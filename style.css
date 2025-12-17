@@ -596,4 +596,38 @@ body:not(.dark-theme) {
   --accent-color: #388e3c;
   --card-bg: #fff;
 }
+/* === Light/Dark theme override === */
+body {
+  background: var(--bg-color);
+  color: var(--text-color);
+}
+
+input, select, textarea {
+  background: var(--input-bg);
+  color: var(--text-color);
+  border-color: var(--border-color);
+}
+
+button {
+  background: var(--accent-color);
+  color: #fff;
+}
+
+.summary,
+#login,
+#screen-add form,
+table,
+#filterSummary {
+  background: var(--card-bg);
+  color: var(--text-color);
+}
+
+th {
+  background: var(--card-bg);
+  color: var(--text-color);
+}
+
+tr:hover {
+  background: rgba(0, 0, 0, 0.1); /* по‑неутрален hover за двете теми */
+}
 
