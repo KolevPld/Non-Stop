@@ -547,16 +547,8 @@ table,
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
-@media (max-width: 600px) {
-  .btn-group {
-    position: sticky;
-    bottom: 0;
-    background: #121212;
-    padding: 10px;
-    z-index: 10;
-  }
-  
-  button.theme-toggle {
+
+button.theme-toggle {
   background: var(--accent-color);
   color: white;
   border: none;
