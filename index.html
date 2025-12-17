@@ -231,20 +231,7 @@
   </div>
 </div>
 <script src="main.js" type="module"></script>
-<script>
-  function toggleTheme() {
-    document.body.classList.toggle("dark");
-    const isDark = document.body.classList.contains("dark");
-    localStorage.setItem("theme", isDark ? "dark" : "light");
-  }
 
-  // Автоматично зареждане на последната избрана тема
-  window.addEventListener("DOMContentLoaded", () => {
-    if (localStorage.getItem("theme") === "dark") {
-      document.body.classList.add("dark");
-    }
-  });
-</script>
  <script>
   function toggleTheme() {
     const body = document.body;
