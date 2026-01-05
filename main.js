@@ -255,7 +255,7 @@ function renderTable(data = records) {
     tr.innerHTML = `
       <td>${r.date}</td>
       <td style="color:${r.type === 'Приход' ? '#4caf50' : '#f44336'};">${r.type}</td>
-      <td>${r.amount.toFixed(2)} лв</td>
+      <td>${r.amount.toFixed(2)} €</td>
       <td>${r.method}</td>
       <td>${r.category || ''}</td>
       <td>${r.note}</td>
@@ -282,9 +282,9 @@ function updateFilterSummary(data) {
 
   document.getElementById("filterSummary").innerHTML = `
     <strong>Сума от филтъра:</strong> 
-    Приходи: ${summary["Приход"].toFixed(2)} лв | 
-    Разходи: ${summary["Разход"].toFixed(2)} лв | 
-    Нетно: ${net.toFixed(2)} лв
+    Приходи: ${summary["Приход"].toFixed(2)}  € | 
+    Разходи: ${summary["Разход"].toFixed(2)}  € | 
+    Нетно: ${net.toFixed(2)}  €
   `;
 }
 
@@ -294,7 +294,7 @@ function renderRecentTable() {
     <tr>
       <td>${r.date}</td>
       <td style="color:${r.type === 'Приход' ? '#4caf50' : '#f44336'};">${r.type}</td>
-      <td>${r.amount.toFixed(2)} лв</td>
+      <td>${r.amount.toFixed(2)}  €</td>
       <td>${r.method}</td>
       <td>${r.note}</td>
       <td>
@@ -326,15 +326,15 @@ function updateSummaries() {
 
   document.getElementById("dailySummary").innerHTML = `
     <div>📅 <strong>Днес:</strong></div>
-    <div>Приходи: ${todayIncome.toFixed(2)} лв</div>
-    <div>Разходи: ${todayExpense.toFixed(2)} лв</div>
+    <div>Приходи: ${todayIncome.toFixed(2)}  €</div>
+    <div>Разходи: ${todayExpense.toFixed(2)}  €</div>
   `;
 
   document.getElementById("monthlySummary").innerHTML = `
     <div>📆 <strong>Месец:</strong></div>
-    <div>Приходи: ${monthIncome.toFixed(2)} лв</div>
-    <div>Разходи: ${monthExpense.toFixed(2)} лв</div>
-    <div><strong>Салдо:</strong> ${saldo} лв</div>
+    <div>Приходи: ${monthIncome.toFixed(2)}  €</div>
+    <div>Разходи: ${monthExpense.toFixed(2)}  €</div>
+    <div><strong>Салдо:</strong> ${saldo}  €</div>
   `;
 }
 
@@ -358,12 +358,12 @@ function renderTaxSummary() {
 
   document.getElementById("taxSummary").innerHTML = `
     <div><strong>📊 Данъчна справка:</strong></div>
-    <div>Приходи: ${income.toFixed(2)} лв</div>
-    <div>Разходи: ${expense.toFixed(2)} лв</div>
-    <div>Печалба: ${profit.toFixed(2)} лв</div>
-    <div>ДДС (20%): ${vat.toFixed(2)} лв</div>
-    <div>Данък печалба (10%): ${corporateTax.toFixed(2)} лв</div>
-    <div><strong>👉 Нетна печалба:</strong> ${netProfit.toFixed(2)} лв</div>
+    <div>Приходи: ${income.toFixed(2)}  €</div>
+    <div>Разходи: ${expense.toFixed(2)}  €</div>
+    <div>Печалба: ${profit.toFixed(2)}  €</div>
+    <div>ДДС (20%): ${vat.toFixed(2)}  €</div>
+    <div>Данък печалба (10%): ${corporateTax.toFixed(2)}  €</div>
+    <div><strong>👉 Нетна печалба:</strong> ${netProfit.toFixed(2)}  €</div>
   `;
 }
 
@@ -381,15 +381,15 @@ function renderMethodSummary() {
   const totalBank = totals.Банка + totals.Карта;
 
   document.getElementById("methodSummary").innerHTML = `
-    <div>💰 Кеш: <strong>${totals.Кеш.toFixed(2)} лв</strong></div>
-    <div>🏦 Банка: <strong>${totals.Банка.toFixed(2)} лв</strong></div>
-    <div>💳 Карта: <strong>${totals.Карта.toFixed(2)} лв</strong></div>
-    <div><strong>Общо:</strong> ${totalSum.toFixed(2)} лв</div>
+    <div>💰 Кеш: <strong>${totals.Кеш.toFixed(2)}  €</strong></div>
+    <div>🏦 Банка: <strong>${totals.Банка.toFixed(2)}  €</strong></div>
+    <div>💳 Карта: <strong>${totals.Карта.toFixed(2)}  €</strong></div>
+    <div><strong>Общо:</strong> ${totalSum.toFixed(2)}  €</div>
   `;
 
   document.getElementById("methodSummaryExtra").innerHTML = `
-    <div><i class="fa-solid fa-money-bill-wave" style="color:#4caf50;"></i> <strong>Общо кеш:</strong> ${totals.Кеш.toFixed(2)} лв</div>
-    <div><i class="fa-solid fa-building-columns" style="color:#2196f3;"></i> <strong>Общо банка:</strong> ${totalBank.toFixed(2)} лв</div>
+    <div><i class="fa-solid fa-money-bill-wave" style="color:#4caf50;"></i> <strong>Общо кеш:</strong> ${totals.Кеш.toFixed(2)}  €</div>
+    <div><i class="fa-solid fa-building-columns" style="color:#2196f3;"></i> <strong>Общо банка:</strong> ${totalBank.toFixed(2)}  €</div>
   `;
 }
 
