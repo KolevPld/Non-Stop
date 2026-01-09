@@ -260,9 +260,7 @@ function renderTable(data = records) {
       <td>${r.category || ''}</td>
       <td>${r.note}</td>
       <td>
-  <button class="admin-only" onclick="deleteRecord('${r.id}')" style="background:#f44336;font-size:12px;padding:4px 6px;">
-    🗑️
-  </button>
+  <button class="admin-only btn-icon" onclick="deleteRecord('${r.id}')">🗑️</button>
 </td>
     `;
     tbody.appendChild(tr);
@@ -299,7 +297,7 @@ function renderRecentTable() {
       <td>${r.category || ''}</td>
       <td>${r.note}</td>
       <td>
-        <button onclick="deleteRecord('${r.id}')" style="background:#f44336;font-size:12px;padding:4px 6px;">🗑️</button>
+      <button class="btn-icon" onclick="deleteRecord('${r.id}')">🗑️</button>
       </td>
     </tr>
   `).join("");
