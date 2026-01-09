@@ -630,4 +630,18 @@ th {
 tr:hover {
   background: rgba(0, 0, 0, 0.1); /* по‑неутрален hover за двете теми */
 }
+.btn-icon {
+  width: auto !important;
+  padding: 4px 6px !important;
+  font-size: 14px;
+  background: #f44336;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  box-shadow: none;
+}
+
+.btn-icon:hover {
+  background: #d32f2f;
+}
 
