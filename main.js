@@ -296,6 +296,7 @@ function renderRecentTable() {
       <td style="color:${r.type === 'Приход' ? '#4caf50' : '#f44336'};">${r.type}</td>
       <td>${r.amount.toFixed(2)}  €</td>
       <td>${r.method}</td>
+      <td>${r.category || ''}</td>
       <td>${r.note}</td>
       <td>
         <button onclick="deleteRecord('${r.id}')" style="background:#f44336;font-size:12px;padding:4px 6px;">🗑️</button>
