@@ -366,7 +366,8 @@ function renderTaxSummary() {
     <tr><td><strong>👉 Нетна печалба:</strong></td><td><strong style="color:#ffca28;">${netProfit.toFixed(2)} €</strong></td></tr>
   </table>
 `;
-  
+ } 
+
 function renderMethodSummary() {
   const totals = { Кеш: 0, Банка: 0, Карта: 0 };
 
