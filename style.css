@@ -671,4 +671,10 @@ button.btn-icon:hover {
   margin: 0 auto;
   display: block;
 }
+#chart {
+  max-width: 600px;
+  max-height: 300px;
+  margin: 20px auto;
+  display: block;
+}
 
