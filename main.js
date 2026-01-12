@@ -355,18 +355,21 @@ function renderTaxSummary() {
   const corporateTax = +(taxableProfit * 0.1).toFixed(2);
   const netProfit = +(taxableProfit - corporateTax).toFixed(2);
 
-  document.getElementById("taxSummary").innerHTML = `
-  <h3><i class="fa-solid fa-file-invoice-dollar"></i> Данъчна справка</h3>
-  <table>
-    <tr><td>Приходи:</td><td>${income.toFixed(2)} €</td></tr>
-    <tr><td>Разходи:</td><td>${expense.toFixed(2)} €</td></tr>
-    <tr><td>Печалба:</td><td>${profit.toFixed(2)} €</td></tr>
-    <tr><td>ДДС (20%):</td><td>${vat.toFixed(2)} €</td></tr>
-    <tr><td>Данък печалба (10%):</td><td>${corporateTax.toFixed(2)} €</td></tr>
-    <tr><td><strong>👉 Нетна печалба:</strong></td><td><strong style="color:#ffca28;">${netProfit.toFixed(2)} €</strong></td></tr>
-  </table>
-`;
- } 
+    document.getElementById("taxSummary").innerHTML = `
+    <h3><i class="fa-solid fa-file-invoice-dollar"></i> Данъчна справка</h3>
+    <table>
+      <tr><td>Приходи:</td><td>${income.toFixed(2)} €</td></tr>
+      <tr><td>Разходи:</td><td>${expense.toFixed(2)} €</td></tr>
+      <tr><td>Печалба:</td><td>${profit.toFixed(2)} €</td></tr>
+      <tr><td>ДДС (20%):</td><td>${vat.toFixed(2)} €</td></tr>
+      <tr><td>Данък печалба (10%):</td><td>${corporateTax.toFixed(2)} €</td></tr>
+      <tr>
+        <td><strong>👉 Нетна печалба:</strong></td>
+        <td><strong style="color:#ffca28;">${netProfit.toFixed(2)} €</strong></td>
+      </tr>
+    </table>
+  `;
+} 
 
 function renderMethodSummary() {
   const totals = { Кеш: 0, Банка: 0, Карта: 0 };
