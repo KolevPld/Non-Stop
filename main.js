@@ -324,17 +324,21 @@ function updateSummaries() {
   const saldo = (monthIncome - monthExpense).toFixed(2);
 
   document.getElementById("dailySummary").innerHTML = `
-    <div>📅 <strong>Днес:</strong></div>
-    <div>Приходи: ${todayIncome.toFixed(2)}  €</div>
-    <div>Разходи: ${todayExpense.toFixed(2)}  €</div>
-  `;
+  <h3><i class="fa-solid fa-calendar-day"></i> Днес</h3>
+  <table>
+    <tr><td>Приходи:</td><td>${todayIncome.toFixed(2)} €</td></tr>
+    <tr><td>Разходи:</td><td>${todayExpense.toFixed(2)} €</td></tr>
+  </table>
+`;
 
-  document.getElementById("monthlySummary").innerHTML = `
-    <div>📆 <strong>Месец:</strong></div>
-    <div>Приходи: ${monthIncome.toFixed(2)}  €</div>
-    <div>Разходи: ${monthExpense.toFixed(2)}  €</div>
-    <div><strong>Салдо:</strong> ${saldo}  €</div>
-  `;
+document.getElementById("monthlySummary").innerHTML = `
+  <h3><i class="fa-solid fa-calendar-alt"></i> Месец</h3>
+  <table>
+    <tr><td>Приходи:</td><td>${monthIncome.toFixed(2)} €</td></tr>
+    <tr><td>Разходи:</td><td>${monthExpense.toFixed(2)} €</td></tr>
+    <tr><td><strong>Салдо:</strong></td><td><strong>${saldo} €</strong></td></tr>
+  </table>
+`;
 }
 
 function renderTaxSummary() {
@@ -385,16 +389,22 @@ function renderMethodSummary() {
   const totalBank = totals.Банка + totals.Карта;
 
   document.getElementById("methodSummary").innerHTML = `
-    <div>💰 Кеш: <strong>${totals.Кеш.toFixed(2)}  €</strong></div>
-    <div>🏦 Банка: <strong>${totals.Банка.toFixed(2)}  €</strong></div>
-    <div>💳 Карта: <strong>${totals.Карта.toFixed(2)}  €</strong></div>
-    <div><strong>Общо:</strong> ${totalSum.toFixed(2)}  €</div>
-  `;
+  <h3><i class="fa-solid fa-wallet"></i> Разпределение по метод</h3>
+  <table>
+    <tr><td>💰 Кеш:</td><td>${totals.Кеш.toFixed(2)} €</td></tr>
+    <tr><td>🏦 Банка:</td><td>${totals.Банка.toFixed(2)} €</td></tr>
+    <tr><td>💳 Карта:</td><td>${totals.Карта.toFixed(2)} €</td></tr>
+    <tr><td><strong>Общо:</strong></td><td><strong>${totalSum.toFixed(2)} €</strong></td></tr>
+  </table>
+`;
 
-  document.getElementById("methodSummaryExtra").innerHTML = `
-    <div><i class="fa-solid fa-money-bill-wave" style="color:#4caf50;"></i> <strong>Общо кеш:</strong> ${totals.Кеш.toFixed(2)}  €</div>
-    <div><i class="fa-solid fa-building-columns" style="color:#2196f3;"></i> <strong>Общо банка:</strong> ${totalBank.toFixed(2)}  €</div>
-  `;
+document.getElementById("methodSummaryExtra").innerHTML = `
+  <h3><i class="fa-solid fa-circle-dollar-to-slot"></i> Общи наличности</h3>
+  <table>
+    <tr><td><i class="fa-solid fa-money-bill-wave" style="color:#4caf50;"></i> Общо кеш:</td><td>${totals.Кеш.toFixed(2)} €</td></tr>
+    <tr><td><i class="fa-solid fa-building-columns" style="color:#2196f3;"></i> Общо банка:</td><td>${totalBank.toFixed(2)} €</td></tr>
+  </table>
+`;
 }
 
 function renderChart() {
