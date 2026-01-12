@@ -392,11 +392,10 @@ function renderMethodSummary() {
   `;
 }
 
-
-
 function renderChart() {
   const ctx = document.getElementById('chart').getContext('2d');
   const monthData = {};
+
   records.forEach(r => {
     const m = r.date?.slice(0, 7);
     if (!m) return;
@@ -415,15 +414,49 @@ function renderChart() {
     data: {
       labels,
       datasets: [
-        { label: 'Приходи', data: incomeData, backgroundColor: '#4caf50' },
-        { label: 'Разходи', data: expenseData, backgroundColor: '#f44336' }
+        {
+          label: 'Приходи',
+          data: incomeData,
+          backgroundColor: '#4caf50',
+          borderRadius: 6,
+          barThickness: 30
+        },
+        {
+          label: 'Разходи',
+          data: expenseData,
+          backgroundColor: '#f44336',
+          borderRadius: 6,
+          barThickness: 30
+        }
       ]
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
       plugins: {
-        legend: { position: 'top' },
-        title: { display: true, text: 'Приходи и разходи по месеци' }
+        legend: {
+          position: 'top',
+          labels: {
+            color: '#ccc',
+            font: { size: 14 }
+          }
+        },
+        title: {
+          display: true,
+          text: '📊 Приходи и разходи по месеци',
+          color: '#ccc',
+          font: { size: 16 }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#ccc' },
+          grid: { display: false }
+        },
+        y: {
+          ticks: { color: '#ccc' },
+          grid: { color: '#444' }
+        }
       }
     }
   });
