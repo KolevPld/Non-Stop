@@ -712,4 +712,27 @@ button.btn-icon:hover {
 .summary-icon {
   margin-right: 6px;
 }
+.summary table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.summary table td {
+  padding: 6px 8px;
+  vertical-align: top;
+  border-bottom: 1px solid #444;
+}
+
+.summary table td:first-child {
+  width: 60%;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.summary table td:last-child {
+  width: 40%;
+  text-align: right;
+  font-weight: bold;
+}
 
