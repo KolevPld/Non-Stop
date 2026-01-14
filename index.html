@@ -128,6 +128,12 @@
       </select>
 
       <input type="text" id="customNote" placeholder="Въведи бележка..." class="hidden">
+      <label for="receipt">📷 Снимка на документ</label>
+      <input type="file" id="receipt" accept="image/*">
+
+      <div id="fileActions" style="margin-top: 6px;" class="hidden">
+      <button type="button" onclick="removeSelectedFile()" class="btn-icon">🗑️ Премахни</button>
+      </div>
   </form>
 
   <div class="btn-group">
