@@ -169,6 +169,27 @@ async function addRecord() {
 
   if (!date || isNaN(amount)) return alert("Попълни дата и сума.");
 
+  // 📷 Качване на снимка в Firebase Storage (ако има)
+  const fileInput = document.getElementById("receipt");
+  const file = fileInput.files[0];
+  let fileURL = "";
+
+  if (file) {
+    if (!file.type.startsWith("image/")) {
+      return alert("Разрешени са само изображения (JPG, PNG и др.)");
+    }
+
+    const user = auth.currentUser;
+    if (!user) {
+      return alert("Трябва да си влязъл, за да качиш файл.");
+    }
+
+    const filename = `${user.uid}_${Date.now()}_${file.name}`;
+    const ref = storageRef(storage, `receipts/${filename}`);
+    await uploadBytes(ref, file);
+    fileURL = await getDownloadURL(ref);
+  }
+
   await addDoc(collection(db, "records"), {
     date,
     type,
@@ -176,7 +197,8 @@ async function addRecord() {
     amount,
     note,
     category,
-    store
+    store,
+    fileURL // 👈 тук запазваме линка към снимката
   });
 
   loadRecords();
