@@ -601,4 +601,3 @@ window.exportFilteredToExcel = function () {
   XLSX.utils.book_append_sheet(wb, ws, 'Отчет');
   XLSX.writeFile(wb, 'nonstop-отчет.xlsx');
 };
-
