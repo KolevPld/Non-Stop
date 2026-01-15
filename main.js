@@ -255,6 +255,7 @@ function clearFilters() {
   filters.store.value = "";
   applyFilters();
 }
+
 function renderTable(data = records) {
   const tbody = document.querySelector("#recordsTable tbody");
   tbody.innerHTML = "";
@@ -268,9 +269,17 @@ function renderTable(data = records) {
       <td>${r.method}</td>
       <td>${r.category || ''}</td>
       <td>${r.note}</td>
-      <td>
-  <button class="admin-only btn-icon" onclick="deleteRecord('${r.id}')">🗑️</button>
-</td>
+      <td style="white-space: nowrap;">
+        ${
+          r.imageUrl
+            ? `<img src="${r.imageUrl}"
+                   style="height:30px;border-radius:4px;cursor:pointer;margin-right:6px;"
+                   onclick="openImageModal('${r.imageUrl}')">`
+            : '📷'
+        }
+        <button class="admin-only btn-icon" onclick="editImage('${r.id}')">✏️</button>
+        <button class="admin-only btn-icon" onclick="deleteRecord('${r.id}')">🗑️</button>
+      </td>
     `;
     tbody.appendChild(tr);
   });
