@@ -209,6 +209,11 @@ function clearForm() {
   
   const categoryInput = document.getElementById("customCategory");
   if (categoryInput) categoryInput.value = "";
+  
+  uploadedImageUrl = "";
+document.getElementById("imagePreview").src = "";
+document.getElementById("imagePreview").classList.add("hidden");
+
 }
 
 // --------------------------------------------------
