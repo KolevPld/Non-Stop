@@ -18,13 +18,6 @@ import {
   signOut
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
-import {
-  getStorage,
-  ref as storageRef,
-  uploadBytes,
-  getDownloadURL
-} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-storage.js";
-
 
 // --------------------------------------------------
 // 🔥 Firebase Config
