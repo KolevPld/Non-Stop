@@ -699,3 +699,19 @@ window.exportFilteredToExcel = function () {
   XLSX.utils.book_append_sheet(wb, ws, 'Отчет');
   XLSX.writeFile(wb, 'nonstop-отчет.xlsx');
 };
+
+function openImageModal(url) {
+  const modal = document.getElementById("imageModal");
+  const modalImg = document.getElementById("modalImage");
+
+  modalImg.src = url;
+  modal.classList.remove("hidden");
+}
+
+function closeImageModal() {
+  document.getElementById("imageModal").classList.add("hidden");
+  document.getElementById("modalImage").src = "";
+}
+
+window.openImageModal = openImageModal;
+window.closeImageModal = closeImageModal;
