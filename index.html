@@ -327,6 +327,39 @@
     document.getElementById("imagePreview").classList.add("hidden");
   }
 </script>
+<!-- Cloudinary Upload Widget -->
+<script src="https://upload-widget.cloudinary.com/global/all.js" type="text/javascript"></script>
+
+<script>
+  let uploadedImageUrl = "";
+
+  function openUploadWidget() {
+    cloudinary.openUploadWidget(
+      {
+        cloudName: dh1l7rhn1
+        uploadPreset: "ml_default",
+        sources: ["local", "camera"],
+        multiple: false,
+        resourceType: "image",
+        maxFileSize: 5000000
+      },
+      (error, result) => {
+        if (!error && result && result.event === "success") {
+          uploadedImageUrl = result.info.secure_url;
+
+          document.getElementById("imagePreview").src = uploadedImageUrl;
+          document.getElementById("imagePreview").classList.remove("hidden");
+        }
+      }
+    );
+  }
+
+  function removeImage() {
+    uploadedImageUrl = "";
+    document.getElementById("imagePreview").src = "";
+    document.getElementById("imagePreview").classList.add("hidden");
+  }
+</script>
 
 </body>
 </html>
