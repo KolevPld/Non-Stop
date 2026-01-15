@@ -179,9 +179,107 @@ async function addRecord() {
   clearForm();
 }
 
+async function saveEditedRecord() {
+  if (!editingId) return;
+
+  const date = document.getElementById("date").value;
+  const type = document.getElementById("type").value;
+  const method = document.getElementById("method").value.split(" ")[0];
+  const amount = parseFloat(document.getElementById("amount").value);
+  const store = document.getElementById("store").value;
+
+  let note = document.getElementById("noteSelect").value;
+  if (note === "custom") {
+    note = document.getElementById("customNote").value.trim();
+    if (note) saveCustomNote(note);
+  }
+
+  let category = document.getElementById("category").value;
+  if (category === "custom") {
+    category = document.getElementById("customCategory").value.trim();
+  }
+
+  if (!date || isNaN(amount)) return alert("Попълни дата и сума.");
+
+  await updateDoc(doc(db, "records", editingId), {
+    date,
+    type,
+    method,
+    amount,
+    note,
+    category,
+    store,
+    imageUrl: uploadedImageUrl || ""
+  });
+
+  editingId = null;
+  clearForm();
+
+  const addBtn = document.querySelector("button[onclick='saveEditedRecord()']");
+  addBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Добави запис';
+  addBtn.setAttribute("onclick", "addRecord()");
+
+  loadRecords();
+}
+
+
 
 window.addRecord = addRecord;
 window.deleteRecord = deleteRecord;
+
+let editingId = null;
+
+window.editImage = async function (id) {
+  const record = records.find(r => r.id === id);
+  if (!record) return;
+
+  editingId = id;
+
+  document.getElementById("date").value = record.date;
+  document.getElementById("type").value = record.type;
+  document.getElementById("method").value = record.method;
+  document.getElementById("amount").value = record.amount;
+  document.getElementById("store").value = record.store;
+
+  const catSelect = document.getElementById("category");
+  const customCatInput = document.getElementById("customCategory");
+
+  if ([...catSelect.options].some(o => o.value === record.category)) {
+    catSelect.value = record.category;
+    customCatInput.classList.add("hidden");
+    customCatInput.value = "";
+  } else {
+    catSelect.value = "custom";
+    customCatInput.classList.remove("hidden");
+    customCatInput.value = record.category;
+  }
+
+  const noteSelect = document.getElementById("noteSelect");
+  const customNoteInput = document.getElementById("customNote");
+
+  if ([...noteSelect.options].some(o => o.value === record.note)) {
+    noteSelect.value = record.note;
+    customNoteInput.classList.add("hidden");
+    customNoteInput.value = "";
+  } else {
+    noteSelect.value = "custom";
+    customNoteInput.classList.remove("hidden");
+    customNoteInput.value = record.note;
+  }
+
+  if (record.imageUrl) {
+    uploadedImageUrl = record.imageUrl;
+    document.getElementById("imagePreview").src = uploadedImageUrl;
+    document.getElementById("imagePreview").classList.remove("hidden");
+  } else {
+    removeImage();
+  }
+
+  const addBtn = document.querySelector("button[onclick='addRecord()']");
+  addBtn.innerHTML = "💾 Запази промените";
+  addBtn.onclick = saveEditedRecord;
+};
+
 
 
 // --------------------------------------------------
