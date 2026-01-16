@@ -218,6 +218,8 @@ await updateDoc(doc(db, "records", editingId), {
 
   editingId = null;
   clearForm();
+  
+  document.getElementById("addForm").removeAttribute("data-editing");
 
   const addBtn = document.querySelector("button[onclick='saveEditedRecord()']");
   addBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Добави запис';
