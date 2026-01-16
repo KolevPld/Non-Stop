@@ -723,12 +723,8 @@ window.openImageModal = openImageModal;
 window.closeImageModal = closeImageModal;
 window.editImage = editImage;
 window.saveEditedRecord = saveEditedRecord;
+;
 
-window.loginEmail = loginEmail;
-window.registerEmail = registerEmail;
-window.logout = logout;
-window.addRecord = addRecord;
-window.deleteRecord = deleteRecord;
 
 
 
