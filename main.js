@@ -276,7 +276,9 @@ window.editImage = async function (id) {
     document.getElementById("imagePreview").src = uploadedImageUrl;
     document.getElementById("imagePreview").classList.remove("hidden");
   } else {
-    removeImage();
+    uploadedImageUrl = "";
+    document.getElementById("imagePreview").src = "";
+    document.getElementById("imagePreview").classList.add("hidden");
   }
 
   const addBtn = document.querySelector("button[onclick='addRecord()']");
