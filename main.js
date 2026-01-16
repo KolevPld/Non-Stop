@@ -80,6 +80,8 @@ window.logout = function () {
 let records = [];
 let filteredRecords = [];
 let chartRef = null;
+let editingId = null;          // 👈 НОВО
+let uploadedImageUrl = "";     // 👈 НОВО
 
 const statusDiv = document.getElementById("status");
 
@@ -203,30 +205,30 @@ async function saveEditedRecord() {
 
   const originalId = document.getElementById("addForm").getAttribute("data-editing");
 const record = records.find(r => r.id === originalId);
+  await updateDoc(doc(db, "records", editingId), {
+    date,
+    type,
+    method,
+    amount,
+    note,
+    category,
+    store,
+    imageUrl: uploadedImageUrl || record.imageUrl || ""
+  });
 
-await updateDoc(doc(db, "records", editingId), {
-  date,
-  type,
-  method,
-  amount,
-  note,
-  category,
-  store,
-  imageUrl: uploadedImageUrl || record.imageUrl || ""
-});
+  editingId = null;
+  clearForm();
 
-editingId = null;
-clearForm();
+  const form = document.getElementById("addForm");
+  form.removeAttribute("data-editing");
+  form.classList.remove("editing-mode");
 
-const form = document.getElementById("addForm");
-form.removeAttribute("data-editing");
-form.classList.remove("editing-mode");
+  const addBtn = document.querySelector("button[onclick='saveEditedRecord()']");
+  addBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Добави запис';
+  addBtn.setAttribute("onclick", "addRecord()");
 
-const addBtn = document.querySelector("button[onclick='saveEditedRecord()']");
-addBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Добави запис';
-addBtn.setAttribute("onclick", "addRecord()");
-
-loadRecords();
+  loadRecords();
+}
 
 window.addRecord = addRecord;
 window.deleteRecord = deleteRecord;
@@ -721,6 +723,9 @@ window.openImageModal = openImageModal;
 window.closeImageModal = closeImageModal;
 window.editImage = editImage;
 window.saveEditedRecord = saveEditedRecord;
+
+
+
 
 
 
