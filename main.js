@@ -201,16 +201,20 @@ async function saveEditedRecord() {
 
   if (!date || isNaN(amount)) return alert("Попълни дата и сума.");
 
-  await updateDoc(doc(db, "records", editingId), {
-    date,
-    type,
-    method,
-    amount,
-    note,
-    category,
-    store,
-    imageUrl: uploadedImageUrl || ""
-  });
+  const originalId = document.getElementById("addForm").getAttribute("data-editing");
+const record = records.find(r => r.id === originalId);
+
+await updateDoc(doc(db, "records", editingId), {
+  date,
+  type,
+  method,
+  amount,
+  note,
+  category,
+  store,
+  imageUrl: uploadedImageUrl || record.imageUrl || ""
+});
+
 
   editingId = null;
   clearForm();
