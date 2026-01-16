@@ -721,6 +721,6 @@ window.openImageModal = openImageModal;
 window.closeImageModal = closeImageModal;
 window.editImage = editImage;
 window.saveEditedRecord = saveEditedRecord;
-document.getElementById("addForm").setAttribute("data-editing", id);
+
 
 
