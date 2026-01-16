@@ -233,8 +233,6 @@ const record = records.find(r => r.id === originalId);
 window.addRecord = addRecord;
 window.deleteRecord = deleteRecord;
 
-let editingId = null;
-
 window.editImage = async function (id) {
   const record = records.find(r => r.id === id);
   if (!record) return;
