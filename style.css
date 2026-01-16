@@ -736,3 +736,13 @@ button.btn-icon:hover {
   font-weight: bold;
 }
 
+/* 🔧 Визуален индикатор при редакция */
+.editing-mode {
+  border: 2px solid #ff9800;
+  box-shadow: 0 0 10px #ff9800;
+}
+
+.editing-mode button {
+  background-color: #ff9800 !important;
+}
+
