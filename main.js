@@ -215,20 +215,18 @@ await updateDoc(doc(db, "records", editingId), {
   imageUrl: uploadedImageUrl || record.imageUrl || ""
 });
 
+editingId = null;
+clearForm();
 
-  editingId = null;
-  clearForm();
-  
-  document.getElementById("addForm").removeAttribute("data-editing");
+const form = document.getElementById("addForm");
+form.removeAttribute("data-editing");
+form.classList.remove("editing-mode");
 
-  const addBtn = document.querySelector("button[onclick='saveEditedRecord()']");
-  addBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Добави запис';
-  addBtn.setAttribute("onclick", "addRecord()");
+const addBtn = document.querySelector("button[onclick='saveEditedRecord()']");
+addBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Добави запис';
+addBtn.setAttribute("onclick", "addRecord()");
 
-  loadRecords();
-}
-
-
+loadRecords();
 
 window.addRecord = addRecord;
 window.deleteRecord = deleteRecord;
