@@ -217,9 +217,14 @@ async function saveEditedRecord() {
   form.removeAttribute("data-editing");
   form.classList.remove("editing-mode");
 
-  const addBtn = document.querySelector("button[onclick='saveEditedRecord()']");
-  addBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Добави запис';
-  addBtn.setAttribute("onclick", "addRecord()");
+  const addBtn = document.getElementById("recordSubmitBtn");
+addBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Добави запис';
+
+// връщаме бутона към add
+addBtn.onclick = addRecord;
+
+// (по желание, но е ОК да го оставиш заради inline)
+addBtn.setAttribute("onclick", "addRecord()");
 
   loadRecords();
 }
@@ -265,12 +270,12 @@ window.editImage = async function (id) {
     customNoteInput.value = record.note;
   }
 
-  const addBtn = document.querySelector("button[onclick='addRecord()']");
-  addBtn.innerHTML = "💾 Запази промените";
-  addBtn.onclick = saveEditedRecord;
-};
+  const addBtn = document.getElementById("recordSubmitBtn");
+addBtn.innerHTML = "💾 Запази промените";
+addBtn.onclick = saveEditedRecord;
 
-
+// (по желание) да е ясно и в HTML атрибута
+addBtn.setAttribute("onclick", "saveEditedRecord()");
 
 // --------------------------------------------------
 // 🔥 Изтриване
