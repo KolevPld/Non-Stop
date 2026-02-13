@@ -745,4 +745,44 @@ button.btn-icon:hover {
 .editing-mode button {
   background-color: #ff9800 !important;
 }
+/* === Laptop/Desktop layout (keep mobile intact) === */
+@media (min-width: 900px) {
+  body {
+    max-width: 1200px;
+    padding: 24px;
+  }
+
+  /* По-четим формуляр на лаптоп */
+  #screen-add form {
+    max-width: 720px;
+    margin: 0 auto 24px auto;
+  }
+
+  /* По-широки бутони групи, но да не стават огромни */
+  .btn-group {
+    max-width: 720px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* Summary блоковете да не са прекалено разтеглени */
+  .summary {
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* Таблиците на отчета да са по-удобни */
+  .table-responsive {
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* Chart да стои по-естетично на широк екран */
+  #chart {
+    max-width: 900px;
+    height: 340px !important;
+  }
+}
 
