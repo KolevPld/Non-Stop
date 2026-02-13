@@ -1,64 +1,68 @@
 <!DOCTYPE html>
 <html lang="bg">
- <style>
-  :root {
-    --bg-color: #ffffff;
-    --text-color: #1a1a1a;
-    --card-bg: #f9f9f9;
-    --input-bg: #f0f0f0;
-    --border-color: #ccc;
-    --accent-color: #4caf50;
-    --danger-color: #e74c3c;
-  }
-
-  body.dark {
-    --bg-color: #121212;
-    --text-color: #e0e0e0;
-    --card-bg: #1f1f1f;
-    --input-bg: #2a2a2a;
-    --border-color: #4caf50;
-    --accent-color: #66bb6a;
-    --danger-color: #e74c3c;
-  }
-
-  body {
-    background: var(--bg-color);
-    color: var(--text-color);
-    transition: background 0.3s ease, color 0.3s ease;
-  }
-
-  button.theme-toggle {
-    position: fixed;
-    top: 10px;
-    right: 10px;
-    background: var(--accent-color);
-    color: white;
-    border: none;
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-weight: bold;
-    cursor: pointer;
-    z-index: 999;
-  }
-
-  button.theme-toggle:hover {
-    background: #388e3c;
-  }
-</style>
- 
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>Нон Стоп Отчет</title>
+
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icon-192.png" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="style.css">
+
+  <!-- Тук премести твоя CSS за темата -->
+  <style>
+    :root {
+      --bg-color: #ffffff;
+      --text-color: #1a1a1a;
+      --card-bg: #f9f9f9;
+      --input-bg: #f0f0f0;
+      --border-color: #ccc;
+      --accent-color: #4caf50;
+      --danger-color: #e74c3c;
+    }
+
+    body.dark-theme {
+      --bg-color: #121212;
+      --text-color: #e0e0e0;
+      --card-bg: #1f1f1f;
+      --input-bg: #2a2a2a;
+      --border-color: #4caf50;
+      --accent-color: #66bb6a;
+      --danger-color: #e74c3c;
+    }
+
+    body {
+      background: var(--bg-color);
+      color: var(--text-color);
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+
+    button.theme-toggle {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: var(--accent-color);
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      z-index: 999;
+    }
+
+    button.theme-toggle:hover {
+      background: #388e3c;
+    }
+  </style>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 <button class="theme-toggle" onclick="toggleTheme()" title="Смени тема">🌗</button>
+
  <!-- 🔐 Login/Register секция -->
 <div id="loginScreen">
   <h2><i class="fa-solid fa-user-lock"></i> Вход / Регистрация</h2>
