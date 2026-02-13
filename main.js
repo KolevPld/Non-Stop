@@ -81,7 +81,6 @@ let records = [];
 let filteredRecords = [];
 let chartRef = null;
 let editingId = null;          // 👈 НОВО
-let uploadedImageUrl = "";     // 👈 НОВО
 
 const statusDiv = document.getElementById("status");
 
@@ -164,7 +163,6 @@ async function addRecord() {
 
   if (!date || isNaN(amount)) return alert("Попълни дата и сума.");
 
-  const imageUrl = uploadedImageUrl || ""; // 👈 Cloudinary URL
 
   await addDoc(collection(db, "records"), {
     date,
@@ -174,7 +172,6 @@ async function addRecord() {
     note,
     category,
     store,
-    imageUrl
   });
 
   loadRecords();
@@ -213,7 +210,6 @@ const record = records.find(r => r.id === originalId);
     note,
     category,
     store,
-    imageUrl: uploadedImageUrl || record.imageUrl || ""
   });
 
   editingId = null;
@@ -271,16 +267,6 @@ window.editImage = async function (id) {
     customNoteInput.value = record.note;
   }
 
-  if (record.imageUrl) {
-    uploadedImageUrl = record.imageUrl;
-    document.getElementById("imagePreview").src = uploadedImageUrl;
-    document.getElementById("imagePreview").classList.remove("hidden");
-  } else {
-    uploadedImageUrl = "";
-    document.getElementById("imagePreview").src = "";
-    document.getElementById("imagePreview").classList.add("hidden");
-  }
-
   const addBtn = document.querySelector("button[onclick='addRecord()']");
   addBtn.innerHTML = "💾 Запази промените";
   addBtn.onclick = saveEditedRecord;
@@ -307,10 +293,6 @@ function clearForm() {
   const categoryInput = document.getElementById("customCategory");
   if (categoryInput) categoryInput.value = "";
   
-  uploadedImageUrl = "";
-document.getElementById("imagePreview").src = "";
-document.getElementById("imagePreview").classList.add("hidden");
-
 }
 
 // --------------------------------------------------
@@ -375,13 +357,7 @@ function renderTable(data = records) {
       <td>${r.category || ''}</td>
       <td>${r.note}</td>
       <td style="white-space: nowrap;">
-        ${
-          r.imageUrl
-            ? `<img src="${r.imageUrl}"
-                   style="height:30px;border-radius:4px;cursor:pointer;margin-right:6px;"
-                   onclick="openImageModal('${r.imageUrl}')">`
-            : '📷'
-        }
+       
         <button class="admin-only btn-icon" onclick="editImage('${r.id}')">✏️</button>
         <button class="admin-only btn-icon" onclick="deleteRecord('${r.id}')">🗑️</button>
       </td>
@@ -705,26 +681,6 @@ window.exportFilteredToExcel = function () {
   XLSX.utils.book_append_sheet(wb, ws, 'Отчет');
   XLSX.writeFile(wb, 'nonstop-отчет.xlsx');
 };
-
-function openImageModal(url) {
-  const modal = document.getElementById("imageModal");
-  const modalImg = document.getElementById("modalImage");
-
-  modalImg.src = url;
-  modal.classList.remove("hidden");
-}
-
-function closeImageModal() {
-  document.getElementById("imageModal").classList.add("hidden");
-  document.getElementById("modalImage").src = "";
-}
-
-window.openImageModal = openImageModal;
-window.closeImageModal = closeImageModal;
-window.editImage = editImage;
-window.saveEditedRecord = saveEditedRecord;
-;
-
 
 
 
