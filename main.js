@@ -200,8 +200,6 @@ async function saveEditedRecord() {
 
   if (!date || isNaN(amount)) return alert("Попълни дата и сума.");
 
-  const originalId = document.getElementById("addForm").getAttribute("data-editing");
-const record = records.find(r => r.id === originalId);
   await updateDoc(doc(db, "records", editingId), {
     date,
     type,
@@ -619,30 +617,64 @@ function updateNoteOptions() {
   noteSelect.value = currentValue;
 }
 
-window.showScreen = function(screen) {
+window.showScreen = function (screen) {
   const addScreen = document.getElementById("screen-add");
   const reportScreen = document.getElementById("screen-report");
   const isAdmin = document.body.classList.contains("admin");
+
+  // Важно: desktop = 2 колони, mobile = 1 колона
+  const isDesktop = window.matchMedia("(min-width: 900px)").matches;
 
   if (screen === "report") {
     if (!isAdmin) {
       alert("Нямаш достъп до този екран.");
       return;
     }
-    addScreen.classList.add("hidden");
-    reportScreen.classList.remove("hidden");
-    renderTable(); 
+
+    // ✅ Desktop: формата остава видима вляво
+    if (isDesktop) {
+      addScreen.classList.remove("hidden");     // оставяме add
+      reportScreen.classList.remove("hidden");  // показваме report
+    } else {
+      // ✅ Mobile: както досега (сменяме екраните)
+      addScreen.classList.add("hidden");
+      reportScreen.classList.remove("hidden");
+    }
+
+    // Рефреш на отчети
+    renderTable();
     updateSummaries();
     renderMethodSummary();
     renderChart();
     applyFilters();
     renderTaxSummary();
+
   } else {
-    addScreen.classList.remove("hidden");
-    reportScreen.classList.add("hidden");
-    renderRecentTable();  
+    // screen === "add"
+
+    if (isDesktop) {
+      // ✅ Desktop: add си стои, report го крием (за да не пречи)
+      addScreen.classList.remove("hidden");
+      reportScreen.classList.add("hidden");
+    } else {
+      // ✅ Mobile: показваме add, крием report
+      addScreen.classList.remove("hidden");
+      reportScreen.classList.add("hidden");
+    }
+
+    renderRecentTable();
   }
 };
+
+window.addEventListener("resize", () => {
+  // ако сме в add екран, да остане add коректно
+  const reportScreen = document.getElementById("screen-report");
+  if (reportScreen && !reportScreen.classList.contains("hidden")) {
+    // ако отчета е видим, просто прерисуваме chart (Chart.js понякога се нуждае)
+    try { renderChart(); } catch (e) {}
+  }
+});
+
 function toggleCustomCategory() {
   const select = document.getElementById("category");
   const input = document.getElementById("customCategory");
