@@ -270,12 +270,11 @@ window.editImage = async function (id) {
     customNoteInput.value = record.note;
   }
 
-  const addBtn = document.getElementById("recordSubmitBtn");
-addBtn.innerHTML = "💾 Запази промените";
-addBtn.onclick = saveEditedRecord;
+    const addBtn = document.getElementById("recordSubmitBtn");
+    addBtn.innerHTML = "💾 Запази промените";
+    addBtn.onclick = saveEditedRecord;
+};
 
-// (по желание) да е ясно и в HTML атрибута
-addBtn.setAttribute("onclick", "saveEditedRecord()");
 
 // --------------------------------------------------
 // 🔥 Изтриване
