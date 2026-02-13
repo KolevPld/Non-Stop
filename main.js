@@ -714,6 +714,11 @@ window.exportFilteredToExcel = function () {
   XLSX.writeFile(wb, 'nonstop-отчет.xlsx');
 };
 
+window.toggleReport = function () {
+  const reportScreen = document.getElementById("screen-report");
+  const isVisible = reportScreen && !reportScreen.classList.contains("hidden");
+  showScreen(isVisible ? "add" : "report");
+};
 
 
 
