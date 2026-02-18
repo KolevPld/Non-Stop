@@ -455,34 +455,37 @@ tr:hover {
   --col-type: 7.5rem;     /* Тип */
   --col-amount: 9rem;     /* Сума */
   --col-method: 8rem;     /* Метод */
-  --col-category: 9rem;   /* Категория */
-  --col-actions: 4.5rem;  /* Действия */
+  --col-category: 9rem;   /* Кат. */
+  --col-actions: 4.5rem;  /* Действие */
 }
 
-/* 1) Единно поведение */
-#recordsTable, #recentTable, .table-responsive table {
-  table-layout: fixed;  /* ключово */
-  width: 100%;
+/* ВАЖНО: !important, за да победим старите table правила */
+#recordsTable, #recentTable {
+  table-layout: fixed !important;
+  width: 100% !important;
 }
 
-/* 2) Общи колони 1..4 (и за двете таблици) */
+/* 1 Дата */
 #recordsTable th:nth-child(1), #recordsTable td:nth-child(1),
 #recentTable  th:nth-child(1), #recentTable  td:nth-child(1) { width: var(--col-date); }
 
+/* 2 Тип */
 #recordsTable th:nth-child(2), #recordsTable td:nth-child(2),
 #recentTable  th:nth-child(2), #recentTable  td:nth-child(2) { width: var(--col-type); }
 
+/* 3 Сума */
 #recordsTable th:nth-child(3), #recordsTable td:nth-child(3),
 #recentTable  th:nth-child(3), #recentTable  td:nth-child(3) { width: var(--col-amount); }
 
+/* 4 Метод */
 #recordsTable th:nth-child(4), #recordsTable td:nth-child(4),
 #recentTable  th:nth-child(4), #recentTable  td:nth-child(4) { width: var(--col-method); }
 
-/* 3) Категория (5-та колона и в двете) */
+/* 5 Категория */
 #recordsTable th:nth-child(5), #recordsTable td:nth-child(5),
 #recentTable  th:nth-child(5), #recentTable  td:nth-child(5) { width: var(--col-category); }
 
-/* 4) Бележка (6-та колона и в двете) – да взима остатъка */
+/* 6 Бележка (остатък) */
 #recordsTable th:nth-child(6), #recordsTable td:nth-child(6),
 #recentTable  th:nth-child(6), #recentTable  td:nth-child(6) {
   width: auto;
@@ -491,11 +494,11 @@ tr:hover {
   white-space: nowrap;
 }
 
-/* 5) Действия (7-ма колона и в двете) */
+/* 7 Действие */
 #recordsTable th:nth-child(7), #recordsTable td:nth-child(7),
 #recentTable  th:nth-child(7), #recentTable  td:nth-child(7) { width: var(--col-actions); }
 
-/* 6) Мобилни корекции (оставяме ги) */
+/* Мобилни ширини (ако искаш – остави ги) */
 @media (max-width: 600px) {
   :root{
     --col-date: 7.5rem;
@@ -505,6 +508,7 @@ tr:hover {
     --col-category: 7.5rem;
     --col-actions: 3.5rem;
   }
+}
 
   #recordsTable th, #recordsTable td,
   #recentTable  th, #recentTable  td { padding: 8px; }
