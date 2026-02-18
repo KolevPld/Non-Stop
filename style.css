@@ -508,7 +508,6 @@ tr:hover {
     --col-category: 7.5rem;
     --col-actions: 3.5rem;
   }
-}
 
   #recordsTable th, #recordsTable td,
   #recentTable  th, #recentTable  td { padding: 8px; }
