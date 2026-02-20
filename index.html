@@ -260,7 +260,7 @@
   function toggleTheme() {
     const body = document.body;
     const button = document.querySelector('.theme-toggle');
-    const isDark = body.classList.toggle('dark-theme');
+    const isDark = body.classList.toggle('dark');
 
     // Запазваме избора
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
@@ -275,7 +275,7 @@
     const button = document.querySelector('.theme-toggle');
 
     if (savedTheme === 'dark') {
-      document.body.classList.add('dark-theme');
+  document.body.classList.add('dark');
       if (button) button.innerText = '☀️';
     } else {
       if (button) button.innerText = '🌙';
