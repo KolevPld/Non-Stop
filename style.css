@@ -588,7 +588,7 @@ body {
   --card-bg: #1f1f1f;
 }
 
-body:not(.dark-theme) {
+body:not(.dark) {
   --bg-color: #f5f5f5;
   --text-color: #333;
   --input-bg: #fff;
