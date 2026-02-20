@@ -579,7 +579,7 @@ body {
   transition: background 0.3s, color 0.3s;
 }
 
-.dark-theme {
+.dark {
   --bg-color: #121212;
   --text-color: #e0e0e0;
   --input-bg: #1f1f1f;
