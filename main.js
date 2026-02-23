@@ -281,7 +281,7 @@ window.editImage = async function (id) {
     document.getElementById("imagePreview").classList.add("hidden");
   }
 
-  const addBtn = document.querySelector("button[onclick='addRecord()']");
+  const addBtn = document.getElementById("submitBtn");
   addBtn.innerHTML = "💾 Запази промените";
   addBtn.onclick = saveEditedRecord;
 };
