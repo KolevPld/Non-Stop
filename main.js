@@ -223,9 +223,9 @@ const record = records.find(r => r.id === originalId);
   form.removeAttribute("data-editing");
   form.classList.remove("editing-mode");
 
-  const addBtn = document.querySelector("button[onclick='saveEditedRecord()']");
-  addBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Добави запис';
-  addBtn.setAttribute("onclick", "addRecord()");
+ const addBtn = document.getElementById("submitBtn");
+ addBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Добави запис';
+ addBtn.onclick = addRecord;
 
   loadRecords();
 }
