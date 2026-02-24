@@ -751,3 +751,12 @@ button.btn-icon:hover {
   box-shadow: 0 0 10px rgba(255, 152, 0, 0.6);
   border-radius: 12px;
 }
+.summary table td:last-child {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.summary table td:last-child {
+  color: #ffffff;
+  text-shadow: 0 0 6px rgba(76, 175, 80, 0.4);
+}
