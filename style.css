@@ -745,4 +745,9 @@ button.btn-icon:hover {
 .editing-mode button {
   background-color: #ff9800 !important;
 }
-
+/* 🔧 Визуален индикатор при редакция */
+#addForm.editing-mode {
+  border: 2px solid #ff9800;
+  box-shadow: 0 0 10px rgba(255, 152, 0, 0.6);
+  border-radius: 12px;
+}
