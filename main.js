@@ -330,6 +330,7 @@ async function saveEditedRecord() {
   document.getElementById("addForm")?.classList.remove("editing-mode");
 
   await loadRecords();
+  window.showScreen("add");
 }
 
 window.saveEditedRecord = saveEditedRecord;
