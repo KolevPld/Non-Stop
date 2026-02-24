@@ -321,6 +321,7 @@ async function saveEditedRecord() {
 
   editingId = null;
   clearForm();
+  document.getElementById("addForm")?.classList.remove("editing-mode");
 
   const submitBtn = document.getElementById("submitBtn");
   if (submitBtn) {
