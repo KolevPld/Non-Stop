@@ -676,3 +676,12 @@ function closeImageModal() {
 
 window.openImageModal = openImageModal;
 window.closeImageModal = closeImageModal;
+
+// Слушай за снимки от Cloudinary widget (в index.html)
+window.addEventListener("imageUploaded", (e) => {
+  uploadedImageUrl = e.detail.url;
+});
+window.addEventListener("imageRemoved", () => {
+  uploadedImageUrl = "";
+});
+
