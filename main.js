@@ -186,10 +186,7 @@ async function saveEditedRecord() {
 
   const date = document.getElementById("date").value;
   const type = document.getElementById("type").value;
-  const methodSelect = document.getElementById("method");
-  const methodOption = [...methodSelect.options].find(o => o.value === record.method);
-  if (methodOption) methodSelect.value = methodOption.value;
-  else methodSelect.value = record.method;
+  const method = document.getElementById("method").value.split(" ")[0];
   const amount = parseFloat(document.getElementById("amount").value);
   const store = document.getElementById("store").value;
 
@@ -206,8 +203,7 @@ async function saveEditedRecord() {
 
   if (!date || isNaN(amount)) return alert("Попълни дата и сума.");
 
-  const originalId = document.getElementById("addForm").getAttribute("data-editing");
-const record = records.find(r => r.id === originalId);
+  const record = records.find(r => r.id === editingId);
   await updateDoc(doc(db, "records", editingId), {
     date,
     type,
