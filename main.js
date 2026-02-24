@@ -457,7 +457,9 @@ function renderTable(data = records) {
     tr.innerHTML = `
       <td>${r.date || ""}</td>
       <td style="color:${r.type === "Приход" ? "#4caf50" : "#f44336"};">${r.type || ""}</td>
-      <td>${formatMoney(r.amount)}</td>
+      <td class="money ${r.type === 'Приход' ? 'money-in' : 'money-out'}">
+  ${formatMoney(r.amount)}
+</td>
       <td>${r.method || ""}</td>
       <td>${r.category || ""}</td>
       <td>${r.note || ""}</td>
@@ -482,7 +484,9 @@ function renderRecentTable() {
     <tr>
       <td>${r.date || ""}</td>
       <td style="color:${r.type === "Приход" ? "#4caf50" : "#f44336"};">${r.type || ""}</td>
-      <td>${formatMoney(r.amount)}</td>
+      <td class="money ${r.type === 'Приход' ? 'money-in' : 'money-out'}">
+  ${formatMoney(r.amount)}
+</td>
       <td>${r.method || ""}</td>
       <td>${r.category || ""}</td>
       <td>${r.note || ""}</td>
