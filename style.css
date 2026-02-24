@@ -751,3 +751,9 @@ button.btn-icon:hover {
   box-shadow: 0 0 10px rgba(255, 152, 0, 0.6);
   border-radius: 12px;
 }
+td.money {
+  text-align: right;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums; /* цифрите да са равни по ширина */
+  letter-spacing: 0.2px;
+}
