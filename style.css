@@ -754,6 +754,14 @@ button.btn-icon:hover {
 td.money {
   text-align: right;
   font-weight: 800;
-  font-variant-numeric: tabular-nums; /* цифрите да са равни по ширина */
-  letter-spacing: 0.2px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.3px;
+}
+
+.money-in {
+  color: #2e7d32;
+}
+
+.money-out {
+  color: #c62828;
 }
