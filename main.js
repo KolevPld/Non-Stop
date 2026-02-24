@@ -186,7 +186,10 @@ async function saveEditedRecord() {
 
   const date = document.getElementById("date").value;
   const type = document.getElementById("type").value;
-  const method = document.getElementById("method").value.split(" ")[0];
+  const methodSelect = document.getElementById("method");
+  const methodOption = [...methodSelect.options].find(o => o.value === record.method);
+  if (methodOption) methodSelect.value = methodOption.value;
+  else methodSelect.value = record.method;
   const amount = parseFloat(document.getElementById("amount").value);
   const store = document.getElementById("store").value;
 
@@ -721,9 +724,6 @@ function closeImageModal() {
 
 window.openImageModal = openImageModal;
 window.closeImageModal = closeImageModal;
-window.editImage = editImage;
-window.saveEditedRecord = saveEditedRecord;
-;
 
 
 
