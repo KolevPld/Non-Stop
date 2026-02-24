@@ -79,6 +79,16 @@ let chartRef = null;
 let editingId = null;
 let uploadedImageUrl = "";
 
+// --------------------------------------------------
+// 💰 Форматиране на суми
+// --------------------------------------------------
+function formatMoney(val) {
+  return Number(val || 0).toLocaleString("bg-BG", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }) + " €";
+}
+
 const statusDiv = document.getElementById("status");
 
 onAuthStateChanged(auth, user => {
