@@ -88,13 +88,16 @@ onAuthStateChanged(auth, user => {
   if (isLoggedIn) {
     if (statusDiv) statusDiv.textContent = `🔓 Влязъл: ${user.email}${isAdmin ? " (админ)" : ""}`;
     document.body.classList.toggle("admin", isAdmin);
+
     document.getElementById("loginScreen")?.classList.add("hidden");
     document.getElementById("app")?.classList.remove("hidden");
+
     window.showScreen?.("add");
     loadRecords();
   } else {
     if (statusDiv) statusDiv.textContent = "🔐 Моля, влез с имейл и парола.";
     document.body.classList.remove("admin");
+
     document.getElementById("loginScreen")?.classList.remove("hidden");
     document.getElementById("app")?.classList.add("hidden");
   }
@@ -105,6 +108,7 @@ onAuthStateChanged(auth, user => {
 // --------------------------------------------------
 async function loadRecords() {
   records = [];
+
   const q = query(collection(db, "records"), orderBy("date", "desc"));
   const snapshot = await getDocs(q);
 
@@ -181,7 +185,7 @@ async function addRecord() {
 window.addRecord = addRecord;
 
 // --------------------------------------------------
-// ✏️ Редактиране (важното: отваря формата)
+// ✏️ Редактиране (ВАЖНО: отваря формата от Отчети)
 // --------------------------------------------------
 window.editImage = async function (id) {
   const record = records.find(r => r.id === id);
@@ -189,19 +193,19 @@ window.editImage = async function (id) {
 
   editingId = id;
 
-  // ✅ 1) Отваряме формата (ако сме в отчети)
+  // ✅ Отваряме формата (ако сме в отчети)
   window.showScreen("add");
 
-  // ✅ 2) Скрол след като DOM покаже формата
+  // ✅ Скрол след като формата стане видима
   requestAnimationFrame(() => {
     document.getElementById("addForm")?.scrollIntoView({ behavior: "smooth" });
   });
 
   // Попълване на полетата
-  if (document.getElementById("date")) document.getElementById("date").value = record.date || "";
-  if (document.getElementById("type")) document.getElementById("type").value = record.type || "";
-  if (document.getElementById("amount")) document.getElementById("amount").value = record.amount ?? "";
-  if (document.getElementById("store")) document.getElementById("store").value = record.store || "";
+  document.getElementById("date") && (document.getElementById("date").value = record.date || "");
+  document.getElementById("type") && (document.getElementById("type").value = record.type || "");
+  document.getElementById("amount") && (document.getElementById("amount").value = record.amount ?? "");
+  document.getElementById("store") && (document.getElementById("store").value = record.store || "");
 
   // Метод
   const methodSelect = document.getElementById("method");
@@ -270,7 +274,7 @@ window.editImage = async function (id) {
   submitBtn.innerHTML = "💾 Запази промените";
   submitBtn.onclick = saveEditedRecord;
 
-  // визуален индикатор (ако имаш CSS)
+  // Визуален индикатор (ако имаш CSS .editing-mode)
   document.getElementById("addForm")?.classList.add("editing-mode");
 };
 
@@ -286,14 +290,12 @@ async function saveEditedRecord() {
   const amount = parseFloat(document.getElementById("amount")?.value);
   const store = document.getElementById("store")?.value;
 
-  // Бележка
   let note = document.getElementById("noteSelect")?.value || "";
   if (note === "custom") {
     note = document.getElementById("customNote")?.value?.trim() || "";
     if (note) saveCustomNote(note);
   }
 
-  // Категория
   let category = document.getElementById("category")?.value || "";
   if (category === "custom") {
     category = document.getElementById("customCategory")?.value?.trim() || "";
@@ -319,7 +321,6 @@ async function saveEditedRecord() {
   editingId = null;
   clearForm();
 
-  // върни бутона
   const submitBtn = document.getElementById("submitBtn");
   if (submitBtn) {
     submitBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Добави запис';
@@ -347,8 +348,8 @@ window.deleteRecord = deleteRecord;
 // 🧹 Изчистване на формата
 // --------------------------------------------------
 function clearForm() {
-  if (document.getElementById("date")) document.getElementById("date").value = "";
-  if (document.getElementById("amount")) document.getElementById("amount").value = "";
+  document.getElementById("date") && (document.getElementById("date").value = "");
+  document.getElementById("amount") && (document.getElementById("amount").value = "");
 
   const noteInput = document.getElementById("customNote");
   if (noteInput) { noteInput.value = ""; noteInput.classList.add("hidden"); }
@@ -356,12 +357,15 @@ function clearForm() {
   const categoryInput = document.getElementById("customCategory");
   if (categoryInput) { categoryInput.value = ""; categoryInput.classList.add("hidden"); }
 
-  if (document.getElementById("category")) document.getElementById("category").value = "Оборот";
-  if (document.getElementById("noteSelect")) document.getElementById("noteSelect").value = "М1";
+  document.getElementById("category") && (document.getElementById("category").value = "Оборот");
+  document.getElementById("noteSelect") && (document.getElementById("noteSelect").value = "М1");
 
   uploadedImageUrl = "";
   const imagePreview = document.getElementById("imagePreview");
   if (imagePreview) { imagePreview.src = ""; imagePreview.classList.add("hidden"); }
+
+  // ако сме били в edit, махаме индикатор
+  document.getElementById("addForm")?.classList.remove("editing-mode");
 }
 // --------------------------------------------------
 // 🔄 Филтри
@@ -710,6 +714,7 @@ window.showScreen = function (screen) {
 
   if (screen === "report") {
     if (!isAdmin) { alert("Нямаш достъп до този екран."); return; }
+
     addScreen.classList.add("hidden");
     reportScreen.classList.remove("hidden");
 
