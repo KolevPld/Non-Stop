@@ -323,6 +323,8 @@ async function saveEditedRecord() {
   editingId = null;
   clearForm();
   document.getElementById("addForm")?.classList.remove("editing-mode");
+  document.getElementById("cancelEditBtn")?.classList.add("hidden");
+
 
   const submitBtn = document.getElementById("submitBtn");
   if (submitBtn) {
@@ -371,6 +373,24 @@ function clearForm() {
   // ако сме били в edit, махаме индикатор
   document.getElementById("addForm")?.classList.remove("editing-mode");
 }
+
+window.cancelEdit = function () {
+  editingId = null;
+
+  clearForm();
+
+  document.getElementById("addForm")?.classList.remove("editing-mode");
+
+  const submitBtn = document.getElementById("submitBtn");
+  if (submitBtn) {
+    submitBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Добави запис';
+    submitBtn.onclick = addRecord;
+  }
+
+  document.getElementById("cancelEditBtn")?.classList.add("hidden");
+
+  window.showScreen?.("add");
+};
 // --------------------------------------------------
 // 🔄 Филтри
 // --------------------------------------------------
