@@ -273,6 +273,7 @@ window.editImage = async function (id) {
 
   submitBtn.innerHTML = "💾 Запази промените";
   submitBtn.onclick = saveEditedRecord;
+  document.getElementById("addForm")?.classList.add("editing-mode");
 
   // Визуален индикатор (ако имаш CSS .editing-mode)
   document.getElementById("addForm")?.classList.add("editing-mode");
