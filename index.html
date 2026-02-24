@@ -148,10 +148,16 @@
     </form>
 
     <div class="btn-group">
-      <button id="submitBtn" onclick="addRecord()">
-        <i class="fa-solid fa-plus"></i> Добави запис
-      </button>
-    </div>
+  <button id="submitBtn" onclick="addRecord()">
+    <i class="fa-solid fa-plus"></i> Добави запис
+  </button>
+
+  <button id="cancelEditBtn" type="button" class="hidden" onclick="cancelEdit()"
+          style="background:#757575;">
+    ✖ Отказ
+  </button>
+</div>
+    
     <div class="btn-group">
       <button class="admin-only" onclick="showScreen('report')">📊 Отчети</button>
     </div>
