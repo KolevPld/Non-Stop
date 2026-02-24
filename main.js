@@ -275,9 +275,6 @@ window.editImage = async function (id) {
   submitBtn.onclick = saveEditedRecord;
   document.getElementById("cancelEditBtn")?.classList.remove("hidden");
   document.getElementById("addForm")?.classList.add("editing-mode");
-
-  // Визуален индикатор (ако имаш CSS .editing-mode)
-  document.getElementById("addForm")?.classList.add("editing-mode");
 };
 
 // --------------------------------------------------
@@ -331,8 +328,6 @@ async function saveEditedRecord() {
     submitBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Добави запис';
     submitBtn.onclick = addRecord;
   }
-
-  document.getElementById("addForm")?.classList.remove("editing-mode");
 
   await loadRecords();
   window.showScreen("add");
