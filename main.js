@@ -7,7 +7,7 @@ import {
   query,
   orderBy,
   deleteDoc,
-  updateDoc,   // 👈 ДОБАВЕНО
+  updateDoc,
   doc
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
@@ -44,7 +44,6 @@ const ADMIN_EMAIL = "kmet.zapaden@gmail.com";
 window.registerEmail = async function () {
   const email = document.getElementById("loginEmail").value.trim();
   const password = document.getElementById("loginPassword").value.trim();
-
   try {
     await createUserWithEmailAndPassword(auth, email, password);
     alert("Регистрация успешна!");
@@ -58,7 +57,6 @@ window.registerEmail = async function () {
 window.loginEmail = async function () {
   const email = document.getElementById("loginEmail").value.trim();
   const password = document.getElementById("loginPassword").value.trim();
-
   try {
     await signInWithEmailAndPassword(auth, email, password);
   } catch (err) {
@@ -72,16 +70,15 @@ window.logout = function () {
   signOut(auth);
 };
 
-
 // --------------------------------------------------
-// 🔄 При вход показваш app + зареждаш DB
+// 🔄 Глобални променливи
 // --------------------------------------------------
 
 let records = [];
 let filteredRecords = [];
 let chartRef = null;
-let editingId = null;          // 👈 НОВО
-let uploadedImageUrl = "";     // 👈 НОВО
+let editingId = null;
+let uploadedImageUrl = "";
 
 const statusDiv = document.getElementById("status");
 
@@ -94,7 +91,7 @@ onAuthStateChanged(auth, user => {
     document.body.classList.toggle("admin", isAdmin);
     document.getElementById("loginScreen").classList.add("hidden");
     document.getElementById("app").classList.remove("hidden");
-    showScreen("add"); // Принудително показва само екран 1
+    showScreen("add");
     loadRecords();
   } else {
     statusDiv.textContent = "🔐 Моля, влез с имейл и парола.";
@@ -111,33 +108,30 @@ async function loadRecords() {
   records = [];
   const q = query(collection(db, "records"), orderBy("date", "desc"));
   const snapshot = await getDocs(q);
-
   snapshot.forEach(docSnap =>
     records.push({ id: docSnap.id, ...docSnap.data() })
   );
 
- if (document.body.classList.contains("admin")) {
-  renderTable();
-  renderRecentTable();
-  updateSummaries();
-  renderMethodSummary();
-  renderChart();
-  applyFilters();
-  renderTaxSummary();
-  updateNoteOptions();
-
-  // Винаги показваме само екран 1 при вход
-  showScreen("add");
-} else {
-  renderRecentTable();       
-  showScreen("add");         
-  document.querySelector("#totalSummary").innerHTML = "";
+  if (document.body.classList.contains("admin")) {
+    renderTable();
+    renderRecentTable();
+    updateSummaries();
+    renderMethodSummary();
+    renderChart();
+    applyFilters();
+    renderTaxSummary();
+    updateNoteOptions();
+    showScreen("add");
+  } else {
+    renderRecentTable();
+    showScreen("add");
+    document.querySelector("#totalSummary").innerHTML = "";
   }
 }
+
 // --------------------------------------------------
 // 🔥 Добавяне на запис
 // --------------------------------------------------
-
 async function addRecord() {
   const date = document.getElementById("date").value;
   const type = document.getElementById("type").value;
@@ -145,41 +139,103 @@ async function addRecord() {
   const amount = parseFloat(document.getElementById("amount").value);
 
   let note;
-  const noteSelectEl = document.getElementById("noteSelect");
-  const noteSelect = noteSelectEl.value;
-
-  if (noteSelect === "custom") {
+  const noteSelectVal = document.getElementById("noteSelect").value;
+  if (noteSelectVal === "custom") {
     note = document.getElementById("customNote").value.trim();
     if (note) saveCustomNote(note);
   } else {
-    note = noteSelect;
+    note = noteSelectVal;
   }
 
   const store = document.getElementById("store").value;
 
   let category = document.getElementById("category").value;
   if (category === "custom") {
-    category = document.getElementById("customCategory").value;
+    category = document.getElementById("customCategory").value.trim();
   }
 
-  if (!date || isNaN(amount)) return alert("Попълни дата и сума.");
+  if (!date || isNaN(amount) || amount <= 0) return alert("Попълни дата и валидна сума.");
 
-  const imageUrl = uploadedImageUrl || ""; // 👈 Cloudinary URL
+  const imageUrl = uploadedImageUrl || "";
 
   await addDoc(collection(db, "records"), {
-    date,
-    type,
-    method,
-    amount,
-    note,
-    category,
-    store,
-    imageUrl
+    date, type, method, amount, note, category, store, imageUrl
   });
 
   loadRecords();
   clearForm();
 }
+
+// --------------------------------------------------
+// ✏️ Редактиране на запис
+// --------------------------------------------------
+window.editImage = async function (id) {
+  const record = records.find(r => r.id === id);
+  if (!record) return;
+
+  editingId = id;
+
+  document.getElementById("date").value = record.date;
+  document.getElementById("type").value = record.type;
+  document.getElementById("amount").value = record.amount;
+  document.getElementById("store").value = record.store;
+
+  // Метод — намери правилната опция
+  const methodSelect = document.getElementById("method");
+  const matchedMethod = [...methodSelect.options].find(o => o.value === record.method);
+  if (matchedMethod) {
+    methodSelect.value = matchedMethod.value;
+  } else {
+    // Опитай да намериш опция, чиято стойност започва с record.method
+    const partial = [...methodSelect.options].find(o => o.value.startsWith(record.method));
+    if (partial) methodSelect.value = partial.value;
+  }
+
+  // Категория
+  const catSelect = document.getElementById("category");
+  const customCatInput = document.getElementById("customCategory");
+  if ([...catSelect.options].some(o => o.value === record.category)) {
+    catSelect.value = record.category;
+    customCatInput.classList.add("hidden");
+    customCatInput.value = "";
+  } else {
+    catSelect.value = "custom";
+    customCatInput.classList.remove("hidden");
+    customCatInput.value = record.category;
+  }
+
+  // Бележка
+  const noteSelect = document.getElementById("noteSelect");
+  const customNoteInput = document.getElementById("customNote");
+  if ([...noteSelect.options].some(o => o.value === record.note)) {
+    noteSelect.value = record.note;
+    customNoteInput.classList.add("hidden");
+    customNoteInput.value = "";
+  } else {
+    noteSelect.value = "custom";
+    customNoteInput.classList.remove("hidden");
+    customNoteInput.value = record.note;
+  }
+
+  // Снимка
+  if (record.imageUrl) {
+    uploadedImageUrl = record.imageUrl;
+    document.getElementById("imagePreview").src = uploadedImageUrl;
+    document.getElementById("imagePreview").classList.remove("hidden");
+  } else {
+    uploadedImageUrl = "";
+    document.getElementById("imagePreview").src = "";
+    document.getElementById("imagePreview").classList.add("hidden");
+  }
+
+  // Смени бутона
+  const submitBtn = document.getElementById("submitBtn");
+  submitBtn.innerHTML = "💾 Запази промените";
+  submitBtn.onclick = saveEditedRecord;
+
+  // Скролирай нагоре до формата
+  document.getElementById("addForm").scrollIntoView({ behavior: "smooth" });
+};
 
 async function saveEditedRecord() {
   if (!editingId) return;
@@ -201,121 +257,63 @@ async function saveEditedRecord() {
     category = document.getElementById("customCategory").value.trim();
   }
 
-  if (!date || isNaN(amount)) return alert("Попълни дата и сума.");
+  if (!date || isNaN(amount) || amount <= 0) return alert("Попълни дата и валидна сума.");
 
   const record = records.find(r => r.id === editingId);
+
   await updateDoc(doc(db, "records", editingId), {
-    date,
-    type,
-    method,
-    amount,
-    note,
-    category,
-    store,
-    imageUrl: uploadedImageUrl || record.imageUrl || ""
+    date, type, method, amount, note, category, store,
+    imageUrl: uploadedImageUrl || (record ? record.imageUrl : "") || ""
   });
 
   editingId = null;
   clearForm();
 
-  const form = document.getElementById("addForm");
-  form.removeAttribute("data-editing");
-  form.classList.remove("editing-mode");
-
- const addBtn = document.getElementById("submitBtn");
- addBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Добави запис';
- addBtn.onclick = addRecord;
+  // Върни бутона
+  const submitBtn = document.getElementById("submitBtn");
+  submitBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Добави запис';
+  submitBtn.onclick = addRecord;
 
   loadRecords();
 }
 
 window.addRecord = addRecord;
-window.deleteRecord = deleteRecord;
-
-window.editImage = async function (id) {
-  const record = records.find(r => r.id === id);
-  if (!record) return;
-
-  editingId = id;
-
-  document.getElementById("date").value = record.date;
-  document.getElementById("type").value = record.type;
-  document.getElementById("method").value = record.method;
-  document.getElementById("amount").value = record.amount;
-  document.getElementById("store").value = record.store;
-
-  const catSelect = document.getElementById("category");
-  const customCatInput = document.getElementById("customCategory");
-
-  if ([...catSelect.options].some(o => o.value === record.category)) {
-    catSelect.value = record.category;
-    customCatInput.classList.add("hidden");
-    customCatInput.value = "";
-  } else {
-    catSelect.value = "custom";
-    customCatInput.classList.remove("hidden");
-    customCatInput.value = record.category;
-  }
-
-  const noteSelect = document.getElementById("noteSelect");
-  const customNoteInput = document.getElementById("customNote");
-
-  if ([...noteSelect.options].some(o => o.value === record.note)) {
-    noteSelect.value = record.note;
-    customNoteInput.classList.add("hidden");
-    customNoteInput.value = "";
-  } else {
-    noteSelect.value = "custom";
-    customNoteInput.classList.remove("hidden");
-    customNoteInput.value = record.note;
-  }
-
-  if (record.imageUrl) {
-    uploadedImageUrl = record.imageUrl;
-    document.getElementById("imagePreview").src = uploadedImageUrl;
-    document.getElementById("imagePreview").classList.remove("hidden");
-  } else {
-    uploadedImageUrl = "";
-    document.getElementById("imagePreview").src = "";
-    document.getElementById("imagePreview").classList.add("hidden");
-  }
-
-  const addBtn = document.getElementById("submitBtn");
-  addBtn.innerHTML = "💾 Запази промените";
-  addBtn.onclick = saveEditedRecord;
-};
-
-
+window.saveEditedRecord = saveEditedRecord;
 
 // --------------------------------------------------
-// 🔥 Изтриване
+// 🗑️ Изтриване
 // --------------------------------------------------
-
 async function deleteRecord(id) {
   if (!confirm("Сигурен ли си?")) return;
   await deleteDoc(doc(db, "records", id));
   loadRecords();
 }
+window.deleteRecord = deleteRecord;
 
+// --------------------------------------------------
+// 🧹 Изчистване на формата
+// --------------------------------------------------
 function clearForm() {
   document.getElementById("date").value = "";
   document.getElementById("amount").value = "";
-  const noteInput = document.getElementById("customNote");
-  if (noteInput) noteInput.value = "";
-  
-  const categoryInput = document.getElementById("customCategory");
-  if (categoryInput) categoryInput.value = "";
-  
-  uploadedImageUrl = "";
-document.getElementById("imagePreview").src = "";
-document.getElementById("imagePreview").classList.add("hidden");
 
+  const noteInput = document.getElementById("customNote");
+  if (noteInput) { noteInput.value = ""; noteInput.classList.add("hidden"); }
+
+  const categoryInput = document.getElementById("customCategory");
+  if (categoryInput) { categoryInput.value = ""; categoryInput.classList.add("hidden"); }
+
+  document.getElementById("category").value = "Оборот";
+  document.getElementById("noteSelect").value = "М1";
+
+  uploadedImageUrl = "";
+  document.getElementById("imagePreview").src = "";
+  document.getElementById("imagePreview").classList.add("hidden");
 }
 
 // --------------------------------------------------
 // 🔄 Филтри
 // --------------------------------------------------
-
 const filters = {
   type: document.getElementById("filterType"),
   method: document.getElementById("filterMethod"),
@@ -324,9 +322,6 @@ const filters = {
   startDate: document.getElementById("startDate"),
   endDate: document.getElementById("endDate")
 };
-
-window.applyFilters = applyFilters;
-window.clearFilters = clearFilters;
 
 function applyFilters() {
   const type = filters.type.value;
@@ -360,6 +355,12 @@ function clearFilters() {
   applyFilters();
 }
 
+window.applyFilters = applyFilters;
+window.clearFilters = clearFilters;
+
+// --------------------------------------------------
+// 📊 Рендиране на таблици
+// --------------------------------------------------
 function renderTable(data = records) {
   const tbody = document.querySelector("#recordsTable tbody");
   tbody.innerHTML = "";
@@ -374,12 +375,9 @@ function renderTable(data = records) {
       <td>${r.category || ''}</td>
       <td>${r.note}</td>
       <td style="white-space: nowrap;">
-        ${
-          r.imageUrl
-            ? `<img src="${r.imageUrl}"
-                   style="height:30px;border-radius:4px;cursor:pointer;margin-right:6px;"
-                   onclick="openImageModal('${r.imageUrl}')">`
-            : '📷'
+        ${r.imageUrl
+          ? `<img src="${r.imageUrl}" style="height:30px;border-radius:4px;cursor:pointer;margin-right:6px;" onclick="openImageModal('${r.imageUrl}')">`
+          : '📷'
         }
         <button class="admin-only btn-icon" onclick="editImage('${r.id}')">✏️</button>
         <button class="admin-only btn-icon" onclick="deleteRecord('${r.id}')">🗑️</button>
@@ -389,48 +387,43 @@ function renderTable(data = records) {
   });
 }
 
-function updateFilterSummary(data) {
-  const summary = { Приход: 0, Разход: 0 };
-
-  data.forEach(r => {
-    if (summary.hasOwnProperty(r.type)) {
-      summary[r.type] += r.amount;
-    }
-  });
-
-  const net = summary["Приход"] - summary["Разход"];
-
-  document.getElementById("filterSummary").innerHTML = `
-    <strong>Сума от филтъра:</strong> 
-    Приходи: ${summary["Приход"].toFixed(2)}  € | 
-    Разходи: ${summary["Разход"].toFixed(2)}  € | 
-    Нетно: ${net.toFixed(2)}  €
-  `;
-}
-
 function renderRecentTable() {
   const tbody = document.querySelector("#recentTable tbody");
   tbody.innerHTML = records.slice(0, 5).map(r => `
     <tr>
       <td>${r.date}</td>
       <td style="color:${r.type === 'Приход' ? '#4caf50' : '#f44336'};">${r.type}</td>
-      <td>${r.amount.toFixed(2)}  €</td>
+      <td>${r.amount.toFixed(2)} €</td>
       <td>${r.method}</td>
       <td>${r.category || ''}</td>
       <td>${r.note}</td>
-      <td>
-      <button class="btn-icon" onclick="deleteRecord('${r.id}')">🗑️</button>
-      </td>
+      <td><button class="btn-icon" onclick="deleteRecord('${r.id}')">🗑️</button></td>
     </tr>
   `).join("");
 }
 
+function updateFilterSummary(data) {
+  const summary = { Приход: 0, Разход: 0 };
+  data.forEach(r => {
+    if (summary.hasOwnProperty(r.type)) summary[r.type] += r.amount;
+  });
+  const net = summary["Приход"] - summary["Разход"];
+  document.getElementById("filterSummary").innerHTML = `
+    <strong>Сума от филтъра:</strong>
+    Приходи: ${summary["Приход"].toFixed(2)} € |
+    Разходи: ${summary["Разход"].toFixed(2)} € |
+    Нетно: ${net.toFixed(2)} €
+  `;
+}
+
+// --------------------------------------------------
+// 📈 Обобщения
+// --------------------------------------------------
 function updateSummaries() {
   const today = new Date().toISOString().slice(0, 10);
   const currentMonth = today.slice(0, 7);
 
-  let todayIncome = 0, todayExpense = 0;
-  let monthIncome = 0, monthExpense = 0;
+  let todayIncome = 0, todayExpense = 0, monthIncome = 0, monthExpense = 0;
 
   records.forEach(({ date, type, amount }) => {
     if (date === today) {
@@ -446,33 +439,28 @@ function updateSummaries() {
   const saldo = (monthIncome - monthExpense).toFixed(2);
 
   document.getElementById("dailySummary").innerHTML = `
-  <h3><i class="fa-solid fa-calendar-day"></i> Днес</h3>
-  <table>
-    <tr><td>Приходи:</td><td>${todayIncome.toFixed(2)} €</td></tr>
-    <tr><td>Разходи:</td><td>${todayExpense.toFixed(2)} €</td></tr>
-  </table>
-`;
+    <h3><i class="fa-solid fa-calendar-day"></i> Днес</h3>
+    <table>
+      <tr><td>Приходи:</td><td>${todayIncome.toFixed(2)} €</td></tr>
+      <tr><td>Разходи:</td><td>${todayExpense.toFixed(2)} €</td></tr>
+    </table>`;
 
-document.getElementById("monthlySummary").innerHTML = `
-  <h3><i class="fa-solid fa-calendar-alt"></i> Месец</h3>
-  <table>
-    <tr><td>Приходи:</td><td>${monthIncome.toFixed(2)} €</td></tr>
-    <tr><td>Разходи:</td><td>${monthExpense.toFixed(2)} €</td></tr>
-    <tr><td><strong>Салдо:</strong></td><td><strong>${saldo} €</strong></td></tr>
-  </table>
-`;
+  document.getElementById("monthlySummary").innerHTML = `
+    <h3><i class="fa-solid fa-calendar-alt"></i> Месец</h3>
+    <table>
+      <tr><td>Приходи:</td><td>${monthIncome.toFixed(2)} €</td></tr>
+      <tr><td>Разходи:</td><td>${monthExpense.toFixed(2)} €</td></tr>
+      <tr><td><strong>Салдо:</strong></td><td><strong>${saldo} €</strong></td></tr>
+    </table>`;
 }
 
 function renderTaxSummary() {
-  const income = records.filter(r => r.type === "Приход").reduce((sum, r) => sum + r.amount, 0);
-  const expense = records.filter(r => r.type === "Разход").reduce((sum, r) => sum + r.amount, 0);
+  const income = records.filter(r => r.type === "Приход").reduce((s, r) => s + r.amount, 0);
+  const expense = records.filter(r => r.type === "Разход").reduce((s, r) => s + r.amount, 0);
   const profit = income - expense;
 
   if (profit <= 0) {
-    document.getElementById("taxSummary").innerHTML = `
-      <strong>📊 Данъчна справка:</strong><br>
-      Няма облагаема печалба.
-    `;
+    document.getElementById("taxSummary").innerHTML = `<strong>📊 Данъчна справка:</strong><br>Няма облагаема печалба.`;
     return;
   }
 
@@ -481,7 +469,7 @@ function renderTaxSummary() {
   const corporateTax = +(taxableProfit * 0.1).toFixed(2);
   const netProfit = +(taxableProfit - corporateTax).toFixed(2);
 
-    document.getElementById("taxSummary").innerHTML = `
+  document.getElementById("taxSummary").innerHTML = `
     <h3><i class="fa-solid fa-file-invoice-dollar"></i> Данъчна справка</h3>
     <table>
       <tr><td>Приходи:</td><td>${income.toFixed(2)} €</td></tr>
@@ -489,46 +477,40 @@ function renderTaxSummary() {
       <tr><td>Печалба:</td><td>${profit.toFixed(2)} €</td></tr>
       <tr><td>ДДС (20%):</td><td>${vat.toFixed(2)} €</td></tr>
       <tr><td>Данък печалба (10%):</td><td>${corporateTax.toFixed(2)} €</td></tr>
-      <tr>
-        <td><strong>👉 Нетна печалба:</strong></td>
-        <td><strong style="color:#ffca28;">${netProfit.toFixed(2)} €</strong></td>
-      </tr>
-    </table>
-  `;
-} 
+      <tr><td><strong>👉 Нетна печалба:</strong></td><td><strong style="color:#ffca28;">${netProfit.toFixed(2)} €</strong></td></tr>
+    </table>`;
+}
 
 function renderMethodSummary() {
   const totals = { Кеш: 0, Банка: 0, Карта: 0 };
-
   records.forEach(r => {
     const amount = r.type === "Приход" ? r.amount : -r.amount;
-    if (totals.hasOwnProperty(r.method)) {
-      totals[r.method] += amount;
-    }
+    if (totals.hasOwnProperty(r.method)) totals[r.method] += amount;
   });
 
   const totalSum = totals.Кеш + totals.Банка + totals.Карта;
   const totalBank = totals.Банка + totals.Карта;
 
   document.getElementById("methodSummary").innerHTML = `
-  <h3><i class="fa-solid fa-wallet"></i> Разпределение по метод</h3>
-  <table>
-    <tr><td>💰 Кеш:</td><td>${totals.Кеш.toFixed(2)} €</td></tr>
-    <tr><td>🏦 Банка:</td><td>${totals.Банка.toFixed(2)} €</td></tr>
-    <tr><td>💳 Карта:</td><td>${totals.Карта.toFixed(2)} €</td></tr>
-    <tr><td><strong>Общо:</strong></td><td><strong>${totalSum.toFixed(2)} €</strong></td></tr>
-  </table>
-`;
+    <h3><i class="fa-solid fa-wallet"></i> Разпределение по метод</h3>
+    <table>
+      <tr><td>💰 Кеш:</td><td>${totals.Кеш.toFixed(2)} €</td></tr>
+      <tr><td>🏦 Банка:</td><td>${totals.Банка.toFixed(2)} €</td></tr>
+      <tr><td>💳 Карта:</td><td>${totals.Карта.toFixed(2)} €</td></tr>
+      <tr><td><strong>Общо:</strong></td><td><strong>${totalSum.toFixed(2)} €</strong></td></tr>
+    </table>`;
 
-document.getElementById("methodSummaryExtra").innerHTML = `
-  <h3><i class="fa-solid fa-circle-dollar-to-slot"></i> Общи наличности</h3>
-  <table>
-    <tr><td><i class="fa-solid fa-money-bill-wave" style="color:#4caf50;"></i> Общо кеш:</td><td>${totals.Кеш.toFixed(2)} €</td></tr>
-    <tr><td><i class="fa-solid fa-building-columns" style="color:#2196f3;"></i> Общо банка:</td><td>${totalBank.toFixed(2)} €</td></tr>
-  </table>
-`;
+  document.getElementById("methodSummaryExtra").innerHTML = `
+    <h3><i class="fa-solid fa-circle-dollar-to-slot"></i> Общи наличности</h3>
+    <table>
+      <tr><td><i class="fa-solid fa-money-bill-wave" style="color:#4caf50;"></i> Общо кеш:</td><td>${totals.Кеш.toFixed(2)} €</td></tr>
+      <tr><td><i class="fa-solid fa-building-columns" style="color:#2196f3;"></i> Общо банка:</td><td>${totalBank.toFixed(2)} €</td></tr>
+    </table>`;
 }
 
+// --------------------------------------------------
+// 📊 Графика
+// --------------------------------------------------
 function renderChart() {
   const ctx = document.getElementById('chart').getContext('2d');
   const monthData = {};
@@ -551,58 +533,31 @@ function renderChart() {
     data: {
       labels,
       datasets: [
-        {
-          label: 'Приходи',
-          data: incomeData,
-          backgroundColor: '#4caf50',
-          borderRadius: 6,
-          barThickness: 30
-        },
-        {
-          label: 'Разходи',
-          data: expenseData,
-          backgroundColor: '#f44336',
-          borderRadius: 6,
-          barThickness: 30
-        }
+        { label: 'Приходи', data: incomeData, backgroundColor: '#4caf50', borderRadius: 6, barThickness: 30 },
+        { label: 'Разходи', data: expenseData, backgroundColor: '#f44336', borderRadius: 6, barThickness: 30 }
       ]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: {
-          position: 'top',
-          labels: {
-            color: '#ccc',
-            font: { size: 14 }
-          }
-        },
-        title: {
-          display: true,
-          text: '📊 Приходи и разходи по месеци',
-          color: '#ccc',
-          font: { size: 16 }
-        }
+        legend: { position: 'top', labels: { color: '#ccc', font: { size: 14 } } },
+        title: { display: true, text: '📊 Приходи и разходи по месеци', color: '#ccc', font: { size: 16 } }
       },
       scales: {
-        x: {
-          ticks: { color: '#ccc' },
-          grid: { display: false }
-        },
-        y: {
-          ticks: { color: '#ccc' },
-          grid: { color: '#444' }
-        }
+        x: { ticks: { color: '#ccc' }, grid: { display: false } },
+        y: { ticks: { color: '#ccc' }, grid: { color: '#444' } }
       }
     }
   });
 }
 
+// --------------------------------------------------
+// 🗒️ Бележки и категории
+// --------------------------------------------------
 function toggleCustomNote() {
   const noteSelect = document.getElementById("noteSelect");
   const customNoteInput = document.getElementById("customNote");
-
   if (noteSelect.value === "custom") {
     customNoteInput.classList.remove("hidden");
     customNoteInput.focus();
@@ -621,6 +576,7 @@ function saveCustomNote(note) {
   localStorage.setItem("customNotes", JSON.stringify(savedNotes));
   updateNoteOptions();
 }
+
 function updateNoteOptions() {
   const noteSelect = document.getElementById("noteSelect");
   const savedNotes = JSON.parse(localStorage.getItem("customNotes")) || [];
@@ -642,34 +598,9 @@ function updateNoteOptions() {
   noteSelect.value = currentValue;
 }
 
-window.showScreen = function(screen) {
-  const addScreen = document.getElementById("screen-add");
-  const reportScreen = document.getElementById("screen-report");
-  const isAdmin = document.body.classList.contains("admin");
-
-  if (screen === "report") {
-    if (!isAdmin) {
-      alert("Нямаш достъп до този екран.");
-      return;
-    }
-    addScreen.classList.add("hidden");
-    reportScreen.classList.remove("hidden");
-    renderTable(); 
-    updateSummaries();
-    renderMethodSummary();
-    renderChart();
-    applyFilters();
-    renderTaxSummary();
-  } else {
-    addScreen.classList.remove("hidden");
-    reportScreen.classList.add("hidden");
-    renderRecentTable();  
-  }
-};
 function toggleCustomCategory() {
   const select = document.getElementById("category");
   const input = document.getElementById("customCategory");
-
   if (select.value === "custom") {
     input.classList.remove("hidden");
     input.focus();
@@ -680,37 +611,62 @@ function toggleCustomCategory() {
 }
 window.toggleCustomCategory = toggleCustomCategory;
 
-// 🖨️ Принтиране на филтрираната таблица
+// --------------------------------------------------
+// 📺 Навигация между екрани
+// --------------------------------------------------
+window.showScreen = function (screen) {
+  const addScreen = document.getElementById("screen-add");
+  const reportScreen = document.getElementById("screen-report");
+  const isAdmin = document.body.classList.contains("admin");
+
+  if (screen === "report") {
+    if (!isAdmin) { alert("Нямаш достъп до този екран."); return; }
+    addScreen.classList.add("hidden");
+    reportScreen.classList.remove("hidden");
+    renderTable();
+    updateSummaries();
+    renderMethodSummary();
+    renderChart();
+    applyFilters();
+    renderTaxSummary();
+  } else {
+    addScreen.classList.remove("hidden");
+    reportScreen.classList.add("hidden");
+    renderRecentTable();
+  }
+};
+
+// --------------------------------------------------
+// 🖨️ Принтиране и Ексел
+// --------------------------------------------------
 window.printFilteredTable = function () {
   const table = document.querySelector('#recordsTable');
   if (!table) return alert('Таблицата не е намерена.');
-
   const newWindow = window.open('', '', 'width=900,height=600');
   newWindow.document.write('<html><head><title>Принтиране</title>');
-  newWindow.document.write('<style>table { width: 100%; border-collapse: collapse; } th, td { border: 1px solid #ccc; padding: 8px; }</style>');
+  newWindow.document.write('<style>table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ccc;padding:8px;}</style>');
   newWindow.document.write('</head><body>');
   newWindow.document.write(table.outerHTML);
   newWindow.document.write('</body></html>');
   newWindow.document.close();
   newWindow.print();
 };
-// 📁 Експорт към Excel с SheetJS
+
 window.exportFilteredToExcel = function () {
   const table = document.querySelector('#recordsTable');
   if (!table) return alert('Таблицата не е намерена.');
-
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.table_to_sheet(table);
   XLSX.utils.book_append_sheet(wb, ws, 'Отчет');
   XLSX.writeFile(wb, 'nonstop-отчет.xlsx');
 };
 
+// --------------------------------------------------
+// 🖼️ Модален преглед на снимка
+// --------------------------------------------------
 function openImageModal(url) {
-  const modal = document.getElementById("imageModal");
-  const modalImg = document.getElementById("modalImage");
-
-  modalImg.src = url;
-  modal.classList.remove("hidden");
+  document.getElementById("modalImage").src = url;
+  document.getElementById("imageModal").classList.remove("hidden");
 }
 
 function closeImageModal() {
@@ -720,11 +676,3 @@ function closeImageModal() {
 
 window.openImageModal = openImageModal;
 window.closeImageModal = closeImageModal;
-
-
-
-
-
-
-
-
