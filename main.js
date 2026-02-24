@@ -16,7 +16,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   onAuthStateChanged,
-  signOut
+  signOutµ
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
 
@@ -231,6 +231,7 @@ window.editImage = async function (id) {
   // Смени бутона
   const submitBtn = document.getElementById("submitBtn");
   submitBtn.innerHTML = "💾 Запази промените";
+  submitBtn.removeAttribute("onclick");
   submitBtn.onclick = saveEditedRecord;
 
   // Скролирай нагоре до формата
@@ -272,6 +273,7 @@ async function saveEditedRecord() {
   // Върни бутона
   const submitBtn = document.getElementById("submitBtn");
   submitBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Добави запис';
+  submitBtn.removeAttribute("onclick");
   submitBtn.onclick = addRecord;
 
   loadRecords();
