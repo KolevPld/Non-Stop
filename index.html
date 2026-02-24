@@ -1,51 +1,5 @@
 <!DOCTYPE html>
 <html lang="bg">
- <style>
-  :root {
-    --bg-color: #ffffff;
-    --text-color: #1a1a1a;
-    --card-bg: #f9f9f9;
-    --input-bg: #f0f0f0;
-    --border-color: #ccc;
-    --accent-color: #4caf50;
-    --danger-color: #e74c3c;
-  }
-
-  body.dark {
-    --bg-color: #121212;
-    --text-color: #e0e0e0;
-    --card-bg: #1f1f1f;
-    --input-bg: #2a2a2a;
-    --border-color: #4caf50;
-    --accent-color: #66bb6a;
-    --danger-color: #e74c3c;
-  }
-
-  body {
-    background: var(--bg-color);
-    color: var(--text-color);
-    transition: background 0.3s ease, color 0.3s ease;
-  }
-
-  button.theme-toggle {
-    position: fixed;
-    top: 10px;
-    right: 10px;
-    background: var(--accent-color);
-    color: white;
-    border: none;
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-weight: bold;
-    cursor: pointer;
-    z-index: 999;
-  }
-
-  button.theme-toggle:hover {
-    background: #388e3c;
-  }
-</style>
- 
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
@@ -56,10 +10,59 @@
   <link rel="stylesheet" href="style.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root {
+      --bg-color: #ffffff;
+      --text-color: #1a1a1a;
+      --card-bg: #f9f9f9;
+      --input-bg: #f0f0f0;
+      --border-color: #ccc;
+      --accent-color: #4caf50;
+      --danger-color: #e74c3c;
+    }
+
+    body.dark {
+      --bg-color: #121212;
+      --text-color: #e0e0e0;
+      --card-bg: #1f1f1f;
+      --input-bg: #2a2a2a;
+      --border-color: #4caf50;
+      --accent-color: #66bb6a;
+      --danger-color: #e74c3c;
+    }
+
+    body {
+      background: var(--bg-color);
+      color: var(--text-color);
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+
+    button.theme-toggle {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: var(--accent-color);
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      z-index: 999;
+    }
+
+    button.theme-toggle:hover {
+      background: #388e3c;
+    }
+  </style>
 </head>
+
 <body>
+
 <button class="theme-toggle" onclick="toggleTheme()" title="Смени тема">🌗</button>
- <!-- 🔐 Login/Register секция -->
+
+<!-- 🔐 Login/Register секция -->
 <div id="loginScreen">
   <h2><i class="fa-solid fa-user-lock"></i> Вход / Регистрация</h2>
   <input type="email" id="loginEmail" placeholder="Имейл">
@@ -79,9 +82,9 @@
 
 <div id="app" class="hidden">
   <div id="screen-add">
-  <h2><i class="fa-solid fa-cash-register"></i> Нон Стоп Отчет</h2>
+    <h2><i class="fa-solid fa-cash-register"></i> Нон Стоп Отчет</h2>
 
-  <form id="addForm">
+    <form id="addForm">
 
       <label for="date">📅 Дата</label>
       <input type="date" id="date">
@@ -93,11 +96,11 @@
       </select>
 
       <label for="method">💳 Метод</label>
-       <select id="method">
-       <option value="Кеш">Кеш 💰</option>
-       <option value="Банка">Банка 🏦</option>
-       <option value="Карта">Карта 💳</option>
-       </select>
+      <select id="method">
+        <option value="Кеш">Кеш 💰</option>
+        <option value="Банка">Банка 🏦</option>
+        <option value="Карта">Карта 💳</option>
+      </select>
 
       <label for="store">🏬 Магазин</label>
       <select id="store">
@@ -118,7 +121,7 @@
       <input type="text" id="customCategory" class="hidden" placeholder="Въведи категория...">
 
       <label for="amount">💸 Сума</label>
-      <input type="number" id="amount">
+      <input type="number" id="amount" min="0" step="0.01">
 
       <label for="noteSelect">📝 Бележка</label>
       <select id="noteSelect" onchange="toggleCustomNote()">
@@ -126,54 +129,55 @@
         <option value="М2">М2</option>
         <option value="custom">Въведи ръчно...</option>
       </select>
-
       <input type="text" id="customNote" placeholder="Въведи бележка..." class="hidden">
+
       <label>📷 Снимка на документ</label>
+      <button type="button" onclick="openUploadWidget()">📷 Качи снимка</button>
 
-<button type="button" onclick="openUploadWidget()">
-  📷 Качи снимка
-</button>
+      <img id="imagePreview"
+           class="hidden"
+           style="max-height:80px;margin-top:6px;border-radius:6px;cursor:pointer;"
+           onclick="openImageModal(this.src)">
 
-<img id="imagePreview"
-     class="hidden"
-     style="max-height:80px;margin-top:6px;border-radius:6px;cursor:pointer;"
-     onclick="openImageModal(this.src)">
+      <button type="button"
+              onclick="removeImage()"
+              style="margin-top:5px;background:#e74c3c;color:white;">
+        🗑️ Премахни снимка
+      </button>
 
-<button type="button"
-        onclick="removeImage()"
-        style="margin-top:5px;background:#e74c3c;color:white;">
-  🗑️ Премахни снимка
-</button>
-  </form>
+    </form>
 
-  <div class="btn-group">
-    <button id="submitBtn" onclick="addRecord()"><i class="fa-solid fa-plus"></i> Добави запис</button>
+    <div class="btn-group">
+      <button id="submitBtn" onclick="addRecord()">
+        <i class="fa-solid fa-plus"></i> Добави запис
+      </button>
+    </div>
+    <div class="btn-group">
+      <button class="admin-only" onclick="showScreen('report')">📊 Отчети</button>
+    </div>
+
+    <div class="summary" id="totalSummary"></div>
+
+    <div class="summary">
+      <h3><i class="fa-solid fa-clock-rotate-left"></i> Последни 5 записа</h3>
+      <table id="recentTable">
+        <thead>
+          <tr>
+            <th>Дата</th>
+            <th>Тип</th>
+            <th>Сума</th>
+            <th>Метод</th>
+            <th>Кат.</th>
+            <th>Бележка</th>
+            <th>Действие</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
   </div>
-  <div class="btn-group">
-    <button class="admin-only" onclick="showScreen('report')">📊 Отчети</button>
-  </div>
 
-  <div class="summary" id="totalSummary"></div>
-
-  <div class="summary">
-    <h3><i class="fa-solid fa-clock-rotate-left"></i> Последни 5 записа</h3>
-    <table id="recentTable">
-      <thead>
-  <tr>
-    <th>Дата</th>
-    <th>Тип</th>
-    <th>Сума</th>
-    <th>Метод</th>
-    <th>Кат.</th>         <!-- 👈 ДОБАВЕНО -->
-    <th>Бележка</th>
-    <th>Действие</th>
-  </tr>
-</thead>
-      <tbody></tbody>
-    </table>
-  </div>
-</div>
-
+  <!-- 📊 Отчети екран -->
   <div id="screen-report" class="hidden admin-only">
     <h3><i class="fa-solid fa-chart-pie"></i> Отчети</h3>
     <div class="summary" id="methodSummary"></div>
@@ -238,8 +242,12 @@
     </div>
 
     <div class="btn-group" style="margin: 15px 0; display: flex; gap: 10px; flex-wrap: wrap;">
-      <button onclick="printFilteredTable()" style="background:#607d8b;"><i class="fa-solid fa-print"></i> Принтирай</button>
-      <button onclick="exportFilteredToExcel()" style="background:#388e3c;"><i class="fa-solid fa-file-excel"></i> Ексел</button>
+      <button onclick="printFilteredTable()" style="background:#607d8b;">
+        <i class="fa-solid fa-print"></i> Принтирай
+      </button>
+      <button onclick="exportFilteredToExcel()" style="background:#388e3c;">
+        <i class="fa-solid fa-file-excel"></i> Ексел
+      </button>
     </div>
 
     <div id="filterSummary" class="summary" style="margin-top:10px;"></div>
@@ -247,43 +255,23 @@
     <div class="table-responsive admin-only">
       <table id="recordsTable">
         <thead>
-          <tr><th>Дата</th><th>Тип</th><th>Сума</th><th>Метод</th><th>Кат.</th><th>Бележка</th><th>Действия</th></tr>
+          <tr>
+            <th>Дата</th>
+            <th>Тип</th>
+            <th>Сума</th>
+            <th>Метод</th>
+            <th>Кат.</th>
+            <th>Бележка</th>
+            <th>Действия</th>
+          </tr>
         </thead>
         <tbody></tbody>
       </table>
     </div>
   </div>
 </div>
-<script src="main.js" type="module"></script>
 
- <script>
-  function toggleTheme() {
-    const body = document.body;
-    const button = document.querySelector('.theme-toggle');
-    const isDark = body.classList.toggle('dark');
-
-    // Запазваме избора
-    localStorage.setItem('theme', isDark ? 'dark' : 'light');
-
-    // Смяна на иконката
-    button.innerText = isDark ? '☀️' : '🌙';
-  }
-
-  // Автоматично зареждане на запазената тема
-  window.addEventListener('DOMContentLoaded', () => {
-    const savedTheme = localStorage.getItem('theme');
-    const button = document.querySelector('.theme-toggle');
-
-    if (savedTheme === 'dark') {
-  document.body.classList.add('dark');
-      if (button) button.innerText = '☀️';
-    } else {
-      if (button) button.innerText = '🌙';
-    }
-  });
-</script>
- 
- <!-- 📷 Модален преглед на изображение -->
+<!-- 📷 Модален преглед на изображение -->
 <div id="imageModal" class="hidden" style="
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center;
@@ -295,13 +283,34 @@
       border: none; border-radius: 50%; width: 32px; height: 32px; font-size: 18px;">✖</button>
   </div>
 </div>
- 
+
 <!-- Cloudinary Upload Widget -->
 <script src="https://upload-widget.cloudinary.com/global/all.js" type="text/javascript"></script>
 
 <script>
-  let uploadedImageUrl = "";
+  // Тема светла/тъмна
+  function toggleTheme() {
+    const body = document.body;
+    const button = document.querySelector('.theme-toggle');
+    const isDark = body.classList.toggle('dark');
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    button.innerText = isDark ? '☀️' : '🌙';
+  }
 
+  window.addEventListener('DOMContentLoaded', () => {
+    const savedTheme = localStorage.getItem('theme');
+    const button = document.querySelector('.theme-toggle');
+    if (savedTheme === 'dark') {
+      document.body.classList.add('dark');
+      if (button) button.innerText = '☀️';
+    } else {
+      if (button) button.innerText = '🌙';
+    }
+  });
+
+  // Cloudinary — качване на снимка
+  // uploadedImageUrl се управлява от main.js (ES модул)
+  // Тук само отваряме widget-а и съобщаваме URL-а на модула
   function openUploadWidget() {
     cloudinary.openUploadWidget(
       {
@@ -314,9 +323,12 @@
       },
       (error, result) => {
         if (!error && result && result.event === "success") {
-          uploadedImageUrl = result.info.secure_url;
+          const url = result.info.secure_url;
 
-          document.getElementById("imagePreview").src = uploadedImageUrl;
+          // Уведоми main.js модула чрез custom event
+          window.dispatchEvent(new CustomEvent("imageUploaded", { detail: { url } }));
+
+          document.getElementById("imagePreview").src = url;
           document.getElementById("imagePreview").classList.remove("hidden");
         }
       }
@@ -324,11 +336,15 @@
   }
 
   function removeImage() {
-    uploadedImageUrl = "";
+    // Уведоми main.js да изчисти uploadedImageUrl
+    window.dispatchEvent(new CustomEvent("imageRemoved"));
     document.getElementById("imagePreview").src = "";
     document.getElementById("imagePreview").classList.add("hidden");
   }
 </script>
+
+<!-- Зареди главния модул -->
+<script src="main.js" type="module"></script>
 
 </body>
 </html>
