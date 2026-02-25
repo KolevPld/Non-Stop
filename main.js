@@ -228,6 +228,7 @@ window.addRecord = addRecord;
 window.editImage = async function (id) {
   const record = records.find(r => r.id === id);
   if (!record) return;
+  if (!requireUnlockIfLocked(record.date)) return;
 
   editingId = id;
   imageRemoved = false;
