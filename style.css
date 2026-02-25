@@ -757,4 +757,25 @@ td.money {
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.3px;
 }
+/* Всички суми в отчетите */
+#screen-report table td:last-child {
+  font-size: 18px;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: 0.5px;
+}
 
+/* Леки “капсули” за числата */
+#screen-report table td:last-child {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 6px 10px;
+  border-radius: 6px;
+  text-align: right;
+}
+
+/* Най-важните числа (Нетна печалба / Салдо) */
+#screen-report table tr:last-child td:last-child {
+  font-size: 20px;
+  font-weight: 900;
+  color: #ffca28;
+}
