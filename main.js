@@ -818,4 +818,5 @@ window.addEventListener("imageUploaded", (e) => {
 });
 window.addEventListener("imageRemoved", () => {
   uploadedImageUrl = "";
+  imageRemoved = true; // 👈 казваме “този запис вече НЯМА снимка”
 });
