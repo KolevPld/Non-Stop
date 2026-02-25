@@ -317,16 +317,20 @@ async function saveEditedRecord() {
 
   const old = records.find(r => r.id === editingId);
 
-  await updateDoc(doc(db, "records", editingId), {
-    date,
-    type,
-    method,
-    amount,
-    note,
-    category,
-    store,
-    imageUrl: uploadedImageUrl || (old?.imageUrl || "")
-  });
+const finalImageUrl = imageRemoved
+  ? ""                             // 👈 ако е премахната -> празно в базата
+  : (uploadedImageUrl || (old?.imageUrl || ""));
+
+await updateDoc(doc(db, "records", editingId), {
+  date,
+  type,
+  method,
+  amount,
+  note,
+  category,
+  store,
+  imageUrl: finalImageUrl
+});
 
   editingId = null;
   clearForm();
