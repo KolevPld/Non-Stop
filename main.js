@@ -202,6 +202,7 @@ window.editImage = async function (id) {
   if (!record) return;
 
   editingId = id;
+  imageRemoved = false;
 
   // ✅ Отваряме формата (ако сме в отчети)
   window.showScreen("add");
