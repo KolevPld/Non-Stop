@@ -81,6 +81,33 @@ let uploadedImageUrl = "";
 let imageRemoved = false;
 
 // --------------------------------------------------
+// 🔒 LOCK на стари месеци
+// --------------------------------------------------
+const LOCK_PAST_MONTHS = true;       // ако искаш да го изключиш -> false
+const UNLOCK_CODE = "1234";          // смени кода (пример)
+
+function currentMonthKey() {
+  return new Date().toISOString().slice(0, 7); // "YYYY-MM"
+}
+
+function isLockedDate(dateStr) {
+  if (!LOCK_PAST_MONTHS) return false;
+  if (!dateStr || typeof dateStr !== "string") return false;
+  return dateStr.slice(0, 7) !== currentMonthKey();
+}
+
+function requireUnlockIfLocked(dateStr) {
+  if (!isLockedDate(dateStr)) return true;
+
+  const code = prompt("🔒 Записът е от друг месец. Въведи код за отключване:");
+  if (code !== UNLOCK_CODE) {
+    alert("❌ Грешен код. Операцията е отказана.");
+    return false;
+  }
+  return true;
+}
+
+// --------------------------------------------------
 // 💰 Форматиране на суми
 // --------------------------------------------------
 function formatMoney(val) {
