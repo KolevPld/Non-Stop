@@ -78,6 +78,7 @@ let filteredRecords = [];
 let chartRef = null;
 let editingId = null;
 let uploadedImageUrl = "";
+let imageRemoved = false;
 
 // --------------------------------------------------
 // 💰 Форматиране на суми
