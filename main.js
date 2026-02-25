@@ -334,6 +334,7 @@ await updateDoc(doc(db, "records", editingId), {
 
   editingId = null;
   clearForm();
+  imageRemoved = false;
   document.getElementById("addForm")?.classList.remove("editing-mode");
   document.getElementById("cancelEditBtn")?.classList.add("hidden");
 
@@ -388,6 +389,7 @@ window.cancelEdit = function () {
   editingId = null;
 
   clearForm();
+  imageRemoved = false;
 
   document.getElementById("addForm")?.classList.remove("editing-mode");
 
