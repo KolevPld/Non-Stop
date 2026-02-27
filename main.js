@@ -486,14 +486,17 @@ window.clearFilters = clearFilters;
 // --------------------------------------------------
 // 📊 Таблици
 // --------------------------------------------------
-function renderRecentTable() {
-  const tbody = document.querySelector("#recentTable tbody");
+function renderTable(data = records) {
+  const tbody = document.querySelector("#recordsTable tbody");
   if (!tbody) return;
 
   const isAdmin = document.body.classList.contains("admin");
 
-  tbody.innerHTML = records.slice(0, 5).map(r => `
-    <tr>
+  tbody.innerHTML = "";
+
+  data.forEach(r => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
       <td>${r.date || ""}</td>
       <td style="color:${r.type === "Приход" ? "#4caf50" : "#f44336"};">${r.type || ""}</td>
       <td class="money">${formatMoney(r.amount)}</td>
@@ -508,19 +511,15 @@ function renderRecentTable() {
         }
         ${
           isAdmin
-            ? `<button class="btn-icon btn-edit" type="button" title="Редакция" onclick="editImage('${r.id}')">✏️</button>`
-            : ``
-        }
-        ${
-          isAdmin
-            ? `<button class="btn-icon btn-del" type="button" title="Изтриване" onclick="deleteRecord('${r.id}')">🗑️</button>`
+            ? `<button class="btn-icon btn-edit" type="button" title="Редакция" onclick="editImage('${r.id}')">✏️</button>
+               <button class="btn-icon btn-del" type="button" title="Изтриване" onclick="deleteRecord('${r.id}')">🗑️</button>`
             : ``
         }
       </td>
-    </tr>
-  `).join("");
+    `;
+    tbody.appendChild(tr);
+  });
 }
-
 function updateFilterSummary(data) {
   const summary = { Приход: 0, Разход: 0 };
 
