@@ -486,36 +486,40 @@ window.clearFilters = clearFilters;
 // --------------------------------------------------
 // 📊 Таблици
 // --------------------------------------------------
-function renderTable(data = records) {
-  const tbody = document.querySelector("#recordsTable tbody");
+function renderRecentTable() {
+  const tbody = document.querySelector("#recentTable tbody");
   if (!tbody) return;
 
-  tbody.innerHTML = "";
+  const isAdmin = document.body.classList.contains("admin");
 
-  data.forEach(r => {
-    const tr = document.createElement("tr");
-    const locked = isLockedDate(r.date);
-    tr.innerHTML = `
+  tbody.innerHTML = records.slice(0, 5).map(r => `
+    <tr>
       <td>${r.date || ""}</td>
       <td style="color:${r.type === "Приход" ? "#4caf50" : "#f44336"};">${r.type || ""}</td>
       <td class="money">${formatMoney(r.amount)}</td>
       <td>${r.method || ""}</td>
       <td>${r.category || ""}</td>
       <td>${r.note || ""}</td>
-      <td class="actions" style="white-space: nowrap;">
-  ${r.imageUrl
-    ? `<button class="btn-icon" title="Виж снимка" onclick="openImageModal('${r.imageUrl}')">📷</button>`
-    : `<span class="muted" title="Няма снимка">—</span>`
-  }
-
-  <button class="admin-only btn-icon" title="Редакция" onclick="editImage('${r.id}')">✏️</button>
-  <button class="admin-only btn-icon danger" title="Изтрий" onclick="deleteRecord('${r.id}')">🗑️</button>
-</td>
-    `;
-    tbody.appendChild(tr);
-  });
+      <td style="white-space: nowrap;">
+        ${
+          r.imageUrl
+            ? `<button class="btn-icon btn-photo" type="button" title="Снимка" onclick="openImageModal('${r.imageUrl}')">📷</button>`
+            : `<span class="muted">—</span>`
+        }
+        ${
+          isAdmin
+            ? `<button class="btn-icon btn-edit" type="button" title="Редакция" onclick="editImage('${r.id}')">✏️</button>`
+            : ``
+        }
+        ${
+          isAdmin
+            ? `<button class="btn-icon btn-del" type="button" title="Изтриване" onclick="deleteRecord('${r.id}')">🗑️</button>`
+            : ``
+        }
+      </td>
+    </tr>
+  `).join("");
 }
-
 function renderRecentTable() {
   const tbody = document.querySelector("#recentTable tbody");
   if (!tbody) return;
