@@ -538,9 +538,15 @@ body {
   background: #4caf50;
   color: #fff;
 }
+/* Не override-ваме фиксираните таблици */
 table {
   word-wrap: break-word;
-  table-layout: auto;
+}
+
+/* Връщаме фиксирания layout за двете таблици */
+#recordsTable,
+#recentTable {
+  table-layout: fixed;
 }
 input:focus::placeholder {
   color: transparent;
