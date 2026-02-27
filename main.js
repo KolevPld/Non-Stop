@@ -494,6 +494,7 @@ function renderTable(data = records) {
 
   data.forEach(r => {
     const tr = document.createElement("tr");
+    const locked = isLockedDate(r.date);
     tr.innerHTML = `
       <td>${r.date || ""}</td>
       <td style="color:${r.type === "Приход" ? "#4caf50" : "#f44336"};">${r.type || ""}</td>
