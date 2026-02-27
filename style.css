@@ -897,3 +897,6 @@ body:not(.dark) .btn-icon:hover {
   box-shadow: 0 6px 14px rgba(0,0,0,0.35);
   background: rgba(255,255,255,0.08);
 }
+#recordsTable .btn-icon:hover {
+  transform: translateY(-3px) scale(1.05);
+}
