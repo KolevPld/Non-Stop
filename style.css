@@ -807,3 +807,27 @@ td.money {
   font-weight: 900;
   color: #ffca28;
 }
+.actions .btn-icon{
+  border-radius: 10px;
+  padding: 6px 10px;
+  margin-left: 6px;
+  font-weight: 700;
+  border: 1px solid var(--border-color);
+  background: var(--input-bg);
+  color: var(--text-color);
+  cursor: pointer;
+}
+
+.actions .btn-icon:hover{
+  filter: brightness(1.08);
+}
+
+.actions .btn-icon.danger{
+  border-color: var(--danger-color);
+  color: var(--danger-color);
+}
+
+.actions .muted{
+  opacity: .6;
+  margin-right: 6px;
+}
