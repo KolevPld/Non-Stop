@@ -502,14 +502,15 @@ function renderTable(data = records) {
       <td>${r.method || ""}</td>
       <td>${r.category || ""}</td>
       <td>${r.note || ""}</td>
-      <td style="white-space: nowrap;">
-        ${r.imageUrl
-          ? `<img src="${r.imageUrl}" style="height:30px;border-radius:4px;cursor:pointer;margin-right:6px;" onclick="openImageModal('${r.imageUrl}')">`
-          : ""
-        }
-        <button class="admin-only btn-icon" onclick="editImage('${r.id}')">✏️</button>
-        <button class="admin-only btn-icon" onclick="deleteRecord('${r.id}')">🗑️</button>
-      </td>
+      <td class="actions" style="white-space: nowrap;">
+  ${r.imageUrl
+    ? `<button class="btn-icon" title="Виж снимка" onclick="openImageModal('${r.imageUrl}')">📷</button>`
+    : `<span class="muted" title="Няма снимка">—</span>`
+  }
+
+  <button class="admin-only btn-icon" title="Редакция" onclick="editImage('${r.id}')">✏️</button>
+  <button class="admin-only btn-icon danger" title="Изтрий" onclick="deleteRecord('${r.id}')">🗑️</button>
+</td>
     `;
     tbody.appendChild(tr);
   });
