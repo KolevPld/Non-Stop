@@ -831,3 +831,26 @@ td.money {
   opacity: .6;
   margin-right: 6px;
 }
+.muted { opacity: 0.6; }
+
+.btn-icon {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.btn-icon:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+body:not(.dark) .btn-icon:hover {
+  background: rgba(0,0,0,0.06);
+}
+
+.btn-del { color: #e74c3c; }
+.btn-edit { color: #ffca28; }
+.btn-photo { color: #4caf50; }
