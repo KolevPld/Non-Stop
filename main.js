@@ -520,6 +520,41 @@ function renderTable(data = records) {
     tbody.appendChild(tr);
   });
 }
+function renderRecentTable() {
+  const tbody = document.querySelector("#recentTable tbody");
+  if (!tbody) return;
+
+  const isAdmin = document.body.classList.contains("admin");
+
+  tbody.innerHTML = records.slice(0, 5).map(r => `
+    <tr>
+      <td>${r.date || ""}</td>
+      <td style="color:${r.type === "Приход" ? "#4caf50" : "#f44336"};">${r.type || ""}</td>
+      <td class="money">${formatMoney(r.amount)}</td>
+      <td>${r.method || ""}</td>
+      <td>${r.category || ""}</td>
+      <td>${r.note || ""}</td>
+      <td style="white-space: nowrap;">
+        ${
+          r.imageUrl
+            ? `<button class="btn-icon btn-photo" type="button" title="Снимка" onclick="openImageModal('${r.imageUrl}')">📷</button>`
+            : `<span class="muted">—</span>`
+        }
+        ${
+          isAdmin
+            ? `<button class="btn-icon btn-edit" type="button" title="Редакция" onclick="editImage('${r.id}')">✏️</button>`
+            : ``
+        }
+        ${
+          isAdmin
+            ? `<button class="btn-icon btn-del" type="button" title="Изтриване" onclick="deleteRecord('${r.id}')">🗑️</button>`
+            : ``
+        }
+      </td>
+    </tr>
+  `).join("");
+}
+
 function updateFilterSummary(data) {
   const summary = { Приход: 0, Разход: 0 };
 
