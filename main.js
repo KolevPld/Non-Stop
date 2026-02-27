@@ -345,8 +345,9 @@ async function saveEditedRecord() {
   }
 
   const old = records.find(r => r.id === editingId);
+  if (old && !requireUnlockIfLocked(old.date)) return;
 
-const finalImageUrl = imageRemoved
+  const finalImageUrl = imageRemoved
   ? ""                             // 👈 ако е премахната -> празно в базата
   : (uploadedImageUrl || (old?.imageUrl || ""));
 
@@ -384,6 +385,9 @@ window.saveEditedRecord = saveEditedRecord;
 // 🗑️ Изтриване
 // --------------------------------------------------
 async function deleteRecord(id) {
+  const rec = records.find(r => r.id === id);
+  if (rec && !requireUnlockIfLocked(rec.date)) return;
+
   if (!confirm("Сигурен ли си?")) return;
   await deleteDoc(doc(db, "records", id));
   await loadRecords();
