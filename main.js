@@ -520,22 +520,6 @@ function renderRecentTable() {
     </tr>
   `).join("");
 }
-function renderRecentTable() {
-  const tbody = document.querySelector("#recentTable tbody");
-  if (!tbody) return;
-
-  tbody.innerHTML = records.slice(0, 5).map(r => `
-    <tr>
-      <td>${r.date || ""}</td>
-      <td style="color:${r.type === "Приход" ? "#4caf50" : "#f44336"};">${r.type || ""}</td>
-      <td class="money">${formatMoney(r.amount)}</td>
-      <td>${r.method || ""}</td>
-      <td>${r.category || ""}</td>
-      <td>${r.note || ""}</td>
-      <td><button class="btn-icon" onclick="deleteRecord('${r.id}')">🗑️</button></td>
-    </tr>
-  `).join("");
-}
 
 function updateFilterSummary(data) {
   const summary = { Приход: 0, Разход: 0 };
