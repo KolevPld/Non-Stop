@@ -854,24 +854,20 @@ body:not(.dark) .btn-icon:hover {
 .btn-del { color: #e74c3c; }
 .btn-edit { color: #ffca28; }
 .btn-photo { color: #4caf50; }
-/* ===== Variant 1: Show on row hover ===== */
+/* ===== Variant 2: Soft Glow ===== */
 
 #recentTable .btn-icon {
   font-size: 12px;
-  padding: 2px 4px;
-  opacity: 0;
-  transition: opacity 0.2s ease, transform 0.15s ease;
+  padding: 3px 5px;
   background: transparent !important;
   border: none;
   box-shadow: none;
-}
-
-#recentTable tr:hover .btn-icon {
-  opacity: 1;
+  transition: all 0.2s ease;
 }
 
 #recentTable .btn-icon:hover {
-  transform: scale(1.15);
+  transform: scale(1.2);
+  text-shadow: 0 0 6px currentColor;
 }
 
 #recentTable .btn-photo { color: #4caf50; }
