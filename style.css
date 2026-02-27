@@ -854,31 +854,26 @@ body:not(.dark) .btn-icon:hover {
 .btn-del { color: #e74c3c; }
 .btn-edit { color: #ffca28; }
 .btn-photo { color: #4caf50; }
-/* =============================== */
-/* 🔹 MINIMAL ICONS – Recent Table */
-/* =============================== */
+/* ===== Variant 1: Show on row hover ===== */
 
 #recentTable .btn-icon {
   font-size: 12px;
   padding: 2px 4px;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.15s ease;
   background: transparent !important;
   border: none;
   box-shadow: none;
-  transition: transform 0.15s ease, opacity 0.15s ease;
 }
 
-/* Цветове */
+#recentTable tr:hover .btn-icon {
+  opacity: 1;
+}
+
+#recentTable .btn-icon:hover {
+  transform: scale(1.15);
+}
+
 #recentTable .btn-photo { color: #4caf50; }
 #recentTable .btn-edit  { color: #ffca28; }
 #recentTable .btn-del   { color: #e74c3c; }
-
-/* Hover ефект */
-#recentTable .btn-icon:hover {
-  transform: scale(1.15);
-  opacity: 0.85;
-}
-
-/* Да не се чупят в реда */
-#recentTable td:last-child {
-  white-space: nowrap;
-}
