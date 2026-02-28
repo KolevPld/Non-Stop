@@ -520,6 +520,7 @@ function renderTable(data = records) {
     tbody.appendChild(tr);
   });
 }
+
 function renderRecentTable() {
   const tbody = document.querySelector("#recentTable tbody");
   if (!tbody) return;
@@ -534,22 +535,27 @@ function renderRecentTable() {
       <td>${r.method || ""}</td>
       <td>${r.category || ""}</td>
       <td>${r.note || ""}</td>
-      <td style="white-space: nowrap;">
-        ${
-          r.imageUrl
-            ? `<button class="btn-icon btn-photo" type="button" title="Снимка" onclick="openImageModal('${r.imageUrl}')">📷</button>`
-            : `<span class="muted">—</span>`
-        }
-        ${
-          isAdmin
-            ? `<button class="btn-icon btn-edit" type="button" title="Редакция" onclick="editImage('${r.id}')">✏️</button>`
-            : ``
-        }
-        ${
-          isAdmin
-            ? `<button class="btn-icon btn-del" type="button" title="Изтриване" onclick="deleteRecord('${r.id}')">🗑️</button>`
-            : ``
-        }
+
+      <td class="actions">
+        <div class="actions-wrap">
+          ${
+            r.imageUrl
+              ? `<button class="btn-icon btn-photo" type="button" title="Снимка" onclick="openImageModal('${r.imageUrl}')">📷</button>`
+              : `<span class="muted">—</span>`
+          }
+
+          ${
+            isAdmin
+              ? `<button class="btn-icon btn-edit" type="button" title="Редакция" onclick="editImage('${r.id}')">✏️</button>`
+              : ``
+          }
+
+          ${
+            isAdmin
+              ? `<button class="btn-icon btn-del" type="button" title="Изтриване" onclick="deleteRecord('${r.id}')">🗑️</button>`
+              : ``
+          }
+        </div>
       </td>
     </tr>
   `).join("");
