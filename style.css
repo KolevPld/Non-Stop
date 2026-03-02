@@ -963,3 +963,80 @@ body:not(.dark) .btn-icon:hover {
   background: rgba(255,255,255,0.10) !important;
   box-shadow: 0 10px 18px rgba(0,0,0,0.35) !important;
 }
+/* =========================================
+   ✅ Screen 1 table = Reports table layout
+   (recentTable да е като recordsTable)
+   ========================================= */
+
+/* 0) Ако имаш Variant 4 за #recentTable .btn-icon -> махни го или го остави, но този блок ще го надпише. */
+
+/* 1) Еднакъв layout за двете таблици */
+#recordsTable,
+#recentTable{
+  table-layout: fixed;
+  width: 100%;
+}
+
+/* 2) Колоната "Действия" - най-вдясно, тясна и центрирана */
+#recordsTable th:nth-child(7),
+#recentTable  th:nth-child(7){
+  text-align: center;
+}
+
+#recordsTable td:nth-child(7),
+#recentTable  td:nth-child(7){
+  /* същото подреждане като в Отчети */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+
+  /* важно да не раздува колоната */
+  padding: 8px;
+}
+
+/* 3) Бутоните в последната колона – един и същ стил като в Отчети */
+#recordsTable td:nth-child(7) .btn-icon,
+#recentTable  td:nth-child(7) .btn-icon{
+  font-size: 14px;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 10px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.10);
+  color: #aaa;
+
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease, color .18s ease;
+  will-change: transform;
+}
+
+/* Цветове при hover */
+#recordsTable td:nth-child(7) .btn-photo:hover,
+#recentTable  td:nth-child(7) .btn-photo:hover { color: #4caf50; }
+
+#recordsTable td:nth-child(7) .btn-edit:hover,
+#recentTable  td:nth-child(7) .btn-edit:hover  { color: #ffca28; }
+
+#recordsTable td:nth-child(7) .btn-del:hover,
+#recentTable  td:nth-child(7) .btn-del:hover   { color: #e74c3c; }
+
+/* Lift ефект (като в Отчети) */
+#recordsTable td:nth-child(7) .btn-icon:hover,
+#recentTable  td:nth-child(7) .btn-icon:hover{
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 10px 22px rgba(0,0,0,.35);
+  background: rgba(255,255,255,0.08);
+}
+
+/* 4) Ако има тире "—" (muted) да не разваля колоната */
+#recordsTable td:nth-child(7) .muted,
+#recentTable  td:nth-child(7) .muted{
+  line-height: 1;
+}
