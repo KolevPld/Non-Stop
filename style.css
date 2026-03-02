@@ -659,7 +659,7 @@ button.btn-icon:hover {
 #recordsTable th:last-child,
 #recordsTable td:last-child,
 #recentTable th:last-child,
-#recentTable td:nth-child(7) {
+#recentTable td:last-child {
   text-align: center;
   vertical-align: middle;
 }
@@ -1025,44 +1025,4 @@ body:not(.dark) .btn-icon:hover {
 
 #recordsTable td:last-child .muted {
   line-height: 1;
-}
-/* ================================
-   ✅ LIGHT THEME READABILITY FIX
-   (постави най-отдолу)
-   ================================ */
-
-body:not(.dark) table {
-  background: #ffffff;
-  color: #111;
-}
-
-body:not(.dark) th {
-  background: #f2f2f2;
-  color: #111;
-}
-
-body:not(.dark) td {
-  color: #111;
-}
-
-body:not(.dark) tr:hover {
-  background: rgba(0,0,0,0.04);
-}
-
-/* суми да са четими */
-body:not(.dark) td.money {
-  color: #111;
-}
-
-/* “капсулите” в отчетите (дясната колона със стойности) */
-body:not(.dark) #screen-report table td:last-child {
-  color: #111;
-  background: rgba(0,0,0,0.05);
-  text-shadow: none;
-  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.06), 0 6px 14px rgba(0,0,0,0.10);
-}
-
-/* важните стойности (салдо/нетна печалба) да са видими и в светла тема */
-body:not(.dark) #screen-report table tr:last-child td:last-child {
-  color: #b07b00; /* по-тъмен “златист” за светъл фон */
 }
