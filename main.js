@@ -658,44 +658,55 @@ function renderTaxSummary() {
     </table>
   `;
 }
-
 function renderMethodSummary() {
-  // totalsByStore: { "1": {Кеш, Карта, Банка}, "2": {...}, ... }
   const makeTotals = () => ({ Кеш: 0, Карта: 0, Банка: 0 });
+
   const totalsByStore = { "1": makeTotals(), "2": makeTotals() };
   const totalsAll = makeTotals();
 
-  // сумираме по ВСИЧКИ записи (records), както е било досега
+  // ✅ Нормализация: хваща стари записи ("М1", "Магазин 1", "магазин1", "1 ")
+  const normalizeStore = (s) => {
+    const v = String(s ?? "").trim().toLowerCase();
+    if (v === "1" || v === "м1" || v.includes("магазин 1") || v.includes("magazin 1") || v.includes("store 1")) return "1";
+    if (v === "2" || v === "м2" || v.includes("магазин 2") || v.includes("magazin 2") || v.includes("store 2")) return "2";
+    return ""; // други (напр. "Каса")
+  };
+
+  // ✅ Нормализация на метода (ако има стари записи с емоджита/добавки)
+  const normalizeMethod = (m) => String(m ?? "").trim().split(" ")[0];
+
   records.forEach(r => {
-    const amount = r.type === "Приход" ? Number(r.amount || 0) : -Number(r.amount || 0);
-    const method = r.method;
-    const store = r.store;
+    const rawAmount = Number(r.amount || 0);
+    if (!Number.isFinite(rawAmount)) return;
+
+    const amount = r.type === "Приход" ? rawAmount : -rawAmount;
+
+    const method = normalizeMethod(r.method);
+    const store = normalizeStore(r.store);
 
     // общо (за наличности)
     if (totalsAll.hasOwnProperty(method)) totalsAll[method] += amount;
 
-    // по магазини (само за store 1 и 2)
-    if ((store === "1" || store === "2") && totalsByStore[store]?.hasOwnProperty(method)) {
+    // по магазини (М1/М2)
+    if ((store === "1" || store === "2") && totalsByStore[store].hasOwnProperty(method)) {
       totalsByStore[store][method] += amount;
     }
   });
 
-  // DOM
   const ms = document.getElementById("methodSummary");
   const msx = document.getElementById("methodSummaryExtra");
-
-  // helper за ред в таблица
   const row = (label, value, strong = false) =>
     `<tr><td>${strong ? `<strong>${label}</strong>` : label}</td><td>${strong ? `<strong>${value}</strong>` : value}</td></tr>`;
 
-  // 1) Разпределение по метод -> разделено М1 / М2 и САМО кеш + карта
+  // --- Разпределение по метод (само кеш + карта, по М1/М2) ---
   if (ms) {
     const m1Cash = totalsByStore["1"].Кеш;
     const m1Card = totalsByStore["1"].Карта;
     const m2Cash = totalsByStore["2"].Кеш;
     const m2Card = totalsByStore["2"].Карта;
 
-    const totalCashCard = (m1Cash + m1Card + m2Cash + m2Card);
+    // ✅ Общо = точно сборът на показаните 4 реда
+    const totalCashCard = m1Cash + m1Card + m2Cash + m2Card;
 
     ms.innerHTML = `
       <h3><i class="fa-solid fa-wallet"></i> Разпределение по метод</h3>
@@ -709,8 +720,7 @@ function renderMethodSummary() {
     `;
   }
 
-  // 2) Общи наличности -> кеш + банка + карта към банка (както ти искаш)
-  // Банка = Банка + Карта (за общо наличности)
+  // --- Общи наличности (банка = банка + карта) ---
   if (msx) {
     const totalCash = totalsAll.Кеш;
     const totalBank = totalsAll.Банка + totalsAll.Карта;
