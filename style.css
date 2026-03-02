@@ -1066,3 +1066,14 @@ body:not(.dark) #screen-report table td:last-child {
 body:not(.dark) #screen-report table tr:last-child td:last-child {
   color: #b07b00; /* по-тъмен “златист” за светъл фон */
 }
+/* ✅ Horizontal scroll for recentTable (Screen Add) */
+#screen-add .table-responsive{
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Таблицата да може да стане по-широка от екрана */
+#screen-add #recentTable{
+  min-width: 800px;
+  width: max-content;
+}
