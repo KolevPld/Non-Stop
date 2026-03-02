@@ -871,13 +871,6 @@ body:not(.dark) .btn-icon:hover {
   background: rgba(255,255,255,0.08);
 }
 
-/* =========================================
-   ✅ Screen 1 table = Reports table layout
-   (recentTable да е като recordsTable)
-   ========================================= */
-
-/* 0) Ако имаш Variant 4 за #recentTable .btn-icon -> махни го или го остави, но този блок ще го надпише. */
-
 /* 1) Еднакъв layout за двете таблици */
 #recordsTable,
 #recentTable{
