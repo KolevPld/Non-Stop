@@ -845,31 +845,6 @@ body:not(.dark) .btn-icon:hover {
 .btn-edit { color: #ffca28; }
 .btn-photo { color: #4caf50; }
 
-/* ================================= */
-/* 🚀 Lift effect – Records Table   */
-/* ================================= */
-
-#recordsTable .btn-icon {
-  font-size: 14px;
-  padding: 6px 8px;
-  border-radius: 8px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
-  transition: all 0.2s ease;
-  color: #aaa;
-  will-change: transform;
-}
-
-/* Цветове при hover */
-#recordsTable .btn-photo:hover { color: #4caf50; }
-#recordsTable .btn-edit:hover  { color: #ffca28; }
-#recordsTable .btn-del:hover   { color: #e74c3c; }
-
-#recordsTable .btn-icon:hover {
-  transform: translateY(-3px) scale(1.05);
-  box-shadow: 0 6px 14px rgba(0,0,0,0.35);
-  background: rgba(255,255,255,0.08);
-}
 
 /* 1) Еднакъв layout за двете таблици */
 #recordsTable,
