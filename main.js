@@ -661,10 +661,7 @@ function renderTaxSummary() {
 function renderMethodSummary() {
   const makeTotals = () => ({ Кеш: 0, Карта: 0, Банка: 0 });
 
-  const totalsByStore = { "1": makeTotals(), "2": makeTotals() };
-  const totalsAll = makeTotals();
-
-  // ✅ Нормализация: хваща стари записи ("М1", "Магазин 1", "магазин1", "1 ")
+  // ✅ Нормализация (за стари записи)
   const normalizeStore = (s) => {
     const v = String(s ?? "").trim().toLowerCase();
     if (v === "1" || v === "м1" || v.includes("магазин 1") || v.includes("magazin 1") || v.includes("store 1")) return "1";
@@ -672,10 +669,32 @@ function renderMethodSummary() {
     return ""; // други (напр. "Каса")
   };
 
-  // ✅ Нормализация на метода (ако има стари записи с емоджита/добавки)
-  const normalizeMethod = (m) => String(m ?? "").trim().split(" ")[0];
+  const normalizeMethod = (m) => String(m ?? "").trim().split(" ")[0]; // "Кеш", "Карта", "Банка"
+  const toDate = (iso) => {
+    // очакваме "YYYY-MM-DD"
+    const s = String(iso ?? "").trim();
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return null;
+    const y = Number(m[1]), mo = Number(m[2]) - 1, d = Number(m[3]);
+    return new Date(y, mo, d);
+  };
 
-  records.forEach(r => {
+  // ✅ Текущ месец
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+  // 1) Разпределение по метод (само текущ месец)
+  const totalsByStoreMonth = { "1": makeTotals(), "2": makeTotals() };
+
+  // 2) Общи наличности (целият период: всички записи)
+  const totalsAllPeriod = makeTotals();
+
+  // За показване на периода (първи/последен запис)
+  let minTime = null;
+  let maxTime = null;
+
+  records.forEach((r) => {
     const rawAmount = Number(r.amount || 0);
     if (!Number.isFinite(rawAmount)) return;
 
@@ -683,58 +702,83 @@ function renderMethodSummary() {
 
     const method = normalizeMethod(r.method);
     const store = normalizeStore(r.store);
+    const d = toDate(r.date);
 
-    // общо (за наличности)
-    if (totalsAll.hasOwnProperty(method)) totalsAll[method] += amount;
+    // ---- период: първи..последен (по дата на записа)
+    if (d) {
+      const t = d.getTime();
+      if (minTime === null || t < minTime) minTime = t;
+      if (maxTime === null || t > maxTime) maxTime = t;
+    }
 
-    // по магазини (М1/М2)
-    if ((store === "1" || store === "2") && totalsByStore[store].hasOwnProperty(method)) {
-      totalsByStore[store][method] += amount;
+    // ---- (A) Общи наличности: всички записи
+    if (totalsAllPeriod.hasOwnProperty(method)) {
+      totalsAllPeriod[method] += amount;
+    }
+
+    // ---- (B) Разпределение: само текущия месец + само магазини 1/2
+    if (d && d >= monthStart && d < nextMonthStart) {
+      if ((store === "1" || store === "2") && totalsByStoreMonth[store].hasOwnProperty(method)) {
+        totalsByStoreMonth[store][method] += amount;
+      }
     }
   });
 
   const ms = document.getElementById("methodSummary");
   const msx = document.getElementById("methodSummaryExtra");
+
   const row = (label, value, strong = false) =>
     `<tr><td>${strong ? `<strong>${label}</strong>` : label}</td><td>${strong ? `<strong>${value}</strong>` : value}</td></tr>`;
 
-  // --- Разпределение по метод (само кеш + карта, по М1/М2) ---
-  if (ms) {
-    const m1Cash = totalsByStore["1"].Кеш;
-    const m1Card = totalsByStore["1"].Карта;
-    const m2Cash = totalsByStore["2"].Кеш;
-    const m2Card = totalsByStore["2"].Карта;
+  const fmt2 = (n) => (Number(n || 0)).toFixed(2);
+  const fmtPeriod = (t) => {
+    if (t === null) return "—";
+    const d = new Date(t);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const da = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${da}`;
+  };
 
-    // ✅ Общо = точно сборът на показаните 4 реда
+  // --- UI: Разпределение (текущ месец)
+  if (ms) {
+    const m1Cash = totalsByStoreMonth["1"].Кеш;
+    const m1Card = totalsByStoreMonth["1"].Карта;
+    const m2Cash = totalsByStoreMonth["2"].Кеш;
+    const m2Card = totalsByStoreMonth["2"].Карта;
+
     const totalCashCard = m1Cash + m1Card + m2Cash + m2Card;
 
     ms.innerHTML = `
-      <h3><i class="fa-solid fa-wallet"></i> Разпределение по метод</h3>
+      <h3><i class="fa-solid fa-wallet"></i> Разпределение по метод (текущ месец)</h3>
       <table>
-        ${row("💰 Кеш (М1):", `${m1Cash.toFixed(2)} €`)}
-        ${row("💳 Карта (М1):", `${m1Card.toFixed(2)} €`)}
-        ${row("💰 Кеш (М2):", `${m2Cash.toFixed(2)} €`)}
-        ${row("💳 Карта (М2):", `${m2Card.toFixed(2)} €`)}
-        ${row("Общо:", `${totalCashCard.toFixed(2)} €`, true)}
+        ${row("💰 Кеш (М1):", `${fmt2(m1Cash)} €`)}
+        ${row("💳 Карта (М1):", `${fmt2(m1Card)} €`)}
+        ${row("💰 Кеш (М2):", `${fmt2(m2Cash)} €`)}
+        ${row("💳 Карта (М2):", `${fmt2(m2Card)} €`)}
+        ${row("Общо:", `${fmt2(totalCashCard)} €`, true)}
       </table>
     `;
   }
 
-  // --- Общи наличности (банка = банка + карта) ---
+  // --- UI: Общи наличности (целият период)
   if (msx) {
-    const totalCash = totalsAll.Кеш;
-    const totalBank = totalsAll.Банка + totalsAll.Карта;
+    const totalCash = totalsAllPeriod.Кеш;
+    const totalBank = totalsAllPeriod.Банка + totalsAllPeriod.Карта;
+
+    const from = fmtPeriod(minTime);
+    const to = fmtPeriod(maxTime);
 
     msx.innerHTML = `
       <h3><i class="fa-solid fa-circle-dollar-to-slot"></i> Общи наличности</h3>
+      <div class="muted" style="margin: 6px 0 10px;">Период: ${from} → ${to}</div>
       <table>
-        ${row("💵 Общо кеш:", `${totalCash.toFixed(2)} €`)}
-        ${row("🏦 Общо банка:", `${totalBank.toFixed(2)} €`)}
+        ${row("💵 Общо кеш:", `${fmt2(totalCash)} €`)}
+        ${row("🏦 Общо банка:", `${fmt2(totalBank)} €`)}
       </table>
     `;
   }
 }
-
 // --------------------------------------------------
 // 📊 Chart.js
 // --------------------------------------------------
