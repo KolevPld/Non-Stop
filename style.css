@@ -941,3 +941,61 @@ body:not(.dark) .btn-icon:hover {
 #recentTable  td:nth-child(7) .muted{
   line-height: 1;
 }
+/* =============================== */
+/* ✅ recentTable = recordsTable   */
+/* (постави НАЙ-ОТДОЛУ в файла)    */
+/* =============================== */
+
+/* 1) Уверяваме се, че actions е 7-ма колона и е тясна */
+#recentTable th:nth-child(7),
+#recentTable td:nth-child(7){
+  width: var(--col-actions);
+  text-align: center;
+  vertical-align: middle;
+}
+
+/* 2) Подреждане на бутоните като в Отчети (вертикално) */
+#recentTable td:nth-child(7){
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+}
+
+/* 3) Бутоните – еднакви, компактни */
+#recentTable td:nth-child(7) .btn-icon{
+  width: 34px !important;
+  height: 34px !important;
+  padding: 0 !important;
+
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 14px !important;
+  line-height: 1 !important;
+
+  border-radius: 10px !important;
+
+  /* ако искаш като Отчети с червени бутони */
+  background: #f44336 !important;
+  color: #fff !important;
+  border: none !important;
+
+  transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+  will-change: transform;
+}
+
+/* 4) Lift ефект */
+#recentTable td:nth-child(7) .btn-icon:hover{
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 10px 22px rgba(0,0,0,.35);
+  filter: brightness(1.05);
+}
+
+/* 5) Ако има "—" да не разваля подредбата */
+#recentTable td:nth-child(7) .muted{
+  line-height: 1;
+}
