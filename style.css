@@ -1026,3 +1026,81 @@ body:not(.dark) .btn-icon:hover {
 #recordsTable td:last-child .muted {
   line-height: 1;
 }
+/* =========================================
+   ✅ LIGHT THEME CONTRAST FIX (APPLY LAST)
+   ========================================= */
+
+body:not(.dark) {
+  /* малко по-добър контраст */
+  --text-color: #111;
+  --muted-text: #555;
+  --card-border: #e6e6e6;
+}
+
+/* Заглавия – да НЕ са винаги бели */
+body:not(.dark) h2,
+body:not(.dark) h3 {
+  color: var(--text-color) !important;
+}
+
+/* Карти/summary да изглеждат светли и четими */
+body:not(.dark) .summary,
+body:not(.dark) #filterSummary,
+body:not(.dark) #screen-add form,
+body:not(.dark) table {
+  background: #ffffff !important;
+  color: var(--text-color) !important;
+  border: 1px solid var(--card-border);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+}
+
+/* Таблици – header/hover/borders за светла тема */
+body:not(.dark) thead,
+body:not(.dark) th {
+  background: #f3f6f8 !important;
+  color: #111 !important;
+}
+
+body:not(.dark) td,
+body:not(.dark) th {
+  border-bottom: 1px solid #e9ecef !important;
+}
+
+body:not(.dark) tr:hover {
+  background: rgba(0, 0, 0, 0.04) !important;
+}
+
+/* “Пари” клетки – по-четими */
+body:not(.dark) td.money {
+  color: #111 !important;
+}
+
+/* Отчети: последната колона (числата) – светла “капсула” + тъмен текст */
+body:not(.dark) #screen-report table td:last-child {
+  color: #111 !important;
+  background: #f6f7f8 !important;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.08), 0 6px 16px rgba(0,0,0,0.08) !important;
+  text-shadow: none !important;
+}
+
+/* Най-важните числа (Салдо/Нетна печалба) – да изпъкват и в светло */
+body:not(.dark) #screen-report table tr:last-child td:last-child {
+  color: #b26a00 !important;           /* “златно” но четимо на бяло */
+  background: #fff3cd !important;      /* лек highlight */
+  box-shadow: inset 0 0 0 1px rgba(178,106,0,0.25), 0 10px 22px rgba(0,0,0,0.10) !important;
+}
+
+/* Input focus – да НЕ става тъмно в светла тема */
+body:not(.dark) input:focus,
+body:not(.dark) select:focus,
+body:not(.dark) textarea:focus {
+  background: #ffffff !important;
+  box-shadow: 0 0 0 2px rgba(56, 142, 60, 0.25) !important;
+}
+
+/* Status – в светла тема да не е тъмен блок */
+body:not(.dark) #status {
+  background: #f3f6f8 !important;
+  color: #2e7d32 !important;
+  border: 1px solid #e6e6e6;
+}
