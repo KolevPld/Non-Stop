@@ -486,19 +486,21 @@ tr:hover {
 /* Категория – само в recordsTable */
 #recordsTable th:nth-child(5), #recordsTable td:nth-child(5) { width: var(--col-category); }
 
-/* Бележка – заемa остатъка + режем дълги текстове с еллипсис */
+/* Бележка – recordsTable(6) и recentTable(6) */
 #recordsTable th:nth-child(6), #recordsTable td:nth-child(6),
-#recentTable  th:nth-child(5), #recentTable  td:nth-child(5) {
+#recentTable  th:nth-child(6), #recentTable  td:nth-child(6) {
   width: auto;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;   /* по-добър мобилен вид */
+  white-space: nowrap;
 }
-/* Действия (кошче) */
+
+/* Действия – recordsTable(7) и recentTable(7) */
 #recordsTable th:nth-child(7), #recordsTable td:nth-child(7),
-#recentTable  th:nth-child(6), #recentTable  td:nth-child(6) {
-  width: var(--col-actions);
-}
+#recentTable  th:nth-child(7), #recentTable  td:nth-child(7) { width: var(--col-actions); }
+
+/* Категория – recentTable(5) (за да не “плува”) */
+#recentTable th:nth-child(5), #recentTable td:nth-child(5) { width: var(--col-category); }
 /* 3) Мобилни корекции (по-компактно) */
 @media (max-width: 600px) {
   :root{
