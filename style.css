@@ -984,14 +984,14 @@ body:not(.dark) .btn-icon:hover {
 #recordsTable td:last-child {
   display: flex;
   flex-direction: column;   /* 1 под друг */
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
   gap: 6px;
 
-  padding: 8px 6px;
-  border-radius: 10px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
+  padding: 8px 10px;
+  border-radius: 0;
+  border: 0;
+  border-left: 1px solid rgba(255,255,255,0.08);
 }
 
 /* Червени "капсули" за всички бутони в Отчети */
@@ -1020,6 +1020,7 @@ body:not(.dark) .btn-icon:hover {
   box-shadow: 0 12px 22px rgba(0,0,0,0.35);
   filter: brightness(1.05);
 }
+#recordsTable td:last-child .btn-icon { margin: 0 !important; }
 
 /* Ако има "—" да не раздува колоната */
 #recordsTable td:last-child .muted {
