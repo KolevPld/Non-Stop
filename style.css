@@ -860,24 +860,7 @@ body:not(.dark) .btn-icon:hover {
 .btn-del { color: #e74c3c; }
 .btn-edit { color: #ffca28; }
 .btn-photo { color: #4caf50; }
-/* ===== Variant 4: Color on hover ===== */
 
-#recentTable .btn-icon {
-  font-size: 12px;
-  padding: 3px 5px;
-  color: #888;
-  background: transparent;
-  border: none;
-  transition: all 0.2s ease;
-}
-
-#recentTable .btn-photo:hover { color: #4caf50; }
-#recentTable .btn-edit:hover  { color: #ffca28; }
-#recentTable .btn-del:hover   { color: #e74c3c; }
-
-#recentTable .btn-icon:hover {
-  transform: scale(1.2);
-}
 /* ================================= */
 /* 🚀 Lift effect – Records Table   */
 /* ================================= */
