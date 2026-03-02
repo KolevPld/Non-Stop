@@ -497,7 +497,6 @@ tr:hover {
 
 /* Действия (кошче) */
 #recordsTable th:nth-child(7), #recordsTable td:nth-child(7),
-#recentTable  th:nth-child(6), #recentTable  td:nth-child(6) { width: var(--col-actions); }
 
 /* 3) Мобилни корекции (по-компактно) */
 @media (max-width: 600px) {
