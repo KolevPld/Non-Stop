@@ -980,25 +980,26 @@ body:not(.dark) .btn-icon:hover {
    Постави най-накрая на файла!
    ========================================= */
 
-/* Последната колона (Действия) – вертикално подреждане */
 #recordsTable td:last-child {
   display: flex;
-  flex-direction: column;   /* 1 под друг */
-  align-items: flex-end;
+  flex-direction: column;
+  align-items: flex-end;        /* ✅ вдясно */
   justify-content: center;
   gap: 6px;
 
   padding: 8px 10px;
+
   border-radius: 0;
+  background: rgba(255,255,255,0.04);
   border: 0;
   border-left: 1px solid rgba(255,255,255,0.08);
 }
 
-/* Червени "капсули" за всички бутони в Отчети */
 #recordsTable td:last-child .btn-icon {
   width: 34px;
   height: 34px;
   padding: 0;
+  margin: 0 !important;         /* ✅ маха auto-центриране */
 
   display: inline-flex;
   align-items: center;
@@ -1014,15 +1015,12 @@ body:not(.dark) .btn-icon:hover {
   will-change: transform;
 }
 
-/* Lift ефект (като на снимката) */
 #recordsTable td:last-child .btn-icon:hover {
   transform: translateY(-3px) scale(1.05);
   box-shadow: 0 12px 22px rgba(0,0,0,0.35);
   filter: brightness(1.05);
 }
-#recordsTable td:last-child .btn-icon { margin: 0 !important; }
 
-/* Ако има "—" да не раздува колоната */
 #recordsTable td:last-child .muted {
   line-height: 1;
 }
