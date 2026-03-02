@@ -1104,3 +1104,34 @@ body:not(.dark) #status {
   color: #2e7d32 !important;
   border: 1px solid #e6e6e6;
 }
+/* =======================================
+   📱 MOBILE FIX – да не чупи числата
+======================================= */
+
+@media (max-width: 600px) {
+
+  /* 1) Малко по-широка колона за суми */
+  :root{
+    --col-amount: 9rem;
+  }
+
+  /* 2) Забраняваме пренасянето на числата */
+  td.money,
+  #screen-report table td:last-child {
+    white-space: nowrap;
+  }
+
+  /* 3) По-малко вътрешен padding за повече място */
+  #screen-report table td:last-child {
+    padding: 6px 8px;
+  }
+
+  /* 4) Намаляваме леко размера на шрифта на големите суми */
+  #screen-report table td:last-child {
+    font-size: 16px;
+  }
+
+  #screen-report table tr:last-child td:last-child {
+    font-size: 18px;
+  }
+}
