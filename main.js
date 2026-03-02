@@ -660,37 +660,66 @@ function renderTaxSummary() {
 }
 
 function renderMethodSummary() {
-  const totals = { Кеш: 0, Банка: 0, Карта: 0 };
+  // totalsByStore: { "1": {Кеш, Карта, Банка}, "2": {...}, ... }
+  const makeTotals = () => ({ Кеш: 0, Карта: 0, Банка: 0 });
+  const totalsByStore = { "1": makeTotals(), "2": makeTotals() };
+  const totalsAll = makeTotals();
 
+  // сумираме по ВСИЧКИ записи (records), както е било досега
   records.forEach(r => {
     const amount = r.type === "Приход" ? Number(r.amount || 0) : -Number(r.amount || 0);
-    if (totals.hasOwnProperty(r.method)) totals[r.method] += amount;
+    const method = r.method;
+    const store = r.store;
+
+    // общо (за наличности)
+    if (totalsAll.hasOwnProperty(method)) totalsAll[method] += amount;
+
+    // по магазини (само за store 1 и 2)
+    if ((store === "1" || store === "2") && totalsByStore[store]?.hasOwnProperty(method)) {
+      totalsByStore[store][method] += amount;
+    }
   });
 
-  const totalSum = totals.Кеш + totals.Банка + totals.Карта;
-  const totalBank = totals.Банка + totals.Карта;
-
+  // DOM
   const ms = document.getElementById("methodSummary");
   const msx = document.getElementById("methodSummaryExtra");
 
+  // helper за ред в таблица
+  const row = (label, value, strong = false) =>
+    `<tr><td>${strong ? `<strong>${label}</strong>` : label}</td><td>${strong ? `<strong>${value}</strong>` : value}</td></tr>`;
+
+  // 1) Разпределение по метод -> разделено М1 / М2 и САМО кеш + карта
   if (ms) {
+    const m1Cash = totalsByStore["1"].Кеш;
+    const m1Card = totalsByStore["1"].Карта;
+    const m2Cash = totalsByStore["2"].Кеш;
+    const m2Card = totalsByStore["2"].Карта;
+
+    const totalCashCard = (m1Cash + m1Card + m2Cash + m2Card);
+
     ms.innerHTML = `
       <h3><i class="fa-solid fa-wallet"></i> Разпределение по метод</h3>
       <table>
-        <tr><td>💰 Кеш:</td><td>${totals.Кеш.toFixed(2)} €</td></tr>
-        <tr><td>🏦 Банка:</td><td>${totals.Банка.toFixed(2)} €</td></tr>
-        <tr><td>💳 Карта:</td><td>${totals.Карта.toFixed(2)} €</td></tr>
-        <tr><td><strong>Общо:</strong></td><td><strong>${totalSum.toFixed(2)} €</strong></td></tr>
+        ${row("💰 Кеш (М1):", `${m1Cash.toFixed(2)} €`)}
+        ${row("💳 Карта (М1):", `${m1Card.toFixed(2)} €`)}
+        ${row("💰 Кеш (М2):", `${m2Cash.toFixed(2)} €`)}
+        ${row("💳 Карта (М2):", `${m2Card.toFixed(2)} €`)}
+        ${row("Общо:", `${totalCashCard.toFixed(2)} €`, true)}
       </table>
     `;
   }
 
+  // 2) Общи наличности -> кеш + банка + карта към банка (както ти искаш)
+  // Банка = Банка + Карта (за общо наличности)
   if (msx) {
+    const totalCash = totalsAll.Кеш;
+    const totalBank = totalsAll.Банка + totalsAll.Карта;
+
     msx.innerHTML = `
       <h3><i class="fa-solid fa-circle-dollar-to-slot"></i> Общи наличности</h3>
       <table>
-        <tr><td>💵 Общо кеш:</td><td>${totals.Кеш.toFixed(2)} €</td></tr>
-        <tr><td>🏦 Общо банка:</td><td>${totalBank.toFixed(2)} €</td></tr>
+        ${row("💵 Общо кеш:", `${totalCash.toFixed(2)} €`)}
+        ${row("🏦 Общо банка:", `${totalBank.toFixed(2)} €`)}
       </table>
     `;
   }
