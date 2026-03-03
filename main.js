@@ -685,16 +685,29 @@ function renderTaxSummary() {
   tax.innerHTML = `
   <h3><i class="fa-solid fa-file-invoice-dollar"></i> Данъчна справка</h3>
   <table>
-    <tr><td>Приходи (с ДДС):</td><td>${incomeGross.toFixed(2)} €</td></tr>
-    <tr><td>Разходи (с ДДС, общо):</td><td>${expenseGrossAll.toFixed(2)} €</td></tr>
-    <tr><td>— от тях Заплати (без ДДС):</td><td>${salariesGross.toFixed(2)} €</td></tr>
+    <tr>
+      <td><strong>ДДС (за внасяне):</strong></td>
+      <td><strong>${vatDue.toFixed(2)} €</strong></td>
+    </tr>
 
-    <tr><td>Разходи с ДДС (без заплати):</td><td>${expenseGrossVatEligible.toFixed(2)} €</td></tr>
-    <tr><td><strong>ДДС (за внасяне):</strong></td><td><strong>${vatDue.toFixed(2)} €</strong></td></tr>
+    <tr>
+      <td><strong>Печалба (без ДДС):</strong></td>
+      <td><strong>${profitNet.toFixed(2)} €</strong></td>
+    </tr>
 
-    <tr><td><strong>Печалба (без ДДС):</strong></td><td><strong>${profitNet.toFixed(2)} €</strong></td></tr>
-    <tr><td><strong>Данък печалба (10%):</strong></td><td><strong>${corporateTax.toFixed(2)} €</strong></td></tr>
-    <tr><td><strong>👉 Нетна печалба (след данък):</strong></td><td><strong style="color:#ffca28;">${netProfitAfterCorpTax.toFixed(2)} €</strong></td></tr>
+    <tr>
+      <td><strong>Данък печалба (10%):</strong></td>
+      <td><strong>${corporateTax.toFixed(2)} €</strong></td>
+    </tr>
+
+    <tr>
+      <td><strong>👉 Нетна печалба:</strong></td>
+      <td>
+        <strong style="color:#ffca28;">
+          ${netProfitAfterCorpTax.toFixed(2)} €
+        </strong>
+      </td>
+    </tr>
   </table>
 `;
 }
