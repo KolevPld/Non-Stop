@@ -632,32 +632,56 @@ function renderTaxSummary() {
   const tax = document.getElementById("taxSummary");
   if (!tax) return;
 
-  const income = records.filter(r => r.type === "Приход").reduce((s, r) => s + Number(r.amount || 0), 0);
-  const expense = records.filter(r => r.type === "Разход").reduce((s, r) => s + Number(r.amount || 0), 0);
-  const profit = income - expense;
+  const isSalaryCategory = (cat) => {
+    const v = String(cat ?? "").trim().toLowerCase();
+    return v === "заплата" || v === "заплати";
+  };
 
-  if (profit <= 0) {
-    tax.innerHTML = `<strong>📊 Данъчна справка:</strong><br>Няма облагаема печалба.`;
-    return;
-  }
+  const sumAmounts = (arr) =>
+    arr.reduce((s, r) => s + Number(r.amount || 0), 0);
 
-  const vat = +(profit * 0.2).toFixed(2);
-  const taxableProfit = +(profit - vat).toFixed(2);
-  const corporateTax = +(taxableProfit * 0.1).toFixed(2);
-  const netProfit = +(taxableProfit - corporateTax).toFixed(2);
+  // 1) ВСИЧКИ приходи/разходи (за данък печалба)
+  const incomeAll = sumAmounts(records.filter(r => r.type === "Приход"));
+  const expenseAll = sumAmounts(records.filter(r => r.type === "Разход"));
+  const profitAll = incomeAll - expenseAll;
+
+  // 2) ДДС база: приходи и разходи, които са с ДДС
+  //    ✅ Заплатите НЕ участват (нямат ДДС), но остават в данък печалба
+  const incomeForVatBase = incomeAll; // приемаме, че всички приходи са с ДДС
+  const expenseForVatBase = sumAmounts(
+    records.filter(r => r.type === "Разход" && !isSalaryCategory(r.category))
+  );
+
+  const vatBaseDiff = incomeForVatBase - expenseForVatBase;
+
+  // ⚠️ ВАЖНО: Тук приемаме, че въведените суми са "без ДДС" (данъчна основа).
+  // Ако ти въвеждаш суми "с ДДС", кажи и ще го сменим на формула /6.
+  const vatDue = vatBaseDiff > 0 ? +(vatBaseDiff * 0.20).toFixed(2) : 0;
+
+  // 3) Данък печалба (10%) върху реалната печалба (с включени заплати)
+  const corporateTax = profitAll > 0 ? +(profitAll * 0.10).toFixed(2) : 0;
+
+  // 4) Нетна печалба след данък печалба (ДДС НЕ се вади от печалбата!)
+  const netProfit = +(profitAll - corporateTax).toFixed(2);
+
+  const row = (label, value, strong = false) =>
+    `<tr><td>${strong ? `<strong>${label}</strong>` : label}</td><td>${strong ? `<strong>${value}</strong>` : value}</td></tr>`;
 
   tax.innerHTML = `
     <h3><i class="fa-solid fa-file-invoice-dollar"></i> Данъчна справка</h3>
     <table>
-      <tr><td>Приходи:</td><td>${income.toFixed(2)} €</td></tr>
-      <tr><td>Разходи:</td><td>${expense.toFixed(2)} €</td></tr>
-      <tr><td>Печалба:</td><td>${profit.toFixed(2)} €</td></tr>
-      <tr><td>ДДС (20%):</td><td>${vat.toFixed(2)} €</td></tr>
-      <tr><td>Данък печалба (10%):</td><td>${corporateTax.toFixed(2)} €</td></tr>
-      <tr><td><strong>👉 Нетна печалба:</strong></td><td><strong style="color:#ffca28;">${netProfit.toFixed(2)} €</strong></td></tr>
+      ${row("Приходи (общо):", `${incomeAll.toFixed(2)} €`)}
+      ${row("Разходи (общо):", `${expenseAll.toFixed(2)} €`)}
+      ${row("Разходи за ДДС (без заплати):", `${expenseForVatBase.toFixed(2)} €`)}
+      ${row("ДДС база (Приходи - Разходи с ДДС):", `${vatBaseDiff.toFixed(2)} €`)}
+      ${row("ДДС (20%):", `${vatDue.toFixed(2)} €`, true)}
+      ${row("Печалба (за данък печалба):", `${profitAll.toFixed(2)} €`)}
+      ${row("Данък печалба (10%):", `${corporateTax.toFixed(2)} €`, true)}
+      ${row("👉 Нетна печалба:", `${netProfit.toFixed(2)} €`, true)}
     </table>
   `;
 }
+
 function renderMethodSummary() {
   const makeTotals = () => ({ Кеш: 0, Карта: 0, Банка: 0 });
 
