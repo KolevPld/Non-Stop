@@ -640,29 +640,44 @@ function renderTaxSummary() {
   const sumAmounts = (arr) =>
     arr.reduce((s, r) => s + Number(r.amount || 0), 0);
 
-  // 1) ВСИЧКИ приходи/разходи (за данък печалба)
-  const incomeAll = sumAmounts(records.filter(r => r.type === "Приход"));
-  const expenseAll = sumAmounts(records.filter(r => r.type === "Разход"));
-  const profitAll = incomeAll - expenseAll;
+  // Брутни (с ДДС) приходи/разходи от записите
+  const incomeGross = sumAmounts(records.filter(r => r.type === "Приход"));
+  const expenseGrossAll = sumAmounts(records.filter(r => r.type === "Разход"));
 
-  // 2) ДДС база: приходи и разходи, които са с ДДС
-  //    ✅ Заплатите НЕ участват (нямат ДДС), но остават в данък печалба
-  const incomeForVatBase = incomeAll; // приемаме, че всички приходи са с ДДС
-  const expenseForVatBase = sumAmounts(
+  // Разходи "Заплати" (без ДДС) – остават като нето
+  const salariesGross = sumAmounts(
+    records.filter(r => r.type === "Разход" && isSalaryCategory(r.category))
+  );
+
+  // Разходи с ДДС (всичко без заплати)
+  const expenseGrossVatEligible = sumAmounts(
     records.filter(r => r.type === "Разход" && !isSalaryCategory(r.category))
   );
 
-  const vatBaseDiff = incomeForVatBase - expenseForVatBase;
+  // =========================
+  // 1) ДДС (20%) при брутни суми
+  // =========================
+  const outputVat = +(incomeGross / 6).toFixed(2);
+  const inputVat = +(expenseGrossVatEligible / 6).toFixed(2);
 
-  // ⚠️ ВАЖНО: Тук приемаме, че въведените суми са "без ДДС" (данъчна основа).
-  // Ако ти въвеждаш суми "с ДДС", кажи и ще го сменим на формула /6.
-  const vatDue = vatBaseDiff > 0 ? +(vatBaseDiff * 0.20).toFixed(2) : 0;
+  // ако предпочиташ да показваме и "за възстановяване", ще го сменим
+  const vatDue = +Math.max(0, outputVat - inputVat).toFixed(2);
 
-  // 3) Данък печалба (10%) върху реалната печалба (с включени заплати)
-  const corporateTax = profitAll > 0 ? +(profitAll * 0.10).toFixed(2) : 0;
+  // =========================
+  // 2) Данък печалба върху НЕТO (без ДДС)
+  // =========================
+  const incomeNet = incomeGross / 1.20;
 
-  // 4) Нетна печалба след данък печалба (ДДС НЕ се вади от печалбата!)
-  const netProfit = +(profitAll - corporateTax).toFixed(2);
+  // разходи с ДДС -> нето
+  const expenseNetVatEligible = expenseGrossVatEligible / 1.20;
+
+  // заплати -> без ДДС, остават като нето
+  const expenseNetAll = expenseNetVatEligible + salariesGross;
+
+  const profitNet = incomeNet - expenseNetAll;
+
+  const corporateTax = profitNet > 0 ? +(profitNet * 0.10).toFixed(2) : 0;
+  const netProfitAfterCorpTax = +(profitNet - corporateTax).toFixed(2);
 
   const row = (label, value, strong = false) =>
     `<tr><td>${strong ? `<strong>${label}</strong>` : label}</td><td>${strong ? `<strong>${value}</strong>` : value}</td></tr>`;
@@ -670,14 +685,21 @@ function renderTaxSummary() {
   tax.innerHTML = `
     <h3><i class="fa-solid fa-file-invoice-dollar"></i> Данъчна справка</h3>
     <table>
-      ${row("Приходи (общо):", `${incomeAll.toFixed(2)} €`)}
-      ${row("Разходи (общо):", `${expenseAll.toFixed(2)} €`)}
-      ${row("Разходи за ДДС (без заплати):", `${expenseForVatBase.toFixed(2)} €`)}
-      ${row("ДДС база (Приходи - Разходи с ДДС):", `${vatBaseDiff.toFixed(2)} €`)}
-      ${row("ДДС (20%):", `${vatDue.toFixed(2)} €`, true)}
-      ${row("Печалба (за данък печалба):", `${profitAll.toFixed(2)} €`)}
+      ${row("Приходи (с ДДС):", `${incomeGross.toFixed(2)} €`)}
+      ${row("Разходи (с ДДС, общо):", `${expenseGrossAll.toFixed(2)} €`)}
+      ${row("— от тях Заплати (без ДДС):", `${salariesGross.toFixed(2)} €`)}
+
+      ${row("Разходи с ДДС (без заплати):", `${expenseGrossVatEligible.toFixed(2)} €`)}
+      ${row("Изходящ ДДС (приходи/6):", `${outputVat.toFixed(2)} €`)}
+      ${row("Входящ ДДС (разходи с ДДС/6):", `${inputVat.toFixed(2)} €`)}
+      ${row("ДДС (за внасяне):", `${vatDue.toFixed(2)} €`, true)}
+
+      ${row("Приходи (нето, без ДДС):", `${incomeNet.toFixed(2)} €`)}
+      ${row("Разходи (нето, без ДДС):", `${expenseNetAll.toFixed(2)} €`)}
+      ${row("Печалба (нето, без ДДС):", `${profitNet.toFixed(2)} €`, true)}
+
       ${row("Данък печалба (10%):", `${corporateTax.toFixed(2)} €`, true)}
-      ${row("👉 Нетна печалба:", `${netProfit.toFixed(2)} €`, true)}
+      ${row("👉 Нетна печалба (след данък):", `${netProfitAfterCorpTax.toFixed(2)} €`, true)}
     </table>
   `;
 }
