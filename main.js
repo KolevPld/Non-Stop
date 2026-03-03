@@ -833,6 +833,65 @@ function renderMethodSummary() {
     `;
   }
 }
+
+function renderLiveBalance() {
+  const el = document.getElementById("liveBalance");
+  if (!el) return;
+
+  const normalizeStore = (s) => {
+    const v = String(s ?? "").trim().toLowerCase();
+    if (v === "1" || v === "м1" || v.includes("магазин 1")) return "1";
+    if (v === "2" || v === "м2" || v.includes("магазин 2")) return "2";
+    return "";
+  };
+
+  let cashM1 = 0;
+  let cashM2 = 0;
+  let bank = 0;
+
+  records.forEach(r => {
+    const amount = Number(r.amount || 0);
+    const sign = r.type === "Приход" ? 1 : -1;
+    const method = String(r.method || "").trim();
+    const store = normalizeStore(r.store);
+
+    if (method === "Кеш") {
+      if (store === "1") cashM1 += sign * amount;
+      if (store === "2") cashM2 += sign * amount;
+    }
+
+    if (method === "Карта" || method === "Банка") {
+      bank += sign * amount;
+    }
+  });
+
+  const total = cashM1 + cashM2 + bank;
+
+  const fmt = (n) => n.toFixed(2) + " €";
+  const cls = (n) => n >= 0 ? "pos" : "neg";
+
+  el.innerHTML = `
+    <h3><i class="fa-solid fa-vault"></i> Живи наличности</h3>
+    <table>
+      <tr>
+        <td>🏪 Каса М1:</td>
+        <td class="${cls(cashM1)}"><strong>${fmt(cashM1)}</strong></td>
+      </tr>
+      <tr>
+        <td>🏪 Каса М2:</td>
+        <td class="${cls(cashM2)}"><strong>${fmt(cashM2)}</strong></td>
+      </tr>
+      <tr>
+        <td>🏦 Банка:</td>
+        <td class="${cls(bank)}"><strong>${fmt(bank)}</strong></td>
+      </tr>
+      <tr>
+        <td><strong>💎 Общо налично:</strong></td>
+        <td class="${cls(total)}"><strong>${fmt(total)}</strong></td>
+      </tr>
+    </table>
+  `;
+}
 // --------------------------------------------------
 // 📊 Chart.js
 // --------------------------------------------------
