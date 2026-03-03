@@ -164,6 +164,7 @@ async function loadRecords() {
     renderTaxSummary();
     updateNoteOptions();
     window.showScreen("add");
+    renderLiveBalance();
   } else {
     renderRecentTable();
     window.showScreen("add");
