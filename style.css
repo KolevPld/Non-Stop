@@ -1135,3 +1135,10 @@ body:not(.dark) #status {
     font-size: 18px;
   }
 }
+#liveBalance td:last-child {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+#liveBalance .pos { color: #2e7d32; }
+#liveBalance .neg { color: #c62828; }
