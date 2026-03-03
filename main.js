@@ -683,25 +683,20 @@ function renderTaxSummary() {
     `<tr><td>${strong ? `<strong>${label}</strong>` : label}</td><td>${strong ? `<strong>${value}</strong>` : value}</td></tr>`;
 
   tax.innerHTML = `
-    <h3><i class="fa-solid fa-file-invoice-dollar"></i> Данъчна справка</h3>
-    <table>
-      ${row("Приходи (с ДДС):", `${incomeGross.toFixed(2)} €`)}
-      ${row("Разходи (с ДДС, общо):", `${expenseGrossAll.toFixed(2)} €`)}
-      ${row("— от тях Заплати (без ДДС):", `${salariesGross.toFixed(2)} €`)}
+  <h3><i class="fa-solid fa-file-invoice-dollar"></i> Данъчна справка</h3>
+  <table>
+    <tr><td>Приходи (с ДДС):</td><td>${incomeGross.toFixed(2)} €</td></tr>
+    <tr><td>Разходи (с ДДС, общо):</td><td>${expenseGrossAll.toFixed(2)} €</td></tr>
+    <tr><td>— от тях Заплати (без ДДС):</td><td>${salariesGross.toFixed(2)} €</td></tr>
 
-      ${row("Разходи с ДДС (без заплати):", `${expenseGrossVatEligible.toFixed(2)} €`)}
-      ${row("Изходящ ДДС (приходи/6):", `${outputVat.toFixed(2)} €`)}
-      ${row("Входящ ДДС (разходи с ДДС/6):", `${inputVat.toFixed(2)} €`)}
-      ${row("ДДС (за внасяне):", `${vatDue.toFixed(2)} €`, true)}
+    <tr><td>Разходи с ДДС (без заплати):</td><td>${expenseGrossVatEligible.toFixed(2)} €</td></tr>
+    <tr><td><strong>ДДС (за внасяне):</strong></td><td><strong>${vatDue.toFixed(2)} €</strong></td></tr>
 
-      ${row("Приходи (нето, без ДДС):", `${incomeNet.toFixed(2)} €`)}
-      ${row("Разходи (нето, без ДДС):", `${expenseNetAll.toFixed(2)} €`)}
-      ${row("Печалба (нето, без ДДС):", `${profitNet.toFixed(2)} €`, true)}
-
-      ${row("Данък печалба (10%):", `${corporateTax.toFixed(2)} €`, true)}
-      ${row("👉 Нетна печалба (след данък):", `${netProfitAfterCorpTax.toFixed(2)} €`, true)}
-    </table>
-  `;
+    <tr><td><strong>Печалба (без ДДС):</strong></td><td><strong>${profitNet.toFixed(2)} €</strong></td></tr>
+    <tr><td><strong>Данък печалба (10%):</strong></td><td><strong>${corporateTax.toFixed(2)} €</strong></td></tr>
+    <tr><td><strong>👉 Нетна печалба (след данък):</strong></td><td><strong style="color:#ffca28;">${netProfitAfterCorpTax.toFixed(2)} €</strong></td></tr>
+  </table>
+`;
 }
 
 function renderMethodSummary() {
