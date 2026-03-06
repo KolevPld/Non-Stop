@@ -316,6 +316,13 @@ window.editImage = async function (id) {
   submitBtn.onclick = saveEditedRecord;
   document.getElementById("cancelEditBtn")?.classList.remove("hidden");
   document.getElementById("addForm")?.classList.add("editing-mode");
+
+  // Sync pills and form title
+  window.syncPills?.();
+  document.getElementById('formTitle').textContent = 'Редактирай запис';
+  const imgPrev = document.getElementById('imagePreview');
+  const removeBtn = document.getElementById('removeImgBtn');
+  if (removeBtn) removeBtn.classList.toggle('hidden', !imgPrev?.src || imgPrev?.classList.contains('hidden'));
 };
 
 // --------------------------------------------------
@@ -434,6 +441,9 @@ window.cancelEdit = function () {
   }
 
   document.getElementById("cancelEditBtn")?.classList.add("hidden");
+  document.getElementById("removeImgBtn")?.classList.add("hidden");
+  document.getElementById("formTitle").textContent = "Нов запис";
+  window.syncPills?.();
 
   window.showScreen?.("add");
 };
@@ -1064,28 +1074,42 @@ window.toggleCustomCategory = toggleCustomCategory;
 // 📺 Навигация между екрани
 // --------------------------------------------------
 window.showScreen = function (screen) {
-  const addScreen = document.getElementById("screen-add");
+  const addScreen    = document.getElementById("screen-add");
   const reportScreen = document.getElementById("screen-report");
-  const isAdmin = document.body.classList.contains("admin");
+  const notesScreen  = document.getElementById("screen-notes");
+  const isAdmin      = document.body.classList.contains("admin");
 
-  if (!addScreen || !reportScreen) return;
+  // Скриваме всички екрани
+  addScreen?.classList.add("hidden");
+  reportScreen?.classList.add("hidden");
+  notesScreen?.classList.add("hidden");
+
+  // Nav active state
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
 
   if (screen === "report") {
     if (!isAdmin) { alert("Нямаш достъп до този екран."); return; }
-
-    addScreen.classList.add("hidden");
-    reportScreen.classList.remove("hidden");
-
+    reportScreen?.classList.remove("hidden");
+    document.getElementById('navReports')?.classList.add('active');
     renderTable();
     updateSummaries();
     renderMethodSummary();
     renderChart();
     applyFilters();
     renderTaxSummary();
+
+  } else if (screen === "notes") {
+    notesScreen?.classList.remove("hidden");
+    document.getElementById('navNotes')?.classList.add('active');
+    renderTasks();
+    checkNotifStatus();
+
   } else {
-    addScreen.classList.remove("hidden");
-    reportScreen.classList.add("hidden");
-    renderRecentList(); renderRecentTable();
+    // "add" или всичко останало
+    addScreen?.classList.remove("hidden");
+    document.getElementById('navAdd')?.classList.add('active');
+    renderRecentList();
+    renderRecentTable();
   }
 };
 
@@ -1231,58 +1255,17 @@ function renderTotalSummaryCards() {
     </div>`;
 }
 
-// ── PATCH: Nav active states ──────────────────────────────────
-const _origShowScreen = window.showScreen;
-window.showScreen = function(screen) {
-  _origShowScreen(screen);
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  if (screen === 'report') {
-    document.getElementById('navReports')?.classList.add('active');
-  } else {
-    document.getElementById('navAdd')?.classList.add('active');
-  }
-};
+// [nav patch merged into showScreen above]
 
-// ── PATCH: syncPills on editImage ────────────────────────────
-const _origEditImage = window.editImage;
-window.editImage = async function(id) {
-  await _origEditImage(id);
-  window.syncPills?.();
-  document.getElementById('formTitle').textContent = 'Редактирай запис';
-  document.getElementById('removeImgBtn').classList.toggle('hidden', !document.getElementById('imagePreview').src || document.getElementById('imagePreview').classList.contains('hidden'));
-};
+// [editImage patch inlined into original function]
 
-// ── PATCH: reset formTitle on cancelEdit ────────────────────
-const _origCancelEdit = window.cancelEdit;
-window.cancelEdit = function() {
-  _origCancelEdit();
-  document.getElementById('formTitle').textContent = 'Нов запис';
-  document.getElementById('removeImgBtn').classList.add('hidden');
-  window.syncPills?.();
-};
+// [cancelEdit patch inlined into original function]
 
 // ════════════════════════════════════════════════
 // 📝 NOTES & PUSH NOTIFICATIONS
 // ════════════════════════════════════════════════
 
-// ── showScreen patch за notes ─────────────────
-const _origShowScreen2 = window.showScreen;
-window.showScreen = function(screen) {
-  const notesScreen = document.getElementById('screen-notes');
-  if (screen === 'notes') {
-    document.getElementById('screen-add')?.classList.add('hidden');
-    document.getElementById('screen-report')?.classList.add('hidden');
-    notesScreen?.classList.remove('hidden');
-    renderTasks();
-    checkNotifStatus();
-    // nav active
-    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('navNotes')?.classList.add('active');
-  } else {
-    notesScreen?.classList.add('hidden');
-    _origShowScreen2(screen);
-  }
-};
+// [notes patch merged into showScreen above]
 
 // ── Tasks (localStorage) ──────────────────────
 function getTasks() {
