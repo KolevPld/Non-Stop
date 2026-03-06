@@ -720,8 +720,7 @@ function renderMethodSummary() {
     const v = String(s ?? "").trim().toLowerCase();
     if (v === "1" || v === "м1" || v.includes("магазин 1")) return "1";
     if (v === "2" || v === "м2" || v.includes("магазин 2")) return "2";
-    if (v === "каса" || v === "kasa")                        return "каса";
-    return "1"; // fallback → М1
+    return null; // Каса, празно → null, не се включва в М1/М2
   };
 
   const normalizeMethod = (m) => String(m ?? "").trim().split(" ")[0]; // "Кеш", "Карта", "Банка"
@@ -756,7 +755,7 @@ function renderMethodSummary() {
     const amount = r.type === "Приход" ? rawAmount : -rawAmount;
 
     const method = normalizeMethod(r.method);
-    const store = normalizeStore(r.store);  // "1", "2", "каса" или "1" (fallback)
+    const store = normalizeStore(r.store);  // "1", "2" или null (Каса/празно)
     const d = toDate(r.date);
 
     // ---- период: първи..последен (по дата на записа)
@@ -772,14 +771,14 @@ function renderMethodSummary() {
     }
 
     // ---- (B) Разпределение: само текущия месец, само М1 и М2
-    // "Каса" записи → fallback вече е "1", така normalizeStore го връща директно
+    // Каса/null записи се пропускат — не изкривяват М1/М2
     if (d && d >= monthStart && d < nextMonthStart) {
-      const storeKey = store === "каса" ? "1" : store; // Каса → М1 за справката
-      if (storeKey === "1" || storeKey === "2") {
-        if (totalsByStoreMonth[storeKey].hasOwnProperty(method)) {
-          totalsByStoreMonth[storeKey][method] += amount;
+      if (store === "1" || store === "2") {
+        if (totalsByStoreMonth[store].hasOwnProperty(method)) {
+          totalsByStoreMonth[store][method] += amount;
         }
       }
+      // store === null (Каса/без магазин) → пропускаме
     }
   });
 
@@ -856,19 +855,21 @@ function renderStoreComparison() {
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const nextMonth  = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
+  // Строга нормализация — само "1" или "2", всичко друго = null (пропускаме)
   const normalizeStore = (s) => {
     const v = String(s ?? "").trim().toLowerCase();
     if (v === "1" || v === "м1" || v.includes("магазин 1")) return "1";
     if (v === "2" || v === "м2" || v.includes("магазин 2")) return "2";
-    return "1";
+    return null; // Каса, празно, непознато → не се включва в М1/М2
   };
 
   const toDate = (iso) => {
-    const m = String(iso ?? "").trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    return m ? new Date(+m[1], +m[2]-1, +m[3]) : null;
+    const parts = String(iso ?? "").trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    return parts ? new Date(+parts[1], +parts[2]-1, +parts[3]) : null;
   };
 
   const m = { "1": { inc: 0, exp: 0 }, "2": { inc: 0, exp: 0 } };
+  let kasaInc = 0, kasaExp = 0; // Каса — броим отделно за информация
 
   records.forEach(r => {
     const amount = Number(r.amount || 0);
@@ -876,15 +877,23 @@ function renderStoreComparison() {
     const d = toDate(r.date);
     if (!d || d < monthStart || d >= nextMonth) return;
     const store = normalizeStore(r.store);
+    if (!store) {
+      // Каса или без магазин — отделно, не изкривява М1/М2
+      if (r.type === "Приход") kasaInc += amount;
+      else                     kasaExp += amount;
+      return;
+    }
     if (r.type === "Приход") m[store].inc += amount;
     else                     m[store].exp += amount;
   });
 
   const saldo1 = m["1"].inc - m["1"].exp;
   const saldo2 = m["2"].inc - m["2"].exp;
-  const totalInc = m["1"].inc + m["2"].inc;
-  const totalExp = m["1"].exp + m["2"].exp;
-  const totalSaldo = saldo1 + saldo2;
+  const kasaSaldo = kasaInc - kasaExp;
+  // Общото включва и Каса
+  const totalInc = m["1"].inc + m["2"].inc + kasaInc;
+  const totalExp = m["1"].exp + m["2"].exp + kasaExp;
+  const totalSaldo = saldo1 + saldo2 + kasaSaldo;
 
   const fmt = (n) => n.toFixed(2) + " €";
   const cls = (n) => n >= 0 ? "pos" : "neg";
@@ -906,6 +915,7 @@ function renderStoreComparison() {
           <th style="font-size:0.7rem;color:var(--text3);font-weight:600;padding:0 0 10px;text-transform:uppercase;letter-spacing:0.05em;"></th>
           <th style="font-size:0.7rem;color:var(--text3);font-weight:600;padding:0 0 10px;text-transform:uppercase;letter-spacing:0.05em;text-align:right;">🏪 М1</th>
           <th style="font-size:0.7rem;color:var(--text3);font-weight:600;padding:0 0 10px;text-transform:uppercase;letter-spacing:0.05em;text-align:right;">🏪 М2</th>
+          ${kasaInc || kasaExp ? \`<th style="font-size:0.7rem;color:var(--text3);font-weight:600;padding:0 0 10px;text-transform:uppercase;letter-spacing:0.05em;text-align:right;">🏧 Каса</th>\` : ""}
           <th style="font-size:0.7rem;color:var(--text3);font-weight:600;padding:0 0 10px;text-transform:uppercase;letter-spacing:0.05em;text-align:right;">📊 Общо</th>
         </tr>
       </thead>
@@ -914,18 +924,21 @@ function renderStoreComparison() {
           <td style="color:var(--text2)">Приходи</td>
           <td style="text-align:right;font-family:var(--mono);font-weight:600;color:var(--green)">${fmt(m["1"].inc)}</td>
           <td style="text-align:right;font-family:var(--mono);font-weight:600;color:var(--green)">${fmt(m["2"].inc)}</td>
+          ${kasaInc || kasaExp ? `<td style="text-align:right;font-family:var(--mono);font-weight:600;color:var(--green)">${fmt(kasaInc)}</td>` : ""}
           <td style="text-align:right;font-family:var(--mono);font-weight:700;color:var(--green)">${fmt(totalInc)}</td>
         </tr>
         <tr>
           <td style="color:var(--text2)">Разходи</td>
           <td style="text-align:right;font-family:var(--mono);font-weight:600;color:var(--red)">${fmt(m["1"].exp)}</td>
           <td style="text-align:right;font-family:var(--mono);font-weight:600;color:var(--red)">${fmt(m["2"].exp)}</td>
+          ${kasaInc || kasaExp ? `<td style="text-align:right;font-family:var(--mono);font-weight:600;color:var(--red)">${fmt(kasaExp)}</td>` : ""}
           <td style="text-align:right;font-family:var(--mono);font-weight:700;color:var(--red)">${fmt(totalExp)}</td>
         </tr>
         <tr style="border-top:1px solid var(--border)">
           <td><strong>Салдо</strong></td>
           <td style="text-align:right;font-family:var(--mono);font-weight:700;" class="${cls(saldo1)}">${fmt(saldo1)}</td>
           <td style="text-align:right;font-family:var(--mono);font-weight:700;" class="${cls(saldo2)}">${fmt(saldo2)}</td>
+          ${kasaInc || kasaExp ? `<td style="text-align:right;font-family:var(--mono);font-weight:700;" class="${cls(kasaSaldo)}">${fmt(kasaSaldo)}</td>` : ""}
           <td style="text-align:right;font-family:var(--mono);font-weight:800;font-size:1rem;" class="${cls(totalSaldo)}">${fmt(totalSaldo)}</td>
         </tr>
         <tr>
