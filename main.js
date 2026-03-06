@@ -840,81 +840,105 @@ function renderMethodSummary() {
 }
 
 function renderLiveBalance() {
+  // Преименувана → renderStoreComparison (виж по-долу)
+  // Оставена празна за обратна съвместимост
+  const el = document.getElementById("liveBalance");
+  if (!el) return;
+  renderStoreComparison();
+}
+
+// ── Сравнение М1 vs М2 (замества Живи наличности) ────────────
+function renderStoreComparison() {
   const el = document.getElementById("liveBalance");
   if (!el) return;
 
-  // Нормализация — същата логика като renderMethodSummary
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const nextMonth  = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
   const normalizeStore = (s) => {
     const v = String(s ?? "").trim().toLowerCase();
     if (v === "1" || v === "м1" || v.includes("магазин 1")) return "1";
     if (v === "2" || v === "м2" || v.includes("магазин 2")) return "2";
-    if (v === "каса" || v === "kasa")                        return "каса";
-    return "1"; // fallback → М1
+    return "1";
   };
 
-  let cashM1 = 0;      // Кеш в Магазин 1
-  let cashM2 = 0;      // Кеш в Магазин 2
-  let cashKasa = 0;    // Кеш в Каса (отделна)
-  let card = 0;        // Всички Карта плащания
-  let bank = 0;        // Всички Банка плащания
+  const toDate = (iso) => {
+    const m = String(iso ?? "").trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    return m ? new Date(+m[1], +m[2]-1, +m[3]) : null;
+  };
+
+  const m = { "1": { inc: 0, exp: 0 }, "2": { inc: 0, exp: 0 } };
 
   records.forEach(r => {
     const amount = Number(r.amount || 0);
     if (!Number.isFinite(amount) || amount === 0) return;
-    const sign = r.type === "Приход" ? 1 : -1;
-    const method = String(r.method || "").trim();
-    const store  = normalizeStore(r.store);
-
-    if (method === "Кеш") {
-      if      (store === "1")     cashM1   += sign * amount;
-      else if (store === "2")     cashM2   += sign * amount;
-      else if (store === "каса")  cashKasa += sign * amount;
-      else                        cashM1   += sign * amount; // fallback
-    }
-    else if (method === "Карта") card += sign * amount;
-    else if (method === "Банка") bank += sign * amount;
+    const d = toDate(r.date);
+    if (!d || d < monthStart || d >= nextMonth) return;
+    const store = normalizeStore(r.store);
+    if (r.type === "Приход") m[store].inc += amount;
+    else                     m[store].exp += amount;
   });
 
-  const totalCash = cashM1 + cashM2 + cashKasa;
-  const total     = totalCash + card + bank;
+  const saldo1 = m["1"].inc - m["1"].exp;
+  const saldo2 = m["2"].inc - m["2"].exp;
+  const totalInc = m["1"].inc + m["2"].inc;
+  const totalExp = m["1"].exp + m["2"].exp;
+  const totalSaldo = saldo1 + saldo2;
 
   const fmt = (n) => n.toFixed(2) + " €";
   const cls = (n) => n >= 0 ? "pos" : "neg";
+  const pct = (a, total) => total > 0 ? Math.round(a / total * 100) : 0;
 
-  const kasaRow = cashKasa !== 0 ? `
-      <tr>
-        <td>🏧 Каса (обща):</td>
-        <td class="${cls(cashKasa)}"><strong>${fmt(cashKasa)}</strong></td>
-      </tr>` : "";
+  // Mini progress bar
+  const bar = (val, total, color) => {
+    const w = total > 0 ? Math.min(100, Math.round(val / total * 100)) : 0;
+    return `<div style="height:3px;background:var(--border);border-radius:2px;margin-top:4px;">
+      <div style="width:${w}%;height:100%;background:${color};border-radius:2px;transition:width 0.4s ease;"></div>
+    </div>`;
+  };
 
   el.innerHTML = `
-    <h3><i class="fa-solid fa-vault"></i> Живи наличности</h3>
+    <h3><i class="fa-solid fa-scale-balanced"></i> Сравнение М1 vs М2 — текущ месец</h3>
     <table>
-      <tr>
-        <td>🏪 Каса М1:</td>
-        <td class="${cls(cashM1)}"><strong>${fmt(cashM1)}</strong></td>
-      </tr>
-      <tr>
-        <td>🏪 Каса М2:</td>
-        <td class="${cls(cashM2)}"><strong>${fmt(cashM2)}</strong></td>
-      </tr>
-      ${kasaRow}
-      <tr style="border-top:1px solid var(--border)">
-        <td>💵 Общо кеш:</td>
-        <td class="${cls(totalCash)}"><strong>${fmt(totalCash)}</strong></td>
-      </tr>
-      <tr>
-        <td>💳 Карта:</td>
-        <td class="${cls(card)}"><strong>${fmt(card)}</strong></td>
-      </tr>
-      <tr>
-        <td>🏦 Банка (превод):</td>
-        <td class="${cls(bank)}"><strong>${fmt(bank)}</strong></td>
-      </tr>
-      <tr style="border-top:1px solid var(--border)">
-        <td><strong>💎 Общо налично:</strong></td>
-        <td class="${cls(total)}"><strong>${fmt(total)}</strong></td>
-      </tr>
+      <thead>
+        <tr>
+          <th style="font-size:0.7rem;color:var(--text3);font-weight:600;padding:0 0 10px;text-transform:uppercase;letter-spacing:0.05em;"></th>
+          <th style="font-size:0.7rem;color:var(--text3);font-weight:600;padding:0 0 10px;text-transform:uppercase;letter-spacing:0.05em;text-align:right;">🏪 М1</th>
+          <th style="font-size:0.7rem;color:var(--text3);font-weight:600;padding:0 0 10px;text-transform:uppercase;letter-spacing:0.05em;text-align:right;">🏪 М2</th>
+          <th style="font-size:0.7rem;color:var(--text3);font-weight:600;padding:0 0 10px;text-transform:uppercase;letter-spacing:0.05em;text-align:right;">📊 Общо</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="color:var(--text2)">Приходи</td>
+          <td style="text-align:right;font-family:var(--mono);font-weight:600;color:var(--green)">${fmt(m["1"].inc)}</td>
+          <td style="text-align:right;font-family:var(--mono);font-weight:600;color:var(--green)">${fmt(m["2"].inc)}</td>
+          <td style="text-align:right;font-family:var(--mono);font-weight:700;color:var(--green)">${fmt(totalInc)}</td>
+        </tr>
+        <tr>
+          <td style="color:var(--text2)">Разходи</td>
+          <td style="text-align:right;font-family:var(--mono);font-weight:600;color:var(--red)">${fmt(m["1"].exp)}</td>
+          <td style="text-align:right;font-family:var(--mono);font-weight:600;color:var(--red)">${fmt(m["2"].exp)}</td>
+          <td style="text-align:right;font-family:var(--mono);font-weight:700;color:var(--red)">${fmt(totalExp)}</td>
+        </tr>
+        <tr style="border-top:1px solid var(--border)">
+          <td><strong>Салдо</strong></td>
+          <td style="text-align:right;font-family:var(--mono);font-weight:700;" class="${cls(saldo1)}">${fmt(saldo1)}</td>
+          <td style="text-align:right;font-family:var(--mono);font-weight:700;" class="${cls(saldo2)}">${fmt(saldo2)}</td>
+          <td style="text-align:right;font-family:var(--mono);font-weight:800;font-size:1rem;" class="${cls(totalSaldo)}">${fmt(totalSaldo)}</td>
+        </tr>
+        <tr>
+          <td style="color:var(--text3);font-size:0.75rem;">Дял приход</td>
+          <td style="text-align:right;color:var(--text2);font-size:0.75rem;">${pct(m["1"].inc, totalInc)}%
+            ${bar(m["1"].inc, totalInc, "var(--green)")}
+          </td>
+          <td style="text-align:right;color:var(--text2);font-size:0.75rem;">${pct(m["2"].inc, totalInc)}%
+            ${bar(m["2"].inc, totalInc, "var(--green)")}
+          </td>
+          <td></td>
+        </tr>
+      </tbody>
     </table>
   `;
 }
