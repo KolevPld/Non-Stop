@@ -716,12 +716,12 @@ function renderTaxSummary() {
 function renderMethodSummary() {
   const makeTotals = () => ({ Кеш: 0, Карта: 0, Банка: 0 });
 
-  // ✅ Нормализация (за стари записи)
   const normalizeStore = (s) => {
     const v = String(s ?? "").trim().toLowerCase();
-    if (v === "1" || v === "м1" || v.includes("магазин 1") || v.includes("magazin 1") || v.includes("store 1")) return "1";
-    if (v === "2" || v === "м2" || v.includes("магазин 2") || v.includes("magazin 2") || v.includes("store 2")) return "2";
-    return ""; // други (напр. "Каса")
+    if (v === "1" || v === "м1" || v.includes("магазин 1")) return "1";
+    if (v === "2" || v === "м2" || v.includes("магазин 2")) return "2";
+    if (v === "каса" || v === "kasa")                        return "каса";
+    return "1"; // fallback → М1
   };
 
   const normalizeMethod = (m) => String(m ?? "").trim().split(" ")[0]; // "Кеш", "Карта", "Банка"
@@ -756,7 +756,7 @@ function renderMethodSummary() {
     const amount = r.type === "Приход" ? rawAmount : -rawAmount;
 
     const method = normalizeMethod(r.method);
-    const store = normalizeStore(r.store);
+    const store = normalizeStore(r.store);  // "1", "2", "каса" или "1" (fallback)
     const d = toDate(r.date);
 
     // ---- период: първи..последен (по дата на записа)
@@ -766,15 +766,19 @@ function renderMethodSummary() {
       if (maxTime === null || t > maxTime) maxTime = t;
     }
 
-    // ---- (A) Общи наличности: всички записи
+    // ---- (A) Общи наличности: всички записи, всички магазини
     if (totalsAllPeriod.hasOwnProperty(method)) {
       totalsAllPeriod[method] += amount;
     }
 
-    // ---- (B) Разпределение: само текущия месец + само магазини 1/2
+    // ---- (B) Разпределение: само текущия месец, само М1 и М2
+    // "Каса" записи → fallback вече е "1", така normalizeStore го връща директно
     if (d && d >= monthStart && d < nextMonthStart) {
-      if ((store === "1" || store === "2") && totalsByStoreMonth[store].hasOwnProperty(method)) {
-        totalsByStoreMonth[store][method] += amount;
+      const storeKey = store === "каса" ? "1" : store; // Каса → М1 за справката
+      if (storeKey === "1" || storeKey === "2") {
+        if (totalsByStoreMonth[storeKey].hasOwnProperty(method)) {
+          totalsByStoreMonth[storeKey][method] += amount;
+        }
       }
     }
   });
@@ -839,37 +843,49 @@ function renderLiveBalance() {
   const el = document.getElementById("liveBalance");
   if (!el) return;
 
+  // Нормализация — същата логика като renderMethodSummary
   const normalizeStore = (s) => {
     const v = String(s ?? "").trim().toLowerCase();
     if (v === "1" || v === "м1" || v.includes("магазин 1")) return "1";
     if (v === "2" || v === "м2" || v.includes("магазин 2")) return "2";
-    return "";
+    if (v === "каса" || v === "kasa")                        return "каса";
+    return "1"; // fallback → М1
   };
 
-  let cashM1 = 0;
-  let cashM2 = 0;
-  let bank = 0;
+  let cashM1 = 0;      // Кеш в Магазин 1
+  let cashM2 = 0;      // Кеш в Магазин 2
+  let cashKasa = 0;    // Кеш в Каса (отделна)
+  let card = 0;        // Всички Карта плащания
+  let bank = 0;        // Всички Банка плащания
 
   records.forEach(r => {
     const amount = Number(r.amount || 0);
+    if (!Number.isFinite(amount) || amount === 0) return;
     const sign = r.type === "Приход" ? 1 : -1;
     const method = String(r.method || "").trim();
-    const store = normalizeStore(r.store);
+    const store  = normalizeStore(r.store);
 
     if (method === "Кеш") {
-      if (store === "1") cashM1 += sign * amount;
-      if (store === "2") cashM2 += sign * amount;
+      if      (store === "1")     cashM1   += sign * amount;
+      else if (store === "2")     cashM2   += sign * amount;
+      else if (store === "каса")  cashKasa += sign * amount;
+      else                        cashM1   += sign * amount; // fallback
     }
-
-    if (method === "Карта" || method === "Банка") {
-      bank += sign * amount;
-    }
+    else if (method === "Карта") card += sign * amount;
+    else if (method === "Банка") bank += sign * amount;
   });
 
-  const total = cashM1 + cashM2 + bank;
+  const totalCash = cashM1 + cashM2 + cashKasa;
+  const total     = totalCash + card + bank;
 
   const fmt = (n) => n.toFixed(2) + " €";
   const cls = (n) => n >= 0 ? "pos" : "neg";
+
+  const kasaRow = cashKasa !== 0 ? `
+      <tr>
+        <td>🏧 Каса (обща):</td>
+        <td class="${cls(cashKasa)}"><strong>${fmt(cashKasa)}</strong></td>
+      </tr>` : "";
 
   el.innerHTML = `
     <h3><i class="fa-solid fa-vault"></i> Живи наличности</h3>
@@ -882,11 +898,20 @@ function renderLiveBalance() {
         <td>🏪 Каса М2:</td>
         <td class="${cls(cashM2)}"><strong>${fmt(cashM2)}</strong></td>
       </tr>
-      <tr>
-        <td>🏦 Банка:</td>
-        <td class="${cls(bank)}"><strong>${fmt(bank)}</strong></td>
+      ${kasaRow}
+      <tr style="border-top:1px solid var(--border)">
+        <td>💵 Общо кеш:</td>
+        <td class="${cls(totalCash)}"><strong>${fmt(totalCash)}</strong></td>
       </tr>
       <tr>
+        <td>💳 Карта:</td>
+        <td class="${cls(card)}"><strong>${fmt(card)}</strong></td>
+      </tr>
+      <tr>
+        <td>🏦 Банка (превод):</td>
+        <td class="${cls(bank)}"><strong>${fmt(bank)}</strong></td>
+      </tr>
+      <tr style="border-top:1px solid var(--border)">
         <td><strong>💎 Общо налично:</strong></td>
         <td class="${cls(total)}"><strong>${fmt(total)}</strong></td>
       </tr>
