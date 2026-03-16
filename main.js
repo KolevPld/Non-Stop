@@ -651,31 +651,15 @@ function updateFilterSummary(data) {
   if (!el) return;
   if (!data.length) { el.style.display = "none"; el.innerHTML = ""; return; }
 
-  const byStore = {};
   let totalInc = 0, totalExp = 0;
   data.forEach(r => {
-    const sk = normStore(r.store);
-    const label = sk === "1" ? "М1" : sk === "2" ? "М2" : (sk || "—");
-    if (!byStore[label]) byStore[label] = { inc:0, exp:0 };
     const a = Number(r.amount || 0);
-    if (r.type === "Приход") { byStore[label].inc += a; totalInc += a; }
-    else                     { byStore[label].exp += a; totalExp += a; }
+    if (r.type === "Приход") totalInc += a; else totalExp += a;
   });
 
   const net = totalInc - totalExp;
   const f   = n => n.toFixed(2) + " €";
   const cls = n => n >= 0 ? "color:var(--green)" : "color:var(--red)";
-  const multiStore = Object.keys(byStore).length > 1;
-
-  const storeRows = Object.entries(byStore).map(([name, v]) => {
-    const sal = v.inc - v.exp;
-    return `<div class="fs-store-row">
-      <span class="fs-store-name">🏪 ${name}</span>
-      ${v.inc ? `<span class="fs-chip inc">▲ ${f(v.inc)}</span>` : ""}
-      ${v.exp ? `<span class="fs-chip exp">▼ ${f(v.exp)}</span>` : ""}
-      <span class="fs-chip sal" style="${cls(sal)}">= ${f(sal)}</span>
-    </div>`;
-  }).join("");
 
   el.style.display = "block";
   el.innerHTML = `<div class="filter-summary-box">
@@ -685,7 +669,6 @@ function updateFilterSummary(data) {
       <div class="fs-total-item"><span class="fs-label">Разходи</span><span class="fs-value" style="color:var(--red)">${f(totalExp)}</span></div>
       <div class="fs-total-item"><span class="fs-label">Салдо</span><span class="fs-value" style="${cls(net)};font-size:1.1rem">${f(net)}</span></div>
     </div>
-    ${multiStore ? `<div class="fs-stores">${storeRows}</div>` : ""}
   </div>`;
 }
 
