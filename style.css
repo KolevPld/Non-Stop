@@ -1477,6 +1477,9 @@ body.admin .table-responsive.admin-only { display: block; }
 
 /* ── Сравнение table (sc-*) ── */
 #liveBalance{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+/* Мобилни карти — скрити по подразбиране (показва се таблицата) */
+.sc-cards{display:none}
 .sc-table{width:100%;border-collapse:collapse;margin-top:10px;min-width:300px}
 .sc-th{font-size:.78rem;color:var(--text3);font-weight:700;text-align:right;padding:0 10px 12px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
 .sc-label-th{width:110px}
@@ -1498,16 +1501,42 @@ body.admin .table-responsive.admin-only { display: block; }
 .sc-pct td{padding-top:8px!important;padding-bottom:4px!important}
 
 @media (max-width:599px){
-  .sc-label-th{width:80px}
-  .sc-row td{padding:7px 5px}
-  .sc-th{font-size:.68rem;padding:0 5px 8px;letter-spacing:0}
-  .sc-label{font-size:.82rem}
-  .sc-label-sm{font-size:.75rem}
-  .sc-num{font-size:.82rem}
-  .sc-num-lg{font-size:.9rem}
-  .sc-num-xl{font-size:1rem}
-  .sc-num-sm,.sc-pct-val{font-size:.72rem}
-  .sc-saldo td{padding-top:8px!important;padding-bottom:8px!important}
+  /* Скрий таблицата, покажи карти */
+  .sc-table{display:none}
+  .sc-cards{display:flex;flex-direction:column;gap:10px;margin-top:10px}
+
+  .sc-card{
+    background:var(--bg3);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:14px 16px;
+  }
+  .sc-card-title{
+    font-size:.72rem;
+    font-weight:700;
+    color:var(--text2);
+    text-transform:uppercase;
+    letter-spacing:.07em;
+    margin-bottom:10px;
+    padding-bottom:8px;
+    border-bottom:1px solid var(--border2);
+  }
+  .sc-card-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:7px 0;
+    border-bottom:1px solid var(--border);
+  }
+  .sc-card-row:last-child{border-bottom:none}
+  .sc-card-label{font-size:.82rem;color:var(--text2)}
+  .sc-card-saldo{
+    border-top:2px solid var(--border2)!important;
+    border-bottom:2px solid var(--border2)!important;
+    margin:4px 0;
+    padding:10px 0!important;
+  }
+  .sc-card-saldo .sc-card-label{color:var(--text);font-weight:700;font-size:.875rem}
 }
 
 /* ── Store cell (кликаем филтър) ── */

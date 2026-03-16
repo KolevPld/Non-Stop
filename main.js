@@ -1039,8 +1039,21 @@ function renderStoreComparison() {
   const tdB=(v,c)=>`<td class="sc-val"><span class="sc-num-lg ${c}">${f(v)}</span></td>`;
   const tdS=(v)=>`<td class="sc-val"><span class="sc-num-sm">${f(v)}</span></td>`;
 
+  const mkCard = (title, inc, exp, sal, ksh, krt, pctVal) => `
+    <div class="sc-card">
+      <div class="sc-card-title">${title}</div>
+      <div class="sc-card-row"><span class="sc-card-label">Приходи</span><span class="sc-num pos">${f(inc)}</span></div>
+      <div class="sc-card-row"><span class="sc-card-label">Разходи</span><span class="sc-num neg">${f(exp)}</span></div>
+      <div class="sc-card-row sc-card-saldo"><span class="sc-card-label"><strong>Салдо</strong></span><span class="sc-num-xl ${cls(sal)}">${f(sal)}</span></div>
+      <div class="sc-card-row"><span class="sc-card-label">💰 Кеш</span><span class="sc-num-sm">${f(ksh)}</span></div>
+      <div class="sc-card-row"><span class="sc-card-label">💳 Карта/Банка</span><span class="sc-num-sm">${f(krt)}</span></div>
+      <div class="sc-card-row"><span class="sc-card-label">Дял приход</span><span class="sc-pct-val">${pctVal}%</span></div>
+    </div>`;
+
   el.innerHTML = `
     <h3><i class="fa-solid fa-scale-balanced"></i> Сравнение М1 vs М2 — текущ месец</h3>
+
+    <!-- Таблица (десктоп) -->
     <table class="sc-table">
       <thead>
         <tr>
@@ -1082,7 +1095,15 @@ function renderStoreComparison() {
           <td></td>
         </tr>
       </tbody>
-    </table>`;
+    </table>
+
+    <!-- Карти (мобилен изглед) -->
+    <div class="sc-cards">
+      ${mkCard("🏪 М1",    m["1"].inc, m["1"].exp, s1, m["1"].kesh, m["1"].karta, pct(m["1"].inc,tI))}
+      ${mkCard("🏪 М2",    m["2"].inc, m["2"].exp, s2, m["2"].kesh, m["2"].karta, pct(m["2"].inc,tI))}
+      ${hk ? mkCard("🏧 Каса", kasaInc, kasaExp, ks, kasaKesh, kasaKarta, pct(kasaInc,tI)) : ""}
+      ${mkCard("📊 Общо",  tI,         tE,         tS, tKesh,       tKarta,       100)}
+    </div>`;
 }
 
 // ── Accordion: Наличности & Данъчна справка ───────────────────
