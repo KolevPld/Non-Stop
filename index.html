@@ -14,6 +14,16 @@
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW:', e));
     }
+    // Блокира pinch-zoom и double-tap zoom на iOS (игнорира user-scalable=no от iOS 10+)
+    document.addEventListener('touchstart', function(e) {
+      if (e.touches.length > 1) e.preventDefault();
+    }, { passive: false });
+    let _lastTap = 0;
+    document.addEventListener('touchend', function(e) {
+      const now = Date.now();
+      if (now - _lastTap < 300) e.preventDefault();
+      _lastTap = now;
+    }, { passive: false });
   </script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="style.css?v=20260312">
