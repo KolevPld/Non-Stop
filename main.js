@@ -474,13 +474,23 @@ window.cancelEdit = function () {
 // ── Нормализация ─────────────────────────────────────────────
 // Единна нормализация на магазин — ползва се навсякъде
 function normStore(s) {
-  const v = String(s ?? "").trim().toLowerCase();
-  if (v === "1" || v === "м1" || v === "m1" || v.includes("магазин 1") || v.includes("magazin 1") || v.includes("store 1")) return "1";
-  if (v === "2" || v === "м2" || v === "m2" || v.includes("магазин 2") || v.includes("magazin 2") || v.includes("store 2")) return "2";
-  if (v === "каса" || v === "kasa" || v === "cash") return "Каса";
-  // Празно/null — показва се само при "Всички магазини"
+  const raw = String(s ?? "").trim();
+  const v   = raw.toLowerCase();
+  if (v === "1" || v === "м1" || v === "m1" || v.includes("магазин 1")) return "1";
+  if (v === "2" || v === "м2" || v === "m2" || v.includes("магазин 2")) return "2";
+  if (raw === "КасаКеш"  || v === "касакеш"  || v === "каса кеш")  return "КасаКеш";
+  if (raw === "КасаБанка" || v === "касабанка" || v === "каса банка") return "КасаБанка";
+  if (v === "каса" || v === "kasa" || v === "cash") return "Каса"; // стари записи
   if (v === "" || v === "null" || v === "undefined") return "";
-  return v;
+  return raw;
+}
+
+// Ефективен магазин на запис — стара "Каса" се разпределя по метод
+function effectiveStore(r) {
+  const s = normStore(r.store);
+  if (s === "1" || s === "2" || s === "КасаКеш" || s === "КасаБанка") return s;
+  // Стара "Каса" или празно → по метод
+  return normMethod(r.method) === "Кеш" ? "КасаКеш" : "КасаБанка";
 }
 function normMethod(m) {
   const v = String(m ?? "").trim().split(/\s+/)[0];
@@ -509,7 +519,7 @@ function applyFilters() {
     const matchCategory = !category || (r.category ?? "").trim() === category;
     const matchStart    = !startDate || (r.date ?? "") >= startDate;
     const matchEnd      = !endDate   || (r.date ?? "") <= endDate;
-    const matchStore    = !store     || normStore(r.store) === store;
+    const matchStore    = !store     || effectiveStore(r) === store;
     return matchType && matchMethod && matchCategory && matchStart && matchEnd && matchStore;
   });
 
@@ -541,11 +551,11 @@ window.clearFilters = clearFilters;
 // --------------------------------------------------
 // 🏪 Хелпъри за магазин
 // --------------------------------------------------
-function storeLabel(store) {
-  const s = normStore(store);
-  if (s === "1") return "🏪 М1";
-  if (s === "2") return "🏪 М2";
-  if (s === "Каса") return "🏧 Каса";
+function storeLabel(storeKey) {
+  if (storeKey === "1")          return "🏪 М1";
+  if (storeKey === "2")          return "🏪 М2";
+  if (storeKey === "КасаКеш")    return "💰 К.Кеш";
+  if (storeKey === "КасаБанка")  return "🏦 К.Банка";
   return "—";
 }
 
@@ -574,7 +584,7 @@ function renderTable(data = records) {
       <td style="color:${r.type === "Приход" ? "#4caf50" : "#f44336"};">${r.type || ""}</td>
       <td class="money">${formatMoney(r.amount)}</td>
       <td>${r.method || ""}</td>
-      <td class="store-cell" data-store="${normStore(r.store)}" onclick="filterByStore(this.dataset.store)" title="Филтрирай по магазин">${storeLabel(r.store)}</td>
+      <td class="store-cell" data-store="${effectiveStore(r)}" onclick="filterByStore(this.dataset.store)" title="Филтрирай по магазин">${storeLabel(effectiveStore(r))}</td>
       <td>${r.category || ""}</td>
       <td>${r.note || ""}</td>
       <td style="white-space: nowrap;">
@@ -798,8 +808,8 @@ function renderMethodSummary() {
     <h3><i class="fa-solid fa-circle-dollar-to-slot"></i> Общи наличности</h3>
     <div class="muted" style="margin:6px 0 10px;">Период: ${fmtDate(minTime)} → ${fmtDate(maxTime)}</div>
     <table>
-      ${row("💵 Общо кеш:", fmt(totals.Кеш))}
-      ${row("🏦 Общо банка:", fmt(totals.Банка + totals.Карта))}
+      ${row("💰 Каса Кеш (салдо):", fmt(totals.Кеш))}
+      ${row("🏦 Каса Банка (салдо):", fmt(totals.Банка + totals.Карта))}
     </table>`;
 }
 
@@ -935,7 +945,7 @@ function renderRecentList() {
         <div class="record-meta">
           <span class="record-date">${r.date || ''} · ${r.method || ''}</span>
           <span class="record-name">${r.category || ''}${r.note ? ' · ' + r.note : ''}</span>
-          <span class="record-sub">${storeLabel(r.store) !== "—" ? storeLabel(r.store) : ""}</span>
+          <span class="record-sub">${storeLabel(effectiveStore(r))}</span>
         </div>
         <div class="record-right">
           <span class="record-amount ${cls}">${sign}${formatMoney(r.amount)}</span>
@@ -997,112 +1007,101 @@ function renderStoreComparison() {
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const nextMonth  = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
-  const td = (iso) => {
+  const toDate = (iso) => {
     const p = String(iso ?? "").trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
     return p ? new Date(+p[1], +p[2]-1, +p[3]) : null;
   };
 
-  const m = { "1": { inc:0, exp:0, kesh:0, karta:0 }, "2": { inc:0, exp:0, kesh:0, karta:0 } };
-  let kasaInc=0, kasaExp=0, kasaKesh=0, kasaKarta=0;
+  // По магазин (само М1 и М2)
+  const m = { "1": { inc:0, exp:0 }, "2": { inc:0, exp:0 } };
+  // Каса Кеш = ВСИЧКИ Кеш транзакции (М1 + М2 + стара Каса)
+  // Каса Банка = ВСИЧКИ Карта/Банка транзакции
+  let kkInc=0, kkExp=0, kbInc=0, kbExp=0;
+  // Истинско общо (без двойно броене)
+  let tI=0, tE=0;
 
   records.forEach(r => {
     const amount = Number(r.amount || 0);
     if (!Number.isFinite(amount) || amount === 0) return;
-    const d = td(r.date);
+    const d = toDate(r.date);
     if (!d || d < monthStart || d >= nextMonth) return;
-    const store = normStore(r.store);
-    const isInc = r.type === "Приход";
-    const signed = isInc ? amount : -amount;
+    const store  = normStore(r.store);
+    const isInc  = r.type === "Приход";
     const isKesh = normMethod(r.method) === "Кеш";
-    if (store !== "1" && store !== "2") {
-      if (isInc) kasaInc += amount; else kasaExp += amount;
-      if (isKesh) kasaKesh += signed; else kasaKarta += signed;
-      return;
+
+    // Общо (всеки запис се брои веднъж)
+    if (isInc) tI += amount; else tE += amount;
+
+    // По магазин (само М1, М2)
+    if (store === "1" || store === "2") {
+      if (isInc) m[store].inc += amount; else m[store].exp += amount;
     }
-    if (isInc) m[store].inc += amount; else m[store].exp += amount;
-    if (isKesh) m[store].kesh += signed; else m[store].karta += signed;
+
+    // Каса Кеш / Каса Банка = по метод, от ВСИЧКИ магазини
+    if (isKesh) {
+      if (isInc) kkInc += amount; else kkExp += amount;
+    } else {
+      if (isInc) kbInc += amount; else kbExp += amount;
+    }
   });
 
-  const s1=m["1"].inc-m["1"].exp, s2=m["2"].inc-m["2"].exp, ks=kasaInc-kasaExp;
-  const tI=m["1"].inc+m["2"].inc+kasaInc, tE=m["1"].exp+m["2"].exp+kasaExp, tS=s1+s2+ks;
-  const tKesh=m["1"].kesh+m["2"].kesh+kasaKesh, tKarta=m["1"].karta+m["2"].karta+kasaKarta;
+  const s1  = m["1"].inc - m["1"].exp;
+  const s2  = m["2"].inc - m["2"].exp;
+  const kkS = kkInc - kkExp;
+  const kbS = kbInc - kbExp;
+  const tS  = tI - tE;
 
-  const f=n=>n.toFixed(2)+" €", cls=n=>n>=0?"pos":"neg";
-  const pct=(a,t)=>t>0?Math.round(a/t*100):0;
-  const bar=(val,tot,col)=>{
-    const w=tot>0?Math.min(100,Math.round(val/tot*100)):0;
-    return `<div style="height:4px;background:var(--border);border-radius:2px;margin-top:4px"><div style="width:${w}%;height:100%;background:${col};border-radius:2px"></div></div>`;
-  };
-  const hk=kasaInc||kasaExp;
-  const th=s=>`<th class="sc-th">${s}</th>`;
-  const td2=(v,c)=>`<td class="sc-val" class="${c}"><span class="sc-num ${c}">${f(v)}</span></td>`;
-  const tdB=(v,c)=>`<td class="sc-val"><span class="sc-num-lg ${c}">${f(v)}</span></td>`;
-  const tdS=(v)=>`<td class="sc-val"><span class="sc-num-sm">${f(v)}</span></td>`;
+  const f   = n => n.toFixed(2) + " €";
+  const cls = n => n >= 0 ? "pos" : "neg";
+  const th  = s => `<th class="sc-th">${s}</th>`;
+  const td2 = (v, c) => `<td class="sc-val"><span class="sc-num ${c}">${f(v)}</span></td>`;
+  const tdB = (v, c) => `<td class="sc-val"><span class="sc-num-lg ${c}">${f(v)}</span></td>`;
 
-  const mkCard = (title, inc, exp, sal, ksh, krt, pctVal) => `
+  const mkCard = (title, inc, exp, sal) => `
     <div class="sc-card">
       <div class="sc-card-title">${title}</div>
       <div class="sc-card-row"><span class="sc-card-label">Приходи</span><span class="sc-num pos">${f(inc)}</span></div>
       <div class="sc-card-row"><span class="sc-card-label">Разходи</span><span class="sc-num neg">${f(exp)}</span></div>
       <div class="sc-card-row sc-card-saldo"><span class="sc-card-label"><strong>Салдо</strong></span><span class="sc-num-xl ${cls(sal)}">${f(sal)}</span></div>
-      <div class="sc-card-row"><span class="sc-card-label">💰 Кеш</span><span class="sc-num-sm">${f(ksh)}</span></div>
-      <div class="sc-card-row"><span class="sc-card-label">💳 Карта/Банка</span><span class="sc-num-sm">${f(krt)}</span></div>
-      <div class="sc-card-row"><span class="sc-card-label">Дял приход</span><span class="sc-pct-val">${pctVal}%</span></div>
     </div>`;
 
   el.innerHTML = `
-    <h3><i class="fa-solid fa-scale-balanced"></i> Сравнение М1 vs М2 — текущ месец</h3>
+    <h3><i class="fa-solid fa-scale-balanced"></i> Сравнение — текущ месец</h3>
 
-    <!-- Таблица (десктоп) -->
+    <!-- Таблица (десктоп/таблет) -->
     <table class="sc-table">
       <thead>
         <tr>
           <th class="sc-label-th"></th>
-          ${th("🏪 М1")}${th("🏪 М2")}${hk?th("🏧 Каса"):""}${th("📊 Общо")}
+          ${th("🏪 М1")}${th("🏪 М2")}${th("💰 Каса Кеш")}${th("🏦 Каса Банка")}${th("📊 Общо")}
         </tr>
       </thead>
       <tbody>
         <tr class="sc-row">
           <td class="sc-label">Приходи</td>
-          ${td2(m["1"].inc,"pos")}${td2(m["2"].inc,"pos")}${hk?td2(kasaInc,"pos"):""}
+          ${td2(m["1"].inc,"pos")}${td2(m["2"].inc,"pos")}${td2(kkInc,"pos")}${td2(kbInc,"pos")}
           <td class="sc-val"><span class="sc-num-lg pos">${f(tI)}</span></td>
         </tr>
         <tr class="sc-row">
           <td class="sc-label">Разходи</td>
-          ${td2(m["1"].exp,"neg")}${td2(m["2"].exp,"neg")}${hk?td2(kasaExp,"neg"):""}
+          ${td2(m["1"].exp,"neg")}${td2(m["2"].exp,"neg")}${td2(kkExp,"neg")}${td2(kbExp,"neg")}
           <td class="sc-val"><span class="sc-num-lg neg">${f(tE)}</span></td>
         </tr>
         <tr class="sc-row sc-saldo">
           <td class="sc-label"><strong>Салдо</strong></td>
-          ${tdB(s1,cls(s1))}${tdB(s2,cls(s2))}${hk?tdB(ks,cls(ks)):""}
+          ${tdB(s1,cls(s1))}${tdB(s2,cls(s2))}${tdB(kkS,cls(kkS))}${tdB(kbS,cls(kbS))}
           <td class="sc-val"><span class="sc-num-xl ${cls(tS)}">${f(tS)}</span></td>
-        </tr>
-        <tr class="sc-row sc-sub">
-          <td class="sc-label-sm">💰 Кеш</td>
-          ${tdS(m["1"].kesh)}${tdS(m["2"].kesh)}${hk?tdS(kasaKesh):""}
-          <td class="sc-val"><span class="sc-num-sm">${f(tKesh)}</span></td>
-        </tr>
-        <tr class="sc-row sc-sub">
-          <td class="sc-label-sm">💳 Карта/Банка</td>
-          ${tdS(m["1"].karta)}${tdS(m["2"].karta)}${hk?tdS(kasaKarta):""}
-          <td class="sc-val"><span class="sc-num-sm">${f(tKarta)}</span></td>
-        </tr>
-        <tr class="sc-row sc-pct">
-          <td class="sc-label-sm">Дял приход</td>
-          <td class="sc-val"><span class="sc-pct-val">${pct(m["1"].inc,tI)}%</span>${bar(m["1"].inc,tI,"var(--green)")}</td>
-          <td class="sc-val"><span class="sc-pct-val">${pct(m["2"].inc,tI)}%</span>${bar(m["2"].inc,tI,"var(--green)")}</td>
-          ${hk?`<td class="sc-val"><span class="sc-pct-val">${pct(kasaInc,tI)}%</span>${bar(kasaInc,tI,"var(--green)")}</td>`:""}
-          <td></td>
         </tr>
       </tbody>
     </table>
 
     <!-- Карти (мобилен изглед) -->
     <div class="sc-cards">
-      ${mkCard("🏪 М1",    m["1"].inc, m["1"].exp, s1, m["1"].kesh, m["1"].karta, pct(m["1"].inc,tI))}
-      ${mkCard("🏪 М2",    m["2"].inc, m["2"].exp, s2, m["2"].kesh, m["2"].karta, pct(m["2"].inc,tI))}
-      ${hk ? mkCard("🏧 Каса", kasaInc, kasaExp, ks, kasaKesh, kasaKarta, pct(kasaInc,tI)) : ""}
-      ${mkCard("📊 Общо",  tI,         tE,         tS, tKesh,       tKarta,       100)}
+      ${mkCard("🏪 М1",         m["1"].inc, m["1"].exp, s1)}
+      ${mkCard("🏪 М2",         m["2"].inc, m["2"].exp, s2)}
+      ${mkCard("💰 Каса Кеш",   kkInc,      kkExp,      kkS)}
+      ${mkCard("🏦 Каса Банка", kbInc,      kbExp,      kbS)}
+      ${mkCard("📊 Общо",       tI,         tE,         tS)}
     </div>`;
 }
 

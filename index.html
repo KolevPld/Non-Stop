@@ -101,14 +101,16 @@
       <!-- Магазин -->
       <label class="field-label">🏬 Магазин</label>
       <div class="pill-row" id="storePills">
-        <button type="button" class="pill-btn active" data-val="1"    onclick="setPill('store','1',    this)">М1</button>
-        <button type="button" class="pill-btn"        data-val="2"    onclick="setPill('store','2',    this)">М2</button>
-        <button type="button" class="pill-btn"        data-val="Каса" onclick="setPill('store','Каса', this)">🏧 Каса</button>
+        <button type="button" class="pill-btn active" data-val="1"          onclick="setPill('store','1',          this)">М1</button>
+        <button type="button" class="pill-btn"        data-val="2"          onclick="setPill('store','2',          this)">М2</button>
+        <button type="button" class="pill-btn"        data-val="КасаКеш"   onclick="setPill('store','КасаКеш',   this)">💰 К.Кеш</button>
+        <button type="button" class="pill-btn"        data-val="КасаБанка" onclick="setPill('store','КасаБанка', this)">🏦 К.Банка</button>
       </div>
       <select id="store" class="hidden">
         <option value="1">Магазин 1</option>
         <option value="2">Магазин 2</option>
-        <option value="Каса">Каса</option>
+        <option value="КасаКеш">Каса Кеш</option>
+        <option value="КасаБанка">Каса Банка</option>
       </select>
 
       <!-- Категория -->
@@ -235,7 +237,8 @@
           <option value="">Всички магазини</option>
           <option value="1">🏪 М1</option>
           <option value="2">🏪 М2</option>
-          <option value="Каса">🏧 Каса</option>
+          <option value="КасаКеш">💰 Каса Кеш</option>
+          <option value="КасаБанка">🏦 Каса Банка</option>
         </select>
       </div>
 
