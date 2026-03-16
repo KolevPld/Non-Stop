@@ -6,6 +6,11 @@
   <title>Нон Стоп Отчет</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icon-192.png" />
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW:', e));
+    }
+  </script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="style.css?v=20260312">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -170,12 +175,18 @@
 
     <!-- Summary cards -->
     <div class="report-summaries">
-      <div id="dailySummary" class="summary admin-only"></div>
-      <div id="monthlySummary" class="summary admin-only"></div>
-      <div id="methodSummary" class="summary admin-only"></div>
-      <div id="methodSummaryExtra" class="summary admin-only"></div>
+      <div id="periodSummary" class="summary admin-only"></div>
       <div id="liveBalance" class="summary admin-only"></div>
-      <div id="taxSummary" class="summary admin-only"></div>
+      <div class="summary admin-only">
+        <button class="accordion-btn" onclick="toggleFinancePanel()">
+          <span><i class="fa-solid fa-file-invoice-dollar"></i> Наличности &amp; Данъчна справка</span>
+          <span id="financeArrow" class="accordion-arrow">▾</span>
+        </button>
+        <div id="financePanel" class="hidden">
+          <div id="methodSummaryExtra"></div>
+          <div id="taxSummary"></div>
+        </div>
+      </div>
     </div>
 
     <!-- Chart -->

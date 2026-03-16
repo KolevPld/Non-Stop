@@ -120,7 +120,18 @@ function formatMoney(val) {
   }) + " €";
 }
 
+function escHtml(s) {
+  return String(s ?? "").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/'/g,"&#39;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
 const statusDiv = document.getElementById("status");
+
+function showStatusMsg(msg, durationMs = 3000) {
+  if (!statusDiv) return;
+  const prev = statusDiv.textContent;
+  statusDiv.textContent = msg;
+  setTimeout(() => { statusDiv.textContent = prev; }, durationMs);
+}
 
 onAuthStateChanged(auth, user => {
   const isLoggedIn = !!(user && !user.isAnonymous);
@@ -146,9 +157,42 @@ onAuthStateChanged(auth, user => {
 });
 
 // --------------------------------------------------
+// 🔄 Локално обновяване на UI (без Firestore заявка)
+// --------------------------------------------------
+function refreshUI() {
+  const isAdmin = document.body.classList.contains("admin");
+  renderRecentList();
+  renderRecentTable();
+  renderTotalSummaryCards();
+  if (isAdmin) {
+    renderTable();
+    updateSummaries();
+    renderMethodSummary();
+    renderChart();
+    applyFilters();
+    renderTaxSummary();
+    renderLiveBalance();
+  }
+}
+
+// --------------------------------------------------
 // 🔥 FIRESTORE: Зареждане
 // --------------------------------------------------
 async function loadRecords() {
+  // Нулираме евентуална редакция при презареждане
+  if (editingId) {
+    editingId = null;
+    imageRemoved = false;
+    clearForm();
+    const submitBtn = document.getElementById("submitBtn");
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Добави запис';
+      submitBtn.onclick = addRecord;
+    }
+    document.getElementById("cancelEditBtn")?.classList.add("hidden");
+  }
+
   records = [];
 
   const q = query(collection(db, "records"), orderBy("date", "desc"));
@@ -183,12 +227,9 @@ async function addRecord() {
   const type = document.getElementById("type")?.value;
   const method = (document.getElementById("method")?.value || "").split(" ")[0];
   const amount = parseFloat(document.getElementById("amount")?.value);
-
   const store = document.getElementById("store")?.value;
-
   const note = (document.getElementById("customNote")?.value || "").trim();
 
-  // Категория
   let category = document.getElementById("category")?.value || "";
   if (category === "custom") {
     category = document.getElementById("customCategory")?.value?.trim() || "";
@@ -197,22 +238,25 @@ async function addRecord() {
   if (!date || !type || !method || isNaN(amount) || amount <= 0) {
     return alert("Попълни дата и валидна сума.");
   }
+  if (!category) {
+    return alert("Въведи категория.");
+  }
 
   const imageUrl = uploadedImageUrl || "";
+  const submitBtn = document.getElementById("submitBtn");
+  if (submitBtn) submitBtn.disabled = true;
 
-  await addDoc(collection(db, "records"), {
-    date,
-    type,
-    method,
-    amount,
-    note,
-    category,
-    store,
-    imageUrl
-  });
-
-  await loadRecords();
-  clearForm();
+  try {
+    const docRef = await addDoc(collection(db, "records"), { date, type, method, amount, note, category, store, imageUrl });
+    records.unshift({ id: docRef.id, date, type, method, amount, note, category, store, imageUrl });
+    clearForm();
+    refreshUI();
+    showStatusMsg("✅ Записано!");
+  } catch (err) {
+    alert("Грешка при запис: " + err.message);
+  } finally {
+    if (submitBtn) submitBtn.disabled = false;
+  }
 }
 
 window.addRecord = addRecord;
@@ -233,7 +277,7 @@ window.editImage = async function (id) {
 
   // ✅ Скрол след като формата стане видима
   requestAnimationFrame(() => {
-    document.getElementById("addForm")?.scrollIntoView({ behavior: "smooth" });
+    document.getElementById("addForm")?.scrollIntoView({ behavior: "smooth", block: "center" });
   });
 
   // Попълване на полетата
@@ -312,7 +356,6 @@ async function saveEditedRecord() {
   const method = (document.getElementById("method")?.value || "").split(" ")[0];
   const amount = parseFloat(document.getElementById("amount")?.value);
   const store = document.getElementById("store")?.value;
-
   const note = (document.getElementById("customNote")?.value || "").trim();
 
   let category = document.getElementById("category")?.value || "";
@@ -323,40 +366,45 @@ async function saveEditedRecord() {
   if (!date || !type || !method || isNaN(amount) || amount <= 0) {
     return alert("Попълни дата и валидна сума.");
   }
+  if (!category) {
+    return alert("Въведи категория.");
+  }
 
   const old = records.find(r => r.id === editingId);
   if (old && !requireUnlockIfLocked(old.date)) return;
 
   const finalImageUrl = imageRemoved
-  ? ""                             // 👈 ако е премахната -> празно в базата
-  : (uploadedImageUrl || (old?.imageUrl || ""));
-
-await updateDoc(doc(db, "records", editingId), {
-  date,
-  type,
-  method,
-  amount,
-  note,
-  category,
-  store,
-  imageUrl: finalImageUrl
-});
-
-  editingId = null;
-  clearForm();
-  imageRemoved = false;
-  document.getElementById("addForm")?.classList.remove("editing-mode");
-  document.getElementById("cancelEditBtn")?.classList.add("hidden");
-
+    ? ""
+    : (uploadedImageUrl || (old?.imageUrl || ""));
 
   const submitBtn = document.getElementById("submitBtn");
-  if (submitBtn) {
-    submitBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Добави запис';
-    submitBtn.onclick = addRecord;
-  }
+  if (submitBtn) submitBtn.disabled = true;
 
-  await loadRecords();
-  window.showScreen("add");
+  try {
+    await updateDoc(doc(db, "records", editingId), { date, type, method, amount, note, category, store, imageUrl: finalImageUrl });
+
+    const idx = records.findIndex(r => r.id === editingId);
+    if (idx !== -1) records[idx] = { ...records[idx], date, type, method, amount, note, category, store, imageUrl: finalImageUrl };
+
+    editingId = null;
+    imageRemoved = false;
+    document.getElementById("addForm")?.classList.remove("editing-mode");
+    document.getElementById("cancelEditBtn")?.classList.add("hidden");
+    clearForm();
+
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Добави запис';
+      submitBtn.onclick = addRecord;
+    }
+
+    refreshUI();
+    showStatusMsg("✅ Промените са запазени!");
+    window.showScreen("add");
+  } catch (err) {
+    alert("Грешка при запис: " + err.message);
+    if (submitBtn) submitBtn.disabled = false;
+  }
 }
 
 window.saveEditedRecord = saveEditedRecord;
@@ -369,8 +417,14 @@ async function deleteRecord(id) {
   if (rec && !requireUnlockIfLocked(rec.date)) return;
 
   if (!confirm("Сигурен ли си?")) return;
-  await deleteDoc(doc(db, "records", id));
-  await loadRecords();
+
+  try {
+    await deleteDoc(doc(db, "records", id));
+    records = records.filter(r => r.id !== id);
+    refreshUI();
+  } catch (err) {
+    alert("Грешка при изтриване: " + err.message);
+  }
 }
 window.deleteRecord = deleteRecord;
 
@@ -390,10 +444,11 @@ function clearForm() {
   const cn = document.getElementById("customNote"); if (cn) cn.value = "";
 
   uploadedImageUrl = "";
+  imageRemoved = false;
   const imagePreview = document.getElementById("imagePreview");
   if (imagePreview) { imagePreview.src = ""; imagePreview.classList.add("hidden"); }
+  document.getElementById("removeImgBtn")?.classList.add("hidden");
 
-  // ако сме били в edit, махаме индикатор
   document.getElementById("addForm")?.classList.remove("editing-mode");
 }
 
@@ -419,16 +474,14 @@ window.cancelEdit = function () {
 // 🔄 Филтри
 // --------------------------------------------------
 // ── Нормализация ─────────────────────────────────────────────
+// Единна нормализация на магазин — ползва се навсякъде
 function normStore(s) {
   const v = String(s ?? "").trim().toLowerCase();
-  // М1 — всички варианти
-  if (v === "1" || v === "м1" || v === "m1" || v.includes("магазин 1") || v.includes("magazin 1")) return "1";
-  // М2 — всички варианти
-  if (v === "2" || v === "м2" || v === "m2" || v.includes("магазин 2") || v.includes("magazin 2")) return "2";
-  // Каса — всички варианти (включително null/undefined/празно)
-  if (v === "каса" || v === "kasa" || v === "каса " || v === "cash") return "Каса";
-  // Ако е празно или null — третира се като Каса (стари записи)
-  if (v === "" || v === "null" || v === "undefined") return "Каса";
+  if (v === "1" || v === "м1" || v === "m1" || v.includes("магазин 1") || v.includes("magazin 1") || v.includes("store 1")) return "1";
+  if (v === "2" || v === "м2" || v === "m2" || v.includes("магазин 2") || v.includes("magazin 2") || v.includes("store 2")) return "2";
+  if (v === "каса" || v === "kasa" || v === "cash") return "Каса";
+  // Празно/null — показва се само при "Всички магазини"
+  if (v === "" || v === "null" || v === "undefined") return "";
   return v;
 }
 function normMethod(m) {
@@ -510,7 +563,7 @@ function renderTable(data = records) {
       <td style="white-space: nowrap;">
         ${
           r.imageUrl
-            ? `<button class="btn-icon btn-photo" type="button" title="Снимка" onclick="openImageModal('${r.imageUrl}')">📷</button>`
+            ? `<button class="btn-icon btn-photo" type="button" title="Снимка" data-imgurl="${escHtml(r.imageUrl)}" onclick="openImageModal(this.dataset.imgurl)">📷</button>`
             : `<span class="muted">—</span>`
         }
         ${
@@ -544,7 +597,7 @@ function renderRecentTable() {
         <div class="actions-wrap">
           ${
             r.imageUrl
-              ? `<button class="btn-icon btn-photo" type="button" title="Снимка" onclick="openImageModal('${r.imageUrl}')">📷</button>`
+              ? `<button class="btn-icon btn-photo" type="button" title="Снимка" data-imgurl="${escHtml(r.imageUrl)}" onclick="openImageModal(this.dataset.imgurl)">📷</button>`
               : `<span class="muted">—</span>`
           }
 
@@ -614,46 +667,47 @@ function updateFilterSummary(data) {
 function updateSummaries() {
   const today = new Date().toISOString().slice(0, 10);
   const currentMonth = today.slice(0, 7);
-
-  let todayIncome = 0, todayExpense = 0, monthIncome = 0, monthExpense = 0;
+  let todayInc = 0, todayExp = 0, monthInc = 0, monthExp = 0;
 
   records.forEach(({ date, type, amount }) => {
     const a = Number(amount || 0);
-    if (date === today) {
-      if (type === "Приход") todayIncome += a;
-      else todayExpense += a;
-    }
-    if ((date || "").startsWith(currentMonth)) {
-      if (type === "Приход") monthIncome += a;
-      else monthExpense += a;
-    }
+    if (date === today) { if (type === "Приход") todayInc += a; else todayExp += a; }
+    if ((date || "").startsWith(currentMonth)) { if (type === "Приход") monthInc += a; else monthExp += a; }
   });
 
-  const saldo = (monthIncome - monthExpense).toFixed(2);
+  const f = n => n.toFixed(2) + " €";
+  const clr = n => n >= 0 ? "color:var(--green)" : "color:var(--red)";
+  const el = document.getElementById("periodSummary");
+  if (!el) return;
 
-  const daily = document.getElementById("dailySummary");
-  const monthly = document.getElementById("monthlySummary");
-
-  if (daily) {
-    daily.innerHTML = `
-      <h3><i class="fa-solid fa-calendar-day"></i> Днес</h3>
-      <table>
-        <tr><td>Приходи:</td><td>${todayIncome.toFixed(2)} €</td></tr>
-        <tr><td>Разходи:</td><td>${todayExpense.toFixed(2)} €</td></tr>
-      </table>
-    `;
-  }
-
-  if (monthly) {
-    monthly.innerHTML = `
-      <h3><i class="fa-solid fa-calendar-alt"></i> Месец</h3>
-      <table>
-        <tr><td>Приходи:</td><td>${monthIncome.toFixed(2)} €</td></tr>
-        <tr><td>Разходи:</td><td>${monthExpense.toFixed(2)} €</td></tr>
-        <tr><td><strong>Салдо:</strong></td><td><strong>${saldo} €</strong></td></tr>
-      </table>
-    `;
-  }
+  el.innerHTML = `
+    <h3><i class="fa-solid fa-calendar-alt"></i> Период</h3>
+    <table>
+      <thead>
+        <tr>
+          <th></th>
+          <th style="text-align:right;font-size:.75rem;color:var(--text3);font-weight:600;padding-bottom:6px">Днес</th>
+          <th style="text-align:right;font-size:.75rem;color:var(--text3);font-weight:600;padding-bottom:6px">Месец</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="color:var(--text2)">Приходи</td>
+          <td style="text-align:right;font-family:var(--mono);color:var(--green)">${f(todayInc)}</td>
+          <td style="text-align:right;font-family:var(--mono);color:var(--green)">${f(monthInc)}</td>
+        </tr>
+        <tr>
+          <td style="color:var(--text2)">Разходи</td>
+          <td style="text-align:right;font-family:var(--mono);color:var(--red)">${f(todayExp)}</td>
+          <td style="text-align:right;font-family:var(--mono);color:var(--red)">${f(monthExp)}</td>
+        </tr>
+        <tr style="border-top:1px solid var(--border)">
+          <td><strong>Салдо</strong></td>
+          <td style="text-align:right;font-family:var(--mono);font-weight:700;${clr(todayInc-todayExp)}">${f(todayInc-todayExp)}</td>
+          <td style="text-align:right;font-family:var(--mono);font-weight:700;${clr(monthInc-monthExp)}">${f(monthInc-monthExp)}</td>
+        </tr>
+      </tbody>
+    </table>`;
 }
 
 function renderTaxSummary() {
@@ -741,125 +795,39 @@ function renderTaxSummary() {
 }
 
 function renderMethodSummary() {
-  const makeTotals = () => ({ Кеш: 0, Карта: 0, Банка: 0 });
-
-  // ✅ Нормализация (за стари записи)
-  const normalizeStore = (s) => {
-    const v = String(s ?? "").trim().toLowerCase();
-    if (v === "1" || v === "м1" || v.includes("магазин 1") || v.includes("magazin 1") || v.includes("store 1")) return "1";
-    if (v === "2" || v === "м2" || v.includes("магазин 2") || v.includes("magazin 2") || v.includes("store 2")) return "2";
-    return ""; // други (напр. "Каса")
-  };
-
-  const normalizeMethod = (m) => String(m ?? "").trim().split(" ")[0]; // "Кеш", "Карта", "Банка"
-  const toDate = (iso) => {
-    // очакваме "YYYY-MM-DD"
-    const s = String(iso ?? "").trim();
-    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (!m) return null;
-    const y = Number(m[1]), mo = Number(m[2]) - 1, d = Number(m[3]);
-    return new Date(y, mo, d);
-  };
-
-  // ✅ Текущ месец
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-
-  // 1) Разпределение по метод (само текущ месец)
-  const totalsByStoreMonth = { "1": makeTotals(), "2": makeTotals() };
-
-  // 2) Общи наличности (целият период: всички записи)
-  const totalsAllPeriod = makeTotals();
-
-  // За показване на периода (първи/последен запис)
-  let minTime = null;
-  let maxTime = null;
+  const localNormMethod = (m) => String(m ?? "").trim().split(" ")[0];
+  const totals = { Кеш: 0, Карта: 0, Банка: 0 };
+  let minTime = null, maxTime = null;
 
   records.forEach((r) => {
-    const rawAmount = Number(r.amount || 0);
-    if (!Number.isFinite(rawAmount)) return;
-
-    const amount = r.type === "Приход" ? rawAmount : -rawAmount;
-
-    const method = normalizeMethod(r.method);
-    const store = normalizeStore(r.store);
-    const d = toDate(r.date);
-
-    // ---- период: първи..последен (по дата на записа)
-    if (d) {
-      const t = d.getTime();
+    const raw = Number(r.amount || 0);
+    if (!Number.isFinite(raw)) return;
+    const signed = r.type === "Приход" ? raw : -raw;
+    const method = localNormMethod(r.method);
+    const dateStr = String(r.date ?? "").trim();
+    const dp = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (dp) {
+      const t = new Date(+dp[1], +dp[2]-1, +dp[3]).getTime();
       if (minTime === null || t < minTime) minTime = t;
       if (maxTime === null || t > maxTime) maxTime = t;
     }
-
-    // ---- (A) Общи наличности: всички записи
-    if (totalsAllPeriod.hasOwnProperty(method)) {
-      totalsAllPeriod[method] += amount;
-    }
-
-    // ---- (B) Разпределение: само текущия месец + само магазини 1/2
-    if (d && d >= monthStart && d < nextMonthStart) {
-      if ((store === "1" || store === "2") && totalsByStoreMonth[store].hasOwnProperty(method)) {
-        totalsByStoreMonth[store][method] += amount;
-      }
-    }
+    if (totals.hasOwnProperty(method)) totals[method] += signed;
   });
 
-  const ms = document.getElementById("methodSummary");
   const msx = document.getElementById("methodSummaryExtra");
+  if (!msx) return;
 
-  const row = (label, value, strong = false) =>
-    `<tr><td>${strong ? `<strong>${label}</strong>` : label}</td><td>${strong ? `<strong>${value}</strong>` : value}</td></tr>`;
+  const fmt = n => Number(n || 0).toFixed(2) + " €";
+  const fmtDate = t => t === null ? "—" : new Date(t).toLocaleDateString("bg-BG");
+  const row = (l, v) => `<tr><td>${l}</td><td>${v}</td></tr>`;
 
-  const fmt2 = (n) => (Number(n || 0)).toFixed(2);
-  const fmtPeriod = (t) => {
-    if (t === null) return "—";
-    const d = new Date(t);
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const da = String(d.getDate()).padStart(2, "0");
-    return `${y}-${m}-${da}`;
-  };
-
-  // --- UI: Разпределение (текущ месец)
-  if (ms) {
-    const m1Cash = totalsByStoreMonth["1"].Кеш;
-    const m1Card = totalsByStoreMonth["1"].Карта;
-    const m2Cash = totalsByStoreMonth["2"].Кеш;
-    const m2Card = totalsByStoreMonth["2"].Карта;
-
-    const totalCashCard = m1Cash + m1Card + m2Cash + m2Card;
-
-    ms.innerHTML = `
-      <h3><i class="fa-solid fa-wallet"></i> Разпределение по метод (текущ месец)</h3>
-      <table>
-        ${row("💰 Кеш (М1):", `${fmt2(m1Cash)} €`)}
-        ${row("💳 Карта (М1):", `${fmt2(m1Card)} €`)}
-        ${row("💰 Кеш (М2):", `${fmt2(m2Cash)} €`)}
-        ${row("💳 Карта (М2):", `${fmt2(m2Card)} €`)}
-        ${row("Общо:", `${fmt2(totalCashCard)} €`, true)}
-      </table>
-    `;
-  }
-
-  // --- UI: Общи наличности (целият период)
-  if (msx) {
-    const totalCash = totalsAllPeriod.Кеш;
-    const totalBank = totalsAllPeriod.Банка + totalsAllPeriod.Карта;
-
-    const from = fmtPeriod(minTime);
-    const to = fmtPeriod(maxTime);
-
-    msx.innerHTML = `
-      <h3><i class="fa-solid fa-circle-dollar-to-slot"></i> Общи наличности</h3>
-      <div class="muted" style="margin: 6px 0 10px;">Период: ${from} → ${to}</div>
-      <table>
-        ${row("💵 Общо кеш:", `${fmt2(totalCash)} €`)}
-        ${row("🏦 Общо банка:", `${fmt2(totalBank)} €`)}
-      </table>
-    `;
-  }
+  msx.innerHTML = `
+    <h3><i class="fa-solid fa-circle-dollar-to-slot"></i> Общи наличности</h3>
+    <div class="muted" style="margin:6px 0 10px;">Период: ${fmtDate(minTime)} → ${fmtDate(maxTime)}</div>
+    <table>
+      ${row("💵 Общо кеш:", fmt(totals.Кеш))}
+      ${row("🏦 Общо банка:", fmt(totals.Банка + totals.Карта))}
+    </table>`;
 }
 
 // --------------------------------------------------
@@ -982,11 +950,11 @@ function renderRecentList() {
     const cls  = isIncome ? "income" : "expense";
     const adminBtns = isAdmin
       ? `<div class="record-actions">
-          ${r.imageUrl ? `<button class="btn-icon btn-photo" onclick="openImageModal('${r.imageUrl}')">📷</button>` : ''}
+          ${r.imageUrl ? `<button class="btn-icon btn-photo" data-imgurl="${escHtml(r.imageUrl)}" onclick="openImageModal(this.dataset.imgurl)">📷</button>` : ''}
           <button class="btn-icon btn-edit" onclick="editImage('${r.id}')">✏️</button>
           <button class="btn-icon btn-del"  onclick="deleteRecord('${r.id}')">🗑️</button>
          </div>`
-      : (r.imageUrl ? `<button class="btn-icon btn-photo" onclick="openImageModal('${r.imageUrl}')">📷</button>` : '');
+      : (r.imageUrl ? `<button class="btn-icon btn-photo" data-imgurl="${escHtml(r.imageUrl)}" onclick="openImageModal(this.dataset.imgurl)">📷</button>` : '');
 
     return `
       <div class="record-row">
@@ -1056,35 +1024,35 @@ function renderStoreComparison() {
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const nextMonth  = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
-  const ns = (s) => {
-    const v = String(s ?? "").trim().toLowerCase();
-    if (v === "1" || v === "м1" || v.includes("магазин 1")) return "1";
-    if (v === "2" || v === "м2" || v.includes("магазин 2")) return "2";
-    return null;
-  };
   const td = (iso) => {
     const p = String(iso ?? "").trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
     return p ? new Date(+p[1], +p[2]-1, +p[3]) : null;
   };
 
-  const m = { "1": { inc:0, exp:0 }, "2": { inc:0, exp:0 } };
-  let kasaInc = 0, kasaExp = 0;
+  const m = { "1": { inc:0, exp:0, kesh:0, karta:0 }, "2": { inc:0, exp:0, kesh:0, karta:0 } };
+  let kasaInc=0, kasaExp=0, kasaKesh=0, kasaKarta=0;
 
   records.forEach(r => {
     const amount = Number(r.amount || 0);
     if (!Number.isFinite(amount) || amount === 0) return;
     const d = td(r.date);
     if (!d || d < monthStart || d >= nextMonth) return;
-    const store = ns(r.store);
-    if (!store) {
-      if (r.type === "Приход") kasaInc += amount; else kasaExp += amount;
+    const store = normStore(r.store);
+    const isInc = r.type === "Приход";
+    const signed = isInc ? amount : -amount;
+    const isKesh = normMethod(r.method) === "Кеш";
+    if (store !== "1" && store !== "2") {
+      if (isInc) kasaInc += amount; else kasaExp += amount;
+      if (isKesh) kasaKesh += signed; else kasaKarta += signed;
       return;
     }
-    if (r.type === "Приход") m[store].inc += amount; else m[store].exp += amount;
+    if (isInc) m[store].inc += amount; else m[store].exp += amount;
+    if (isKesh) m[store].kesh += signed; else m[store].karta += signed;
   });
 
   const s1=m["1"].inc-m["1"].exp, s2=m["2"].inc-m["2"].exp, ks=kasaInc-kasaExp;
   const tI=m["1"].inc+m["2"].inc+kasaInc, tE=m["1"].exp+m["2"].exp+kasaExp, tS=s1+s2+ks;
+  const tKesh=m["1"].kesh+m["2"].kesh+kasaKesh, tKarta=m["1"].karta+m["2"].karta+kasaKarta;
 
   const f=n=>n.toFixed(2)+" €", cls=n=>n>=0?"pos":"neg";
   const pct=(a,t)=>t>0?Math.round(a/t*100):0;
@@ -1095,6 +1063,7 @@ function renderStoreComparison() {
   const hk=kasaInc||kasaExp;
   const th=s=>`<th style="font-size:.7rem;color:var(--text3);font-weight:600;padding:0 0 10px;text-transform:uppercase;text-align:right">${s}</th>`;
   const td2=(v,c)=>`<td style="text-align:right;font-family:var(--mono);font-weight:600" class="${c}">${f(v)}</td>`;
+  const tdS=(v)=>`<td style="text-align:right;font-family:var(--mono);font-size:.8rem;color:var(--text2)">${f(v)}</td>`;
 
   el.innerHTML = `
     <h3><i class="fa-solid fa-scale-balanced"></i> Сравнение М1 vs М2 — текущ месец</h3>
@@ -1110,7 +1079,17 @@ function renderStoreComparison() {
           ${hk?`<td style="text-align:right;font-family:var(--mono);font-weight:700" class="${cls(ks)}">${f(ks)}</td>`:""}
           <td style="text-align:right;font-family:var(--mono);font-weight:800;font-size:1rem" class="${cls(tS)}">${f(tS)}</td>
         </tr>
+        <tr style="border-top:1px solid var(--border)">
+          <td style="color:var(--text3);font-size:.8rem">💰 Кеш</td>
+          ${tdS(m["1"].kesh)}${tdS(m["2"].kesh)}${hk?tdS(kasaKesh):""}
+          <td style="text-align:right;font-family:var(--mono);font-size:.8rem;color:var(--text2)">${f(tKesh)}</td>
+        </tr>
         <tr>
+          <td style="color:var(--text3);font-size:.8rem">💳 Карта/Банка</td>
+          ${tdS(m["1"].karta)}${tdS(m["2"].karta)}${hk?tdS(kasaKarta):""}
+          <td style="text-align:right;font-family:var(--mono);font-size:.8rem;color:var(--text2)">${f(tKarta)}</td>
+        </tr>
+        <tr style="border-top:1px solid var(--border)">
           <td style="color:var(--text3);font-size:.75rem">Дял приход</td>
           <td style="text-align:right;color:var(--text2);font-size:.75rem">${pct(m["1"].inc,tI)}%${bar(m["1"].inc,tI,"var(--green)")}</td>
           <td style="text-align:right;color:var(--text2);font-size:.75rem">${pct(m["2"].inc,tI)}%${bar(m["2"].inc,tI,"var(--green)")}</td>
@@ -1120,6 +1099,15 @@ function renderStoreComparison() {
       </tbody>
     </table>`;
 }
+
+// ── Accordion: Наличности & Данъчна справка ───────────────────
+window.toggleFinancePanel = function() {
+  const panel = document.getElementById("financePanel");
+  const arrow = document.getElementById("financeArrow");
+  if (!panel) return;
+  const hidden = panel.classList.toggle("hidden");
+  if (arrow) arrow.textContent = hidden ? "▾" : "▴";
+};
 
 // ── syncPills ─────────────────────────────────────────────────
 window.syncPills = function() {
@@ -1252,3 +1240,10 @@ function scheduleReminder() {
 if (localStorage.getItem('ns_notif') === '1' && 'Notification' in window && Notification.permission === 'granted') {
   scheduleReminder();
 }
+
+// --------------------------------------------------
+// 🛡️ Глобален handler за необработени Promise грешки
+// --------------------------------------------------
+window.addEventListener('unhandledrejection', e => {
+  console.error('Unhandled rejection:', e.reason);
+});
