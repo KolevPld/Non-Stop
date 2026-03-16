@@ -1482,6 +1482,10 @@ body.admin .table-responsive.admin-only { display: block; }
 .fs-chip.exp{background:rgba(248,113,113,.12);color:#f87171}
 .fs-chip.sal{background:rgba(255,255,255,.06)}
 
+/* ── Store cell (кликаем филтър) ── */
+.store-cell{cursor:pointer;white-space:nowrap;font-size:.8rem}
+.store-cell:hover{color:var(--green);text-decoration:underline}
+
 /* ── Accordion: Наличности & Данъчна справка ── */
 .accordion-btn{display:flex;justify-content:space-between;align-items:center;width:100%;background:none;border:none;color:var(--text1);font-size:.9rem;font-weight:600;padding:4px 0;cursor:pointer;text-align:left;gap:8px}
 .accordion-btn:hover{color:var(--green)}

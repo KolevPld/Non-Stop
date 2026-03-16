@@ -541,6 +541,24 @@ window.applyFilters = applyFilters;
 window.clearFilters = clearFilters;
 
 // --------------------------------------------------
+// 🏪 Хелпъри за магазин
+// --------------------------------------------------
+function storeLabel(store) {
+  const s = normStore(store);
+  if (s === "1") return "🏪 М1";
+  if (s === "2") return "🏪 М2";
+  if (s === "Каса") return "🏧 Каса";
+  return "—";
+}
+
+window.filterByStore = function(store) {
+  const el = document.getElementById("filterStore");
+  if (!el) return;
+  el.value = store;
+  applyFilters();
+};
+
+// --------------------------------------------------
 // 📊 Таблици
 // --------------------------------------------------
 function renderTable(data = records) {
@@ -558,6 +576,7 @@ function renderTable(data = records) {
       <td style="color:${r.type === "Приход" ? "#4caf50" : "#f44336"};">${r.type || ""}</td>
       <td class="money">${formatMoney(r.amount)}</td>
       <td>${r.method || ""}</td>
+      <td class="store-cell" data-store="${normStore(r.store)}" onclick="filterByStore(this.dataset.store)" title="Филтрирай по магазин">${storeLabel(r.store)}</td>
       <td>${r.category || ""}</td>
       <td>${r.note || ""}</td>
       <td style="white-space: nowrap;">
@@ -590,6 +609,7 @@ function renderRecentTable() {
       <td style="color:${r.type === "Приход" ? "#4caf50" : "#f44336"};">${r.type || ""}</td>
       <td class="money">${formatMoney(r.amount)}</td>
       <td>${r.method || ""}</td>
+      <td>${storeLabel(r.store)}</td>
       <td>${r.category || ""}</td>
       <td>${r.note || ""}</td>
 
@@ -962,7 +982,7 @@ function renderRecentList() {
         <div class="record-meta">
           <span class="record-date">${r.date || ''} · ${r.method || ''}</span>
           <span class="record-name">${r.category || ''}${r.note ? ' · ' + r.note : ''}</span>
-          <span class="record-sub">${r.store ? (r.store==='Каса'?'🏧 Каса':'М'+r.store) : ''}</span>
+          <span class="record-sub">${storeLabel(r.store) !== "—" ? storeLabel(r.store) : ""}</span>
         </div>
         <div class="record-right">
           <span class="record-amount ${cls}">${sign}${formatMoney(r.amount)}</span>
