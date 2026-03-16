@@ -831,7 +831,7 @@ button {
 #recordsTable tr:hover td { background: var(--bg3); }
 
 /* Column widths */
-#recordsTable { min-width: 560px; }   /* минимум за да не се чупи на малки прозорци */
+#recordsTable { min-width: 640px; }   /* +Магазин колона */
 
 #recordsTable th:nth-child(1), #recordsTable td:nth-child(1) { width: 82px; }
 #recordsTable th:nth-child(2), #recordsTable td:nth-child(2) { width: 60px; }
@@ -1483,10 +1483,11 @@ body.admin .table-responsive.admin-only { display: block; }
 .fs-chip.sal{background:rgba(255,255,255,.06)}
 
 /* ── Сравнение table (sc-*) ── */
-.sc-table{width:100%;border-collapse:collapse;margin-top:10px}
+#liveBalance{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.sc-table{width:100%;border-collapse:collapse;margin-top:10px;min-width:300px}
 .sc-th{font-size:.78rem;color:var(--text3);font-weight:700;text-align:right;padding:0 10px 12px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
 .sc-label-th{width:110px}
-.sc-row td{padding:10px 10px}
+.sc-row td{padding:10px}
 .sc-label{color:var(--text2);font-size:.95rem;white-space:nowrap}
 .sc-label-sm{color:var(--text3);font-size:.82rem;white-space:nowrap;padding-left:10px!important}
 .sc-val{text-align:right}
@@ -1502,6 +1503,19 @@ body.admin .table-responsive.admin-only { display: block; }
 .sc-sub{opacity:.85}
 .sc-pct{border-top:1px solid var(--border)}
 .sc-pct td{padding-top:8px!important;padding-bottom:4px!important}
+
+@media (max-width:599px){
+  .sc-label-th{width:80px}
+  .sc-row td{padding:7px 5px}
+  .sc-th{font-size:.68rem;padding:0 5px 8px;letter-spacing:0}
+  .sc-label{font-size:.82rem}
+  .sc-label-sm{font-size:.75rem}
+  .sc-num{font-size:.82rem}
+  .sc-num-lg{font-size:.9rem}
+  .sc-num-xl{font-size:1rem}
+  .sc-num-sm,.sc-pct-val{font-size:.72rem}
+  .sc-saldo td{padding-top:8px!important;padding-bottom:8px!important}
+}
 
 /* ── Store cell (кликаем филтър) ── */
 .store-cell{cursor:pointer;white-space:nowrap;font-size:.8rem}
