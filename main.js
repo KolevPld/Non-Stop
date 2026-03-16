@@ -166,7 +166,6 @@ function refreshUI() {
   renderTotalSummaryCards();
   if (isAdmin) {
     renderTable();
-    updateSummaries();
     renderMethodSummary();
     renderChart();
     applyFilters();
@@ -205,7 +204,6 @@ async function loadRecords() {
   if (document.body.classList.contains("admin")) {
     renderTable();
     renderRecentList(); renderRecentTable();
-    updateSummaries();
     renderMethodSummary();
     renderChart();
     applyFilters();
@@ -684,51 +682,6 @@ function updateFilterSummary(data) {
 // --------------------------------------------------
 // 📈 Обобщения
 // --------------------------------------------------
-function updateSummaries() {
-  const today = new Date().toISOString().slice(0, 10);
-  const currentMonth = today.slice(0, 7);
-  let todayInc = 0, todayExp = 0, monthInc = 0, monthExp = 0;
-
-  records.forEach(({ date, type, amount }) => {
-    const a = Number(amount || 0);
-    if (date === today) { if (type === "Приход") todayInc += a; else todayExp += a; }
-    if ((date || "").startsWith(currentMonth)) { if (type === "Приход") monthInc += a; else monthExp += a; }
-  });
-
-  const f = n => n.toFixed(2) + " €";
-  const clr = n => n >= 0 ? "color:var(--green)" : "color:var(--red)";
-  const el = document.getElementById("periodSummary");
-  if (!el) return;
-
-  el.innerHTML = `
-    <h3><i class="fa-solid fa-calendar-alt"></i> Период</h3>
-    <table>
-      <thead>
-        <tr>
-          <th></th>
-          <th style="text-align:right;font-size:.75rem;color:var(--text3);font-weight:600;padding-bottom:6px">Днес</th>
-          <th style="text-align:right;font-size:.75rem;color:var(--text3);font-weight:600;padding-bottom:6px">Месец</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td style="color:var(--text2)">Приходи</td>
-          <td style="text-align:right;font-family:var(--mono);color:var(--green)">${f(todayInc)}</td>
-          <td style="text-align:right;font-family:var(--mono);color:var(--green)">${f(monthInc)}</td>
-        </tr>
-        <tr>
-          <td style="color:var(--text2)">Разходи</td>
-          <td style="text-align:right;font-family:var(--mono);color:var(--red)">${f(todayExp)}</td>
-          <td style="text-align:right;font-family:var(--mono);color:var(--red)">${f(monthExp)}</td>
-        </tr>
-        <tr style="border-top:1px solid var(--border)">
-          <td><strong>Салдо</strong></td>
-          <td style="text-align:right;font-family:var(--mono);font-weight:700;${clr(todayInc-todayExp)}">${f(todayInc-todayExp)}</td>
-          <td style="text-align:right;font-family:var(--mono);font-weight:700;${clr(monthInc-monthExp)}">${f(monthInc-monthExp)}</td>
-        </tr>
-      </tbody>
-    </table>`;
-}
 
 function renderTaxSummary() {
   const tax = document.getElementById("taxSummary");
@@ -936,7 +889,7 @@ window.showScreen = function(screen) {
     if (!isAdmin) { alert("Нямаш достъп до този екран."); return; }
     reportScreen?.classList.remove("hidden");
     document.getElementById('navReports')?.classList.add('active');
-    renderTable(); updateSummaries(); renderMethodSummary();
+    renderTable(); renderMethodSummary();
     renderChart(); applyFilters(); renderTaxSummary();
 
   } else if (screen === "notes") {
@@ -1078,42 +1031,54 @@ function renderStoreComparison() {
   const pct=(a,t)=>t>0?Math.round(a/t*100):0;
   const bar=(val,tot,col)=>{
     const w=tot>0?Math.min(100,Math.round(val/tot*100)):0;
-    return `<div style="height:3px;background:var(--border);border-radius:2px;margin-top:3px"><div style="width:${w}%;height:100%;background:${col};border-radius:2px"></div></div>`;
+    return `<div style="height:4px;background:var(--border);border-radius:2px;margin-top:4px"><div style="width:${w}%;height:100%;background:${col};border-radius:2px"></div></div>`;
   };
   const hk=kasaInc||kasaExp;
-  const th=s=>`<th style="font-size:.7rem;color:var(--text3);font-weight:600;padding:0 0 10px;text-transform:uppercase;text-align:right">${s}</th>`;
-  const td2=(v,c)=>`<td style="text-align:right;font-family:var(--mono);font-weight:600" class="${c}">${f(v)}</td>`;
-  const tdS=(v)=>`<td style="text-align:right;font-family:var(--mono);font-size:.8rem;color:var(--text2)">${f(v)}</td>`;
+  const th=s=>`<th class="sc-th">${s}</th>`;
+  const td2=(v,c)=>`<td class="sc-val" class="${c}"><span class="sc-num ${c}">${f(v)}</span></td>`;
+  const tdB=(v,c)=>`<td class="sc-val"><span class="sc-num-lg ${c}">${f(v)}</span></td>`;
+  const tdS=(v)=>`<td class="sc-val"><span class="sc-num-sm">${f(v)}</span></td>`;
 
   el.innerHTML = `
     <h3><i class="fa-solid fa-scale-balanced"></i> Сравнение М1 vs М2 — текущ месец</h3>
-    <table>
-      <thead><tr><th></th>${th("🏪 М1")}${th("🏪 М2")}${hk?th("🏧 Каса"):""}${th("📊 Общо")}</tr></thead>
-      <tbody>
-        <tr><td style="color:var(--text2)">Приходи</td>${td2(m["1"].inc,"pos")}${td2(m["2"].inc,"pos")}${hk?td2(kasaInc,"pos"):""}<td style="text-align:right;font-family:var(--mono);font-weight:700;color:var(--green)">${f(tI)}</td></tr>
-        <tr><td style="color:var(--text2)">Разходи</td>${td2(m["1"].exp,"neg")}${td2(m["2"].exp,"neg")}${hk?td2(kasaExp,"neg"):""}<td style="text-align:right;font-family:var(--mono);font-weight:700;color:var(--red)">${f(tE)}</td></tr>
-        <tr style="border-top:1px solid var(--border)">
-          <td><strong>Салдо</strong></td>
-          <td style="text-align:right;font-family:var(--mono);font-weight:700" class="${cls(s1)}">${f(s1)}</td>
-          <td style="text-align:right;font-family:var(--mono);font-weight:700" class="${cls(s2)}">${f(s2)}</td>
-          ${hk?`<td style="text-align:right;font-family:var(--mono);font-weight:700" class="${cls(ks)}">${f(ks)}</td>`:""}
-          <td style="text-align:right;font-family:var(--mono);font-weight:800;font-size:1rem" class="${cls(tS)}">${f(tS)}</td>
-        </tr>
-        <tr style="border-top:1px solid var(--border)">
-          <td style="color:var(--text3);font-size:.8rem">💰 Кеш</td>
-          ${tdS(m["1"].kesh)}${tdS(m["2"].kesh)}${hk?tdS(kasaKesh):""}
-          <td style="text-align:right;font-family:var(--mono);font-size:.8rem;color:var(--text2)">${f(tKesh)}</td>
-        </tr>
+    <table class="sc-table">
+      <thead>
         <tr>
-          <td style="color:var(--text3);font-size:.8rem">💳 Карта/Банка</td>
-          ${tdS(m["1"].karta)}${tdS(m["2"].karta)}${hk?tdS(kasaKarta):""}
-          <td style="text-align:right;font-family:var(--mono);font-size:.8rem;color:var(--text2)">${f(tKarta)}</td>
+          <th class="sc-label-th"></th>
+          ${th("🏪 М1")}${th("🏪 М2")}${hk?th("🏧 Каса"):""}${th("📊 Общо")}
         </tr>
-        <tr style="border-top:1px solid var(--border)">
-          <td style="color:var(--text3);font-size:.75rem">Дял приход</td>
-          <td style="text-align:right;color:var(--text2);font-size:.75rem">${pct(m["1"].inc,tI)}%${bar(m["1"].inc,tI,"var(--green)")}</td>
-          <td style="text-align:right;color:var(--text2);font-size:.75rem">${pct(m["2"].inc,tI)}%${bar(m["2"].inc,tI,"var(--green)")}</td>
-          ${hk?`<td style="text-align:right;color:var(--text2);font-size:.75rem">${pct(kasaInc,tI)}%${bar(kasaInc,tI,"var(--green)")}</td>`:""}
+      </thead>
+      <tbody>
+        <tr class="sc-row">
+          <td class="sc-label">Приходи</td>
+          ${td2(m["1"].inc,"pos")}${td2(m["2"].inc,"pos")}${hk?td2(kasaInc,"pos"):""}
+          <td class="sc-val"><span class="sc-num-lg pos">${f(tI)}</span></td>
+        </tr>
+        <tr class="sc-row">
+          <td class="sc-label">Разходи</td>
+          ${td2(m["1"].exp,"neg")}${td2(m["2"].exp,"neg")}${hk?td2(kasaExp,"neg"):""}
+          <td class="sc-val"><span class="sc-num-lg neg">${f(tE)}</span></td>
+        </tr>
+        <tr class="sc-row sc-saldo">
+          <td class="sc-label"><strong>Салдо</strong></td>
+          ${tdB(s1,cls(s1))}${tdB(s2,cls(s2))}${hk?tdB(ks,cls(ks)):""}
+          <td class="sc-val"><span class="sc-num-xl ${cls(tS)}">${f(tS)}</span></td>
+        </tr>
+        <tr class="sc-row sc-sub">
+          <td class="sc-label-sm">💰 Кеш</td>
+          ${tdS(m["1"].kesh)}${tdS(m["2"].kesh)}${hk?tdS(kasaKesh):""}
+          <td class="sc-val"><span class="sc-num-sm">${f(tKesh)}</span></td>
+        </tr>
+        <tr class="sc-row sc-sub">
+          <td class="sc-label-sm">💳 Карта/Банка</td>
+          ${tdS(m["1"].karta)}${tdS(m["2"].karta)}${hk?tdS(kasaKarta):""}
+          <td class="sc-val"><span class="sc-num-sm">${f(tKarta)}</span></td>
+        </tr>
+        <tr class="sc-row sc-pct">
+          <td class="sc-label-sm">Дял приход</td>
+          <td class="sc-val"><span class="sc-pct-val">${pct(m["1"].inc,tI)}%</span>${bar(m["1"].inc,tI,"var(--green)")}</td>
+          <td class="sc-val"><span class="sc-pct-val">${pct(m["2"].inc,tI)}%</span>${bar(m["2"].inc,tI,"var(--green)")}</td>
+          ${hk?`<td class="sc-val"><span class="sc-pct-val">${pct(kasaInc,tI)}%</span>${bar(kasaInc,tI,"var(--green)")}</td>`:""}
           <td></td>
         </tr>
       </tbody>

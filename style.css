@@ -1482,6 +1482,27 @@ body.admin .table-responsive.admin-only { display: block; }
 .fs-chip.exp{background:rgba(248,113,113,.12);color:#f87171}
 .fs-chip.sal{background:rgba(255,255,255,.06)}
 
+/* ── Сравнение table (sc-*) ── */
+.sc-table{width:100%;border-collapse:collapse;margin-top:10px}
+.sc-th{font-size:.78rem;color:var(--text3);font-weight:700;text-align:right;padding:0 10px 12px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.sc-label-th{width:110px}
+.sc-row td{padding:10px 10px}
+.sc-label{color:var(--text2);font-size:.95rem;white-space:nowrap}
+.sc-label-sm{color:var(--text3);font-size:.82rem;white-space:nowrap;padding-left:10px!important}
+.sc-val{text-align:right}
+.sc-num{font-family:var(--mono,monospace);font-size:.95rem;font-weight:600}
+.sc-num-lg{font-family:var(--mono,monospace);font-size:1.05rem;font-weight:700}
+.sc-num-xl{font-family:var(--mono,monospace);font-size:1.2rem;font-weight:800}
+.sc-num-sm{font-family:var(--mono,monospace);font-size:.82rem;color:var(--text2)}
+.sc-pct-val{font-family:var(--mono,monospace);font-size:.82rem;color:var(--text2)}
+.sc-num.pos,.sc-num-lg.pos,.sc-num-xl.pos{color:var(--green)}
+.sc-num.neg,.sc-num-lg.neg,.sc-num-xl.neg{color:var(--red)}
+.sc-saldo{border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.sc-saldo td{padding-top:12px!important;padding-bottom:12px!important}
+.sc-sub{opacity:.85}
+.sc-pct{border-top:1px solid var(--border)}
+.sc-pct td{padding-top:8px!important;padding-bottom:4px!important}
+
 /* ── Store cell (кликаем филтър) ── */
 .store-cell{cursor:pointer;white-space:nowrap;font-size:.8rem}
 .store-cell:hover{color:var(--green);text-decoration:underline}
