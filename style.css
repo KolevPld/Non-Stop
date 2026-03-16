@@ -1056,6 +1056,17 @@ body.admin .table-responsive.admin-only { display: block; }
   }
 }
 
+/* ── Landscape мобилен (≤1023px, landscape) ──── */
+@media (orientation: landscape) and (max-width: 1023px) {
+  #app {
+    max-width: none;
+    padding: 14px 20px 0;
+  }
+  #screen-report {
+    max-width: none;
+  }
+}
+
 /* ── Desktop (1024px+) ───────────────────────── */
 @media (min-width: 1024px) {
 
