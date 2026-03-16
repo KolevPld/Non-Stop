@@ -173,18 +173,18 @@
       <h2><i class="fa-solid fa-chart-pie" style="color:var(--green)"></i> Отчети</h2>
     </div>
 
-    <!-- Summary cards -->
-    <div class="report-summaries">
-      <div id="liveBalance" class="summary admin-only"></div>
-      <div class="summary admin-only">
-        <button class="accordion-btn" onclick="toggleFinancePanel()">
-          <span><i class="fa-solid fa-file-invoice-dollar"></i> Наличности &amp; Данъчна справка</span>
-          <span id="financeArrow" class="accordion-arrow">▾</span>
-        </button>
-        <div id="financePanel" class="hidden">
-          <div id="methodSummaryExtra"></div>
-          <div id="taxSummary"></div>
-        </div>
+    <!-- Сравнение table — full width, same as chart -->
+    <div id="liveBalance" class="summary admin-only"></div>
+
+    <!-- Наличности & Данъчна справка accordion -->
+    <div class="summary admin-only">
+      <button class="accordion-btn" onclick="toggleFinancePanel()">
+        <span><i class="fa-solid fa-file-invoice-dollar"></i> Наличности &amp; Данъчна справка</span>
+        <span id="financeArrow" class="accordion-arrow">▾</span>
+      </button>
+      <div id="financePanel" class="hidden">
+        <div id="methodSummaryExtra"></div>
+        <div id="taxSummary"></div>
       </div>
     </div>
 
