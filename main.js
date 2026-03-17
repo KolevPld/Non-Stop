@@ -471,6 +471,21 @@ window.cancelEdit = function () {
 // --------------------------------------------------
 // 🔄 Филтри
 // --------------------------------------------------
+// ── Сортиране ─────────────────────────────────────────────────
+// Приоритет: Дата DESC → Магазин ASC (М1=1, М2=2, К.Кеш=3, К.Банка=4) → Тип ASC (Приход=1, Разход=2)
+function sortRecords(arr) {
+  const storeOrder = { "1": 1, "2": 2, "КасаКеш": 3, "КасаБанка": 4 };
+  const typeOrder  = { "Приход": 1, "Разход": 2 };
+  return arr.slice().sort((a, b) => {
+    const dateCmp = (b.date || "").localeCompare(a.date || "");
+    if (dateCmp !== 0) return dateCmp;
+    const aStore = effectiveStore(a), bStore = effectiveStore(b);
+    const storeCmp = (storeOrder[aStore] ?? 9) - (storeOrder[bStore] ?? 9);
+    if (storeCmp !== 0) return storeCmp;
+    return (typeOrder[a.type] ?? 9) - (typeOrder[b.type] ?? 9);
+  });
+}
+
 // ── Нормализация ─────────────────────────────────────────────
 // Единна нормализация на магазин — ползва се навсякъде
 function normStore(s) {
@@ -512,7 +527,7 @@ function applyFilters() {
   const endDate   = document.getElementById("endDate")?.value        ?? "";
   const store     = document.getElementById("filterStore")?.value    ?? "";
 
-  filteredRecords = records.filter(r => {
+  filteredRecords = sortRecords(records.filter(r => {
     if (!r) return false;
     const matchType     = !type     || r.type === type;
     const matchMethod   = !method   || normMethod(r.method) === method;
@@ -521,7 +536,7 @@ function applyFilters() {
     const matchEnd      = !endDate   || (r.date ?? "") <= endDate;
     const matchStore    = !store     || effectiveStore(r) === store;
     return matchType && matchMethod && matchCategory && matchStart && matchEnd && matchStore;
-  });
+  }));
 
   renderTable(filteredRecords);
   updateFilterSummary(filteredRecords);
@@ -569,7 +584,7 @@ window.filterByStore = function(store) {
 // --------------------------------------------------
 // 📊 Таблици
 // --------------------------------------------------
-function renderTable(data = records) {
+function renderTable(data = sortRecords(records)) {
   const tbody = document.querySelector("#recordsTable tbody");
   if (!tbody) return;
 
@@ -900,7 +915,7 @@ function renderRecentList() {
     return;
   }
 
-  container.innerHTML = records.slice(0, 10).map(r => {
+  container.innerHTML = sortRecords(records).slice(0, 10).map(r => {
     const isIncome = r.type === "Приход";
     const sign = isIncome ? "+" : "−";
     const cls  = isIncome ? "income" : "expense";
