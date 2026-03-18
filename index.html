@@ -336,18 +336,41 @@
       <div class="card-title">
         <i class="fa-solid fa-plus"></i> Нова бележка
       </div>
-      <div class="task-input-row">
-        <input type="text" id="taskInput" placeholder="Напр. да платим наема, да поръчаме стока..." maxlength="120"
-               onkeydown="if(event.key==='Enter') addTask()">
+
+      <input type="text" id="taskInput" placeholder="Текст на бележката..." maxlength="200"
+             onkeydown="if(event.key==='Enter')addTask()">
+
+      <div class="task-form-row">
         <select id="taskPriority">
-          <option value="normal">📋 Обичайна</option>
-          <option value="urgent">🔴 Спешна</option>
-          <option value="info">💡 Инфо</option>
+          <option value="high">🔴 Важно</option>
+          <option value="normal" selected>🟡 Нормално</option>
+          <option value="low">⚫ Ниско</option>
         </select>
-        <button class="btn-primary" onclick="addTask()" style="margin-top:0;width:auto;padding:0 18px;">
-          <i class="fa-solid fa-plus"></i>
-        </button>
+        <div>
+          <label class="task-form-label">📅 Краен срок</label>
+          <input type="date" id="taskDueDate">
+        </div>
       </div>
+
+      <div class="task-form-row">
+        <div>
+          <label class="task-form-label">🔔 Напомни на дата</label>
+          <input type="date" id="taskReminderDate">
+        </div>
+        <div>
+          <label class="task-form-label">Час</label>
+          <input type="time" id="taskReminderTime">
+        </div>
+      </div>
+
+      <div id="taskChecklistBuilder"></div>
+      <button type="button" class="btn-secondary task-add-cl-btn" onclick="addChecklistField()">
+        + Добави подзадача
+      </button>
+
+      <button type="button" class="btn-primary" onclick="addTask()" style="margin-top:12px;">
+        <i class="fa-solid fa-plus"></i> Добави бележка
+      </button>
     </div>
 
     <!-- Task list -->

@@ -1115,35 +1115,85 @@ window.syncPills = function() {
 
 // ── Бележки — Firebase realtime sync ─────────────────────────
 const tasksCol = collection(db, "tasks");
-let _tasks = [];
+let _tasks      = [];
 let _tasksUnsub = null;
+let _expandedTasks  = new Set();  // ID-та на разгънати бележки
+let _newChecklist   = [];         // [{id, text}] за формата
 
+// ── loadTasksRealtime ─────────────────────────────────────────
 function loadTasksRealtime() {
   if (_tasksUnsub) return;
   const q = query(tasksCol, orderBy("createdAt", "desc"));
   _tasksUnsub = onSnapshot(q, snap => {
     _tasks = snap.docs.map(d => ({ firestoreId: d.id, ...d.data() }));
     renderTasks();
+    scheduleTaskReminders();
   }, err => console.error("tasks snapshot:", err));
 }
 
+// ── Checklist builder (форма) ─────────────────────────────────
+window.addChecklistField = function() {
+  _newChecklist.push({ id: Date.now(), text: '' });
+  renderChecklistBuilder();
+};
+window.removeChecklistField = function(id) {
+  _newChecklist = _newChecklist.filter(i => i.id !== id);
+  renderChecklistBuilder();
+};
+window.updateChecklistField = function(id, text) {
+  const item = _newChecklist.find(i => i.id === id);
+  if (item) item.text = text;
+};
+function renderChecklistBuilder() {
+  const el = document.getElementById('taskChecklistBuilder');
+  if (!el) return;
+  el.innerHTML = _newChecklist.map(item => `
+    <div class="checklist-field-row">
+      <input type="text" class="checklist-input" placeholder="Подзадача..."
+             oninput="updateChecklistField(${item.id},this.value)">
+      <button type="button" class="btn-icon btn-del" onclick="removeChecklistField(${item.id})">✕</button>
+    </div>`).join('');
+}
+
+// ── addTask ───────────────────────────────────────────────────
 window.addTask = async function() {
   const inp  = document.getElementById('taskInput');
   const prio = document.getElementById('taskPriority');
+  const due  = document.getElementById('taskDueDate');
+  const remD = document.getElementById('taskReminderDate');
+  const remT = document.getElementById('taskReminderTime');
   const text = (inp?.value || '').trim();
   if (!text) { inp?.focus(); return; }
-  inp.value = ''; inp.focus();
+
+  const checklist = _newChecklist
+    .filter(i => i.text.trim())
+    .map(i => ({ id: String(Date.now() + Math.random()), text: i.text.trim(), done: false }));
+
+  // Reset form
+  inp.value = '';
+  if (due)  due.value  = '';
+  if (remD) remD.value = '';
+  if (remT) remT.value = '';
+  _newChecklist = [];
+  renderChecklistBuilder();
+  inp.focus();
+
   try {
     await addDoc(tasksCol, {
       text,
-      priority: prio?.value || 'normal',
+      priority:     prio?.value  || 'normal',
+      dueDate:      due?.value   || null,
+      reminderDate: remD?.value  || null,
+      reminderTime: remT?.value  || null,
+      checklist,
       done: false,
       createdAt: Date.now(),
-      created: new Date().toLocaleDateString('bg-BG', {day:'2-digit',month:'2-digit',year:'numeric'})
+      created: new Date().toLocaleDateString('bg-BG', { day:'2-digit', month:'2-digit', year:'numeric' })
     });
   } catch(e) { console.error("addTask:", e); }
 };
 
+// ── toggleTask / deleteTask ───────────────────────────────────
 window.toggleTask = async function(firestoreId) {
   const task = _tasks.find(t => t.firestoreId === firestoreId);
   if (!task) return;
@@ -1156,28 +1206,105 @@ window.deleteTask = async function(firestoreId) {
   catch(e) { console.error("deleteTask:", e); }
 };
 
+// ── toggleChecklistItem ───────────────────────────────────────
+window.toggleChecklistItem = async function(taskId, itemId) {
+  const task = _tasks.find(t => t.firestoreId === taskId);
+  if (!task) return;
+  const checklist = (task.checklist || []).map(c =>
+    c.id === itemId ? { ...c, done: !c.done } : c
+  );
+  try { await updateDoc(doc(db, "tasks", taskId), { checklist }); }
+  catch(e) { console.error("toggleChecklistItem:", e); }
+};
+
+// ── toggleTaskExpand ──────────────────────────────────────────
+window.toggleTaskExpand = function(id) {
+  if (_expandedTasks.has(id)) _expandedTasks.delete(id);
+  else _expandedTasks.add(id);
+  renderTasks();
+};
+
+// ── renderTasks ───────────────────────────────────────────────
 function renderTasks() {
   const el    = document.getElementById('taskList');
   const badge = document.getElementById('taskCount');
   if (!el) return;
+
   const pending = _tasks.filter(t => !t.done).length;
   if (badge) { badge.textContent = pending; badge.className = 'task-badge' + (pending ? '' : ' zero'); }
-  if (!_tasks.length) { el.innerHTML = '<div class="tasks-empty">Няма бележки — добави първата 👆</div>'; return; }
-  const pLbl = { urgent:'🔴 Спешна', normal:'📋 Обичайна', info:'💡 Инфо' };
-  const pCls = { urgent:'priority-urgent', normal:'priority-normal', info:'priority-info' };
-  const esc  = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  el.innerHTML = [..._tasks].sort((a,b) => Number(a.done)-Number(b.done)).map(t => `
-    <div class="task-item ${t.done?'done':''}">
-      <div class="task-check" onclick="toggleTask('${t.firestoreId}')">${t.done?'✓':''}</div>
-      <div class="task-body">
-        <div class="task-text">${esc(t.text)}</div>
-        <div class="task-meta">
-          <span class="task-priority ${pCls[t.priority]||'priority-normal'}">${pLbl[t.priority]||'📋 Обичайна'}</span>
-          <span>${t.created||''}</span>
-        </div>
+
+  if (!_tasks.length) {
+    el.innerHTML = '<div class="tasks-empty">Няма бележки — добави първата 👆</div>';
+    return;
+  }
+
+  // Приоритет: Важно(1) > Нормално(2) > Ниско(3); завършени накрая
+  const prioOrder = { high:1, urgent:1, normal:2, low:3, info:3 };
+  const dotCls    = { high:'high', urgent:'high', normal:'normal', low:'low', info:'low' };
+  const esc       = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const today     = new Date().toISOString().slice(0, 10);
+
+  const sorted = [..._tasks].sort((a, b) => {
+    if (a.done !== b.done) return Number(a.done) - Number(b.done);
+    return (prioOrder[a.priority] || 2) - (prioOrder[b.priority] || 2);
+  });
+
+  el.innerHTML = sorted.map(t => {
+    const expanded  = _expandedTasks.has(t.firestoreId);
+    const checklist = t.checklist || [];
+    const clDone    = checklist.filter(c => c.done).length;
+    const isOverdue = t.dueDate && t.dueDate < today && !t.done;
+    const hasRemind = t.reminderDate && t.reminderTime;
+
+    const clHtml = checklist.length ? `
+      <div class="task-checklist${expanded ? '' : ' hidden'}" id="cl-${t.firestoreId}">
+        ${checklist.map(c => `
+          <div class="task-cl-item${c.done ? ' done' : ''}">
+            <div class="task-check small" onclick="toggleChecklistItem('${t.firestoreId}','${c.id}')">${c.done ? '✓' : ''}</div>
+            <span class="task-cl-text">${esc(c.text)}</span>
+          </div>`).join('')}
       </div>
-      <button class="task-del btn-icon" onclick="deleteTask('${t.firestoreId}')">🗑️</button>
-    </div>`).join('');
+      <button class="task-expand-btn" onclick="toggleTaskExpand('${t.firestoreId}')">
+        ${expanded ? '▲ Скрий' : `▼ ${checklist.length} подзадачи (${clDone}/${checklist.length})`}
+      </button>` : '';
+
+    return `
+      <div class="task-item${t.done ? ' done' : ''}">
+        <div class="task-row-main">
+          <div class="task-check" onclick="toggleTask('${t.firestoreId}')">${t.done ? '✓' : ''}</div>
+          <span class="task-priority-dot ${dotCls[t.priority] || 'normal'}"></span>
+          <div class="task-body">
+            <div class="task-text">${esc(t.text)}</div>
+            <div class="task-meta">
+              ${t.dueDate  ? `<span class="task-due${isOverdue ? ' overdue' : ''}">📅 ${t.dueDate}</span>` : ''}
+              ${hasRemind  ? `<span class="task-bell" title="🔔 ${t.reminderDate} ${t.reminderTime}">🔔</span>` : ''}
+              ${t.created  ? `<span>${t.created}</span>` : ''}
+            </div>
+          </div>
+          <button class="task-del btn-icon" onclick="deleteTask('${t.firestoreId}')">🗑️</button>
+        </div>
+        ${clHtml}
+      </div>`;
+  }).join('');
+}
+
+// ── scheduleTaskReminders — напомняния за конкретни бележки ──
+function scheduleTaskReminders() {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  const now = new Date();
+  _tasks.forEach(t => {
+    if (t.done || !t.reminderDate || !t.reminderTime) return;
+    const dt = new Date(`${t.reminderDate}T${t.reminderTime}:00`);
+    if (dt <= now) return;
+    const delay = dt - now;
+    if (delay > 48 * 3600 * 1000) return; // планираме само до 48ч напред
+    setTimeout(() => {
+      const live = _tasks.find(x => x.firestoreId === t.firestoreId);
+      if (live && !live.done && Notification.permission === 'granted') {
+        new Notification('📝 Нон Стоп — Бележка', { body: t.text, icon: 'icon-192.png' });
+      }
+    }, delay);
+  });
 }
 
 // ── Push нотификации ──────────────────────────────────────────
