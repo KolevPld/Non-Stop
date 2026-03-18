@@ -6,6 +6,7 @@ import {
   getDocs,
   query,
   orderBy,
+  where,
   deleteDoc,
   updateDoc,
   doc,
@@ -875,11 +876,13 @@ window.showScreen = function(screen) {
   const addScreen    = document.getElementById("screen-add");
   const reportScreen = document.getElementById("screen-report");
   const notesScreen  = document.getElementById("screen-notes");
+  const ownersScreen = document.getElementById("screen-owners");
   const isAdmin      = document.body.classList.contains("admin");
 
   addScreen?.classList.add("hidden");
   reportScreen?.classList.add("hidden");
   notesScreen?.classList.add("hidden");
+  ownersScreen?.classList.add("hidden");
 
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
 
@@ -896,6 +899,12 @@ window.showScreen = function(screen) {
     loadTasksRealtime();
     renderTasks();
     checkNotifStatus();
+
+  } else if (screen === "owners") {
+    if (!isAdmin) { alert("Нямаш достъп до този екран."); return; }
+    ownersScreen?.classList.remove("hidden");
+    document.getElementById('navOwners')?.classList.add('active');
+    loadOwnersForMonth();
 
   } else {
     addScreen?.classList.remove("hidden");
@@ -1367,3 +1376,123 @@ if (localStorage.getItem('ns_notif') === '1' && 'Notification' in window && Noti
 window.addEventListener('unhandledrejection', e => {
   console.error('Unhandled rejection:', e.reason);
 });
+
+// ════════════════════════════════════════════════
+// 👥 СОБСТВЕНИЦИ
+// ════════════════════════════════════════════════
+
+let _ownersMonth = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+let _ownersUnsub = null;
+
+function ownersMonthLabel(ym) {
+  const [y, m] = ym.split("-");
+  const names = ["Януари","Февруари","Март","Април","Май","Юни",
+                  "Юли","Август","Септември","Октомври","Ноември","Декември"];
+  return `${names[parseInt(m,10)-1]} ${y}`;
+}
+
+function ownersChangeMonth(delta) {
+  const [y, m] = _ownersMonth.split("-").map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  _ownersMonth = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+  document.getElementById("ownersMonthLabel").textContent = ownersMonthLabel(_ownersMonth);
+  loadOwnersForMonth();
+}
+window.ownersChangeMonth = ownersChangeMonth;
+
+function loadOwnersForMonth() {
+  if (_ownersUnsub) { _ownersUnsub(); _ownersUnsub = null; }
+
+  const q = query(
+    collection(db, "owners"),
+    where("month", "==", _ownersMonth),
+    orderBy("date", "asc")
+  );
+
+  document.getElementById("ownersMonthLabel").textContent = ownersMonthLabel(_ownersMonth);
+
+  // Set default date to today (or first day of selected month if navigating past)
+  const today = new Date().toISOString().slice(0, 10);
+  const todayMonth = today.slice(0, 7);
+  const ownerDateEl = document.getElementById("ownerDate");
+  if (ownerDateEl && !ownerDateEl.value) {
+    ownerDateEl.value = _ownersMonth === todayMonth ? today : _ownersMonth + "-01";
+  }
+
+  _ownersUnsub = onSnapshot(q, snap => {
+    const entries = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderOwners(entries);
+  }, err => {
+    console.error("Owners snapshot error:", err);
+  });
+}
+
+function renderOwners(entries) {
+  const mitko = entries.filter(e => e.name === "Митко");
+  const velko  = entries.filter(e => e.name === "Велко");
+
+  const sumMitko = mitko.reduce((s,e) => s + (parseFloat(e.amount)||0), 0);
+  const sumVelko = velko.reduce((s,e)  => s + (parseFloat(e.amount)||0), 0);
+  const diff = sumMitko - sumVelko;
+
+  const fmt = v => v.toFixed(2) + " €";
+
+  const rowsHtml = (arr) => arr.map(e => `
+    <tr>
+      <td>${e.date || "—"}</td>
+      <td class="mono">${fmt(parseFloat(e.amount)||0)}</td>
+      <td>${escHtml(e.note || "")}</td>
+      <td><button class="btn-danger btn-sm" onclick="deleteOwnerEntry('${e.id}')">🗑️</button></td>
+    </tr>`).join("") || `<tr><td colspan="4" class="owners-empty">Няма записи</td></tr>`;
+
+  document.getElementById("ownersMitkoBody").innerHTML = rowsHtml(mitko);
+  document.getElementById("ownersVelkoBody").innerHTML  = rowsHtml(velko);
+
+  document.getElementById("ownersSummaryBody").innerHTML = `
+    <tr>
+      <td>Митко</td>
+      <td class="mono income">${fmt(sumMitko)}</td>
+    </tr>
+    <tr>
+      <td>Велко</td>
+      <td class="mono income">${fmt(sumVelko)}</td>
+    </tr>
+    <tr class="owners-diff-row">
+      <td>Разлика</td>
+      <td class="mono ${diff >= 0 ? 'income' : 'expense'}">${diff >= 0 ? "+" : ""}${fmt(diff)}</td>
+    </tr>`;
+}
+
+window.addOwnerEntry = async function() {
+  const amount = parseFloat(document.getElementById("ownerAmount").value);
+  const name   = document.getElementById("ownerName").value;
+  const note   = document.getElementById("ownerNote").value.trim();
+  const date   = document.getElementById("ownerDate").value;
+
+  if (!amount || amount <= 0) { alert("Въведи сума!"); return; }
+  if (!date)                  { alert("Избери дата!");  return; }
+
+  try {
+    await addDoc(collection(db, "owners"), {
+      name,
+      amount,
+      note,
+      date,
+      month: date.slice(0, 7),
+      createdAt: new Date().toISOString()
+    });
+    document.getElementById("ownerAmount").value = "";
+    document.getElementById("ownerNote").value   = "";
+  } catch(err) {
+    alert("Грешка при запис: " + err.message);
+  }
+};
+
+window.deleteOwnerEntry = async function(id) {
+  if (!confirm("Изтрий този запис?")) return;
+  try {
+    await deleteDoc(doc(db, "owners", id));
+  } catch(err) {
+    alert("Грешка при изтриване: " + err.message);
+  }
+};

@@ -21,7 +21,7 @@ div, section, nav, header, footer { max-width: 100%; }
 /* Cards & form containers */
 .card, .form-section, .summary, .filters-card,
 .chart-wrap, .filter-summary-box, .login-card,
-#screen-add, #screen-report, #screen-notes,
+#screen-add, #screen-report, #screen-notes, #screen-owners,
 #app, #totalSummary, #recentList { overflow-x: hidden; }
 
 /* Table wrappers scroll horizontally — intentional */
@@ -1617,3 +1617,68 @@ body.admin .table-responsive.admin-only { display: block; }
 #financePanel{margin-top:14px;display:flex;flex-direction:column;gap:14px}
 #financePanel .summary{padding:0;background:none;border:none;box-shadow:none}
 #financePanel h3{margin-bottom:8px}
+
+/* ════════════════════════════════════════════════
+   👥 СОБСТВЕНИЦИ
+   ════════════════════════════════════════════════ */
+#screen-owners { display:flex; flex-direction:column; gap:16px; overflow-x:hidden; }
+
+.owners-page-title {
+  display:flex; align-items:center; gap:10px;
+  font-size:1.25rem; font-weight:700; color:var(--text1);
+  padding:8px 0 4px;
+}
+
+.owners-month-nav {
+  display:flex; align-items:center; justify-content:center; gap:16px;
+  padding:8px 0;
+}
+.owners-month-btn {
+  background:var(--card); border:1px solid var(--border); border-radius:8px;
+  color:var(--text1); font-size:1.4rem; line-height:1;
+  width:38px; height:38px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+}
+.owners-month-btn:hover { border-color:var(--green); color:var(--green); }
+.owners-month-label {
+  font-size:1rem; font-weight:600; color:var(--text1);
+  min-width:160px; text-align:center;
+}
+
+.owners-form-card { display:flex; flex-direction:column; gap:10px; }
+.owners-form-title { font-size:1rem; font-weight:600; color:var(--text1); margin-bottom:4px; }
+.owners-form-row { display:flex; flex-direction:column; gap:4px; }
+
+.owners-submit {
+  width:100%; min-height:44px; margin-top:4px;
+  background:var(--green); color:#fff; border:none; border-radius:10px;
+  font-size:1rem; font-weight:600; cursor:pointer;
+}
+.owners-submit:hover { background:#16a34a; }
+
+.owners-table-card { overflow-x:hidden; }
+.owners-table-title {
+  font-size:.9rem; font-weight:700; color:var(--text1);
+  margin-bottom:8px; padding-bottom:6px;
+  border-bottom:1px solid var(--border);
+}
+.owners-name-mitko { color:#3b82f6; }
+.owners-name-velko  { color:#f59e0b; }
+
+.owners-table { width:100%; border-collapse:collapse; font-size:.85rem; }
+.owners-table th {
+  background:var(--bg2); color:var(--text3);
+  font-size:.75rem; font-weight:600; letter-spacing:.04em;
+  padding:6px 8px; text-align:left;
+  border-bottom:1px solid var(--border);
+}
+.owners-table td { padding:7px 8px; border-bottom:1px solid var(--border2); color:var(--text1); }
+.owners-table tr:last-child td { border-bottom:none; }
+.owners-table tr:hover td { background:var(--bg2); }
+.owners-diff-row td { font-weight:700; background:var(--bg2); }
+
+.owners-empty { text-align:center; color:var(--text3); font-size:.8rem; padding:14px 0 !important; }
+
+.btn-sm {
+  padding:3px 8px; font-size:.75rem; border-radius:6px; cursor:pointer;
+  border:none; min-height:28px;
+}

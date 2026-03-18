@@ -387,6 +387,103 @@
 
   </div><!-- /screen-notes -->
 
+  <!-- ── SCREEN: СОБСТВЕНИЦИ ───────────────────── -->
+  <div id="screen-owners" class="hidden">
+
+    <div class="owners-page-title">
+      <span>👥</span>
+      <span>Собственици</span>
+    </div>
+
+    <!-- Month navigation -->
+    <div class="owners-month-nav">
+      <button class="owners-month-btn" onclick="ownersChangeMonth(-1)">&#8249;</button>
+      <span id="ownersMonthLabel" class="owners-month-label">—</span>
+      <button class="owners-month-btn" onclick="ownersChangeMonth(1)">&#8250;</button>
+    </div>
+
+    <!-- Add form -->
+    <div class="card owners-form-card">
+      <div class="owners-form-title">Нов запис</div>
+      <div class="owners-form-row">
+        <label class="field-label" for="ownerDate">📅 Дата</label>
+        <input type="date" id="ownerDate">
+      </div>
+      <div class="owners-form-row">
+        <label class="field-label" for="ownerAmount">💸 Сума (€)</label>
+        <input type="number" id="ownerAmount" min="0" step="0.01" placeholder="0.00">
+      </div>
+      <div class="owners-form-row">
+        <label class="field-label">👤 Собственик</label>
+        <div class="segment">
+          <button type="button" class="segment-btn active" id="btnMitko"
+                  onclick="document.getElementById('ownerName').value='Митко';
+                           document.getElementById('btnMitko').classList.add('active');
+                           document.getElementById('btnVelko').classList.remove('active');">
+            Митко
+          </button>
+          <button type="button" class="segment-btn" id="btnVelko"
+                  onclick="document.getElementById('ownerName').value='Велко';
+                           document.getElementById('btnVelko').classList.add('active');
+                           document.getElementById('btnMitko').classList.remove('active');">
+            Велко
+          </button>
+        </div>
+        <select id="ownerName" class="hidden">
+          <option value="Митко">Митко</option>
+          <option value="Велко">Велко</option>
+        </select>
+      </div>
+      <div class="owners-form-row">
+        <label class="field-label" for="ownerNote">📝 Бележка</label>
+        <input type="text" id="ownerNote" placeholder="Бележка..." autocomplete="off">
+      </div>
+      <button class="btn-primary owners-submit" onclick="addOwnerEntry()">
+        <i class="fa-solid fa-plus"></i> Добави
+      </button>
+    </div>
+
+    <!-- Митко table -->
+    <div class="card owners-table-card">
+      <div class="owners-table-title owners-name-mitko">💼 Митко</div>
+      <div class="table-responsive">
+        <table class="owners-table">
+          <thead>
+            <tr><th>Дата</th><th>Сума</th><th>Бележка</th><th></th></tr>
+          </thead>
+          <tbody id="ownersMitkoBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Велко table -->
+    <div class="card owners-table-card">
+      <div class="owners-table-title owners-name-velko">💼 Велко</div>
+      <div class="table-responsive">
+        <table class="owners-table">
+          <thead>
+            <tr><th>Дата</th><th>Сума</th><th>Бележка</th><th></th></tr>
+          </thead>
+          <tbody id="ownersVelkoBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Summary table -->
+    <div class="card owners-table-card">
+      <div class="owners-table-title">📊 Обобщение</div>
+      <div class="table-responsive">
+        <table class="owners-table">
+          <thead>
+            <tr><th>Собственик</th><th>Взето</th></tr>
+          </thead>
+          <tbody id="ownersSummaryBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /screen-owners -->
+
 </div><!-- /app -->
 
 <!-- ── Bottom Navigation ──────────────────────── -->
@@ -400,6 +497,11 @@
   <button class="nav-btn nav-add active" id="navAdd" onclick="showScreen('add')">
     <span class="nav-icon-wrap">➕</span>
     Добави
+  </button>
+
+  <button class="nav-btn admin-only" id="navOwners" onclick="showScreen('owners')">
+    <span class="nav-icon">👥</span>
+    Собственици
   </button>
 
   <button class="nav-btn" id="navNotes" onclick="showScreen('notes')">
