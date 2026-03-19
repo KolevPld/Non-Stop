@@ -248,6 +248,11 @@ async function addRecord() {
   try {
     const docRef = await addDoc(collection(db, "records"), { date, type, method, amount, note, category, store, imageUrl });
     records.unshift({ id: docRef.id, date, type, method, amount, note, category, store, imageUrl });
+
+    if (OWNER_CATEGORIES.includes(category)) {
+      await syncOwnerRecord(docRef.id, { name: category, amount, note, date, type });
+    }
+
     clearForm();
     refreshUI();
     showStatusMsg("✅ Записано!");
@@ -379,11 +384,22 @@ async function saveEditedRecord() {
   const submitBtn = document.getElementById("submitBtn");
   if (submitBtn) submitBtn.disabled = true;
 
-  try {
-    await updateDoc(doc(db, "records", editingId), { date, type, method, amount, note, category, store, imageUrl: finalImageUrl });
+  const savedId = editingId;
+  const oldCategory = old?.category || "";
 
-    const idx = records.findIndex(r => r.id === editingId);
+  try {
+    await updateDoc(doc(db, "records", savedId), { date, type, method, amount, note, category, store, imageUrl: finalImageUrl });
+
+    const idx = records.findIndex(r => r.id === savedId);
     if (idx !== -1) records[idx] = { ...records[idx], date, type, method, amount, note, category, store, imageUrl: finalImageUrl };
+
+    // Синхронизирай собственици
+    if (OWNER_CATEGORIES.includes(category)) {
+      await syncOwnerRecord(savedId, { name: category, amount, note, date, type });
+    } else if (OWNER_CATEGORIES.includes(oldCategory)) {
+      // Категорията е сменена от Митко/Велко → изтрий собственик запис
+      await deleteOwnerByLinkedId(savedId);
+    }
 
     editingId = null;
     imageRemoved = false;
@@ -420,12 +436,42 @@ async function deleteRecord(id) {
   try {
     await deleteDoc(doc(db, "records", id));
     records = records.filter(r => r.id !== id);
+    // Изтрий свързания запис в собственици (ако има)
+    await deleteOwnerByLinkedId(id);
     refreshUI();
   } catch (err) {
     alert("Грешка при изтриване: " + err.message);
   }
 }
 window.deleteRecord = deleteRecord;
+
+// --------------------------------------------------
+// 🔗 Синхронизация owners ↔ records
+// --------------------------------------------------
+const OWNER_CATEGORIES = ["Митко", "Велко"];
+
+async function syncOwnerRecord(recordId, { name, amount, note, date, type }) {
+  const month = date.slice(0, 7);
+  const data  = { name, amount, note, date, month, type, linkedRecordId: recordId };
+
+  // Търси дали вече има запис с този linkedRecordId
+  const q = query(collection(db, "owners"), where("linkedRecordId", "==", recordId));
+  const snap = await getDocs(q);
+
+  if (snap.empty) {
+    await addDoc(collection(db, "owners"), { ...data, createdAt: new Date().toISOString() });
+  } else {
+    await updateDoc(doc(db, "owners", snap.docs[0].id), data);
+  }
+}
+
+async function deleteOwnerByLinkedId(recordId) {
+  const q = query(collection(db, "owners"), where("linkedRecordId", "==", recordId));
+  const snap = await getDocs(q);
+  for (const d of snap.docs) {
+    await deleteDoc(doc(db, "owners", d.id));
+  }
+}
 
 // --------------------------------------------------
 // 🧹 Изчистване на формата
@@ -1431,35 +1477,54 @@ function renderOwners(entries) {
   const mitko = entries.filter(e => e.name === "Митко");
   const velko  = entries.filter(e => e.name === "Велко");
 
-  const sumMitko = mitko.reduce((s,e) => s + (parseFloat(e.amount)||0), 0);
-  const sumVelko = velko.reduce((s,e)  => s + (parseFloat(e.amount)||0), 0);
-  const diff = sumMitko - sumVelko;
-
   const fmt = v => v.toFixed(2) + " €";
+
+  // Пресмята приходи/разходи за собственик
+  function calcSums(arr) {
+    let inc = 0, exp = 0;
+    for (const e of arr) {
+      const a = parseFloat(e.amount) || 0;
+      if ((e.type || "").toLowerCase().includes("приход")) inc += a;
+      else exp += a;
+    }
+    return { inc, exp, net: inc - exp };
+  }
+
+  const typeBadge = t => {
+    const isInc = (t || "").toLowerCase().includes("приход");
+    return `<span class="owners-type-badge ${isInc ? 'owners-income' : 'owners-expense'}">${t || "—"}</span>`;
+  };
 
   const rowsHtml = (arr) => arr.map(e => `
     <tr>
       <td>${e.date || "—"}</td>
       <td class="mono">${fmt(parseFloat(e.amount)||0)}</td>
+      <td>${typeBadge(e.type)}</td>
       <td>${escHtml(e.note || "")}</td>
-      <td><button class="btn-danger btn-sm" onclick="deleteOwnerEntry('${e.id}')">🗑️</button></td>
-    </tr>`).join("") || `<tr><td colspan="4" class="owners-empty">Няма записи</td></tr>`;
+      <td>${e.linkedRecordId ? '<span title="Свързан с Отчети" style="color:var(--text3);font-size:.75rem">🔗</span>' : `<button class="btn-danger btn-sm" onclick="deleteOwnerEntry('${e.id}')">🗑️</button>`}</td>
+    </tr>`).join("") || `<tr><td colspan="5" class="owners-empty">Няма записи</td></tr>`;
 
   document.getElementById("ownersMitkoBody").innerHTML = rowsHtml(mitko);
   document.getElementById("ownersVelkoBody").innerHTML  = rowsHtml(velko);
 
+  const sm = calcSums(mitko);
+  const sv = calcSums(velko);
+
   document.getElementById("ownersSummaryBody").innerHTML = `
     <tr>
-      <td>Митко</td>
-      <td class="mono income">${fmt(sumMitko)}</td>
+      <td class="owners-summary-label">Приходи</td>
+      <td class="mono income">${fmt(sm.inc)}</td>
+      <td class="mono income">${fmt(sv.inc)}</td>
     </tr>
     <tr>
-      <td>Велко</td>
-      <td class="mono income">${fmt(sumVelko)}</td>
+      <td class="owners-summary-label">Разходи</td>
+      <td class="mono expense">${fmt(sm.exp)}</td>
+      <td class="mono expense">${fmt(sv.exp)}</td>
     </tr>
     <tr class="owners-diff-row">
-      <td>Разлика</td>
-      <td class="mono ${diff >= 0 ? 'income' : 'expense'}">${diff >= 0 ? "+" : ""}${fmt(diff)}</td>
+      <td class="owners-summary-label">Нето</td>
+      <td class="mono ${sm.net >= 0 ? 'income' : 'expense'}">${sm.net >= 0 ? "+" : ""}${fmt(sm.net)}</td>
+      <td class="mono ${sv.net >= 0 ? 'income' : 'expense'}">${sv.net >= 0 ? "+" : ""}${fmt(sv.net)}</td>
     </tr>`;
 }
 

@@ -135,6 +135,8 @@
         <option>Заплати</option>
         <option>Наеми</option>
         <option>Без ДДС</option>
+        <option>Митко</option>
+        <option>Велко</option>
         <option>Друго</option>
         <option value="custom">✏️ Въведи ръчно...</option>
       </select>
@@ -247,6 +249,8 @@
           <option>Заплати</option>
           <option>Наеми</option>
           <option>Без ДДС</option>
+          <option>Митко</option>
+          <option>Велко</option>
           <option>Друго</option>
         </select>
         <select id="filterStore"    onchange="applyFilters()">
@@ -449,7 +453,7 @@
       <div class="table-responsive">
         <table class="owners-table">
           <thead>
-            <tr><th>Дата</th><th>Сума</th><th>Бележка</th><th></th></tr>
+            <tr><th>Дата</th><th>Сума</th><th>Тип</th><th>Бележка</th><th></th></tr>
           </thead>
           <tbody id="ownersMitkoBody"></tbody>
         </table>
@@ -462,7 +466,7 @@
       <div class="table-responsive">
         <table class="owners-table">
           <thead>
-            <tr><th>Дата</th><th>Сума</th><th>Бележка</th><th></th></tr>
+            <tr><th>Дата</th><th>Сума</th><th>Тип</th><th>Бележка</th><th></th></tr>
           </thead>
           <tbody id="ownersVelkoBody"></tbody>
         </table>
@@ -475,7 +479,7 @@
       <div class="table-responsive">
         <table class="owners-table">
           <thead>
-            <tr><th>Собственик</th><th>Взето</th></tr>
+            <tr><th></th><th class="owners-name-mitko">Митко</th><th class="owners-name-velko">Велко</th></tr>
           </thead>
           <tbody id="ownersSummaryBody"></tbody>
         </table>
