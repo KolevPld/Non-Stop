@@ -1506,20 +1506,32 @@ function renderOwners(entries) {
     return `<span class="owners-type-badge ${isInc ? 'owners-income' : 'owners-expense'}">${t || "—"}</span>`;
   };
 
-  const rowsHtml = (arr) => arr.map(e => `
-    <tr>
-      <td>${e.date || "—"}</td>
-      <td class="mono">${fmt(parseFloat(e.amount)||0)}</td>
-      <td>${typeBadge(e.type)}</td>
-      <td>${escHtml(e.note || "")}</td>
-      <td>${e.linkedRecordId ? '<span title="Свързан с Отчети" style="color:var(--text3);font-size:.75rem">🔗</span>' : `<button class="btn-danger btn-sm" onclick="deleteOwnerEntry('${e.id}')">🗑️</button>`}</td>
-    </tr>`).join("") || `<tr><td colspan="5" class="owners-empty">Няма записи</td></tr>`;
+  const rowsHtml = (arr) => {
+    const total = arr.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+    const dataRows = arr.map(e => `
+      <tr>
+        <td>${e.date || "—"}</td>
+        <td class="mono">${fmt(parseFloat(e.amount)||0)}</td>
+        <td>${typeBadge(e.type)}</td>
+        <td>${escHtml(e.note || "")}</td>
+        <td>${e.linkedRecordId ? '<span title="Свързан с Отчети" style="color:var(--text3);font-size:.75rem">🔗</span>' : `<button class="btn-danger btn-sm" onclick="deleteOwnerEntry('${e.id}')">🗑️</button>`}</td>
+      </tr>`).join("") || `<tr><td colspan="5" class="owners-empty">Няма записи</td></tr>`;
+    const totalRow = `
+      <tr class="owners-total-row">
+        <td class="owners-total-label">Общо за месеца:</td>
+        <td class="mono owners-total-amount">${fmt(total)}</td>
+        <td colspan="3"></td>
+      </tr>`;
+    return dataRows + totalRow;
+  };
 
   document.getElementById("ownersMitkoBody").innerHTML = rowsHtml(mitko);
   document.getElementById("ownersVelkoBody").innerHTML  = rowsHtml(velko);
 
   const sm = calcSums(mitko);
   const sv = calcSums(velko);
+  const totalM = mitko.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+  const totalV = velko.reduce((s, e)  => s + (parseFloat(e.amount) || 0), 0);
 
   document.getElementById("ownersSummaryBody").innerHTML = `
     <tr>
@@ -1536,6 +1548,11 @@ function renderOwners(entries) {
       <td class="owners-summary-label">Нето</td>
       <td class="mono ${sm.net >= 0 ? 'income' : 'expense'}">${sm.net >= 0 ? "+" : ""}${fmt(sm.net)}</td>
       <td class="mono ${sv.net >= 0 ? 'income' : 'expense'}">${sv.net >= 0 ? "+" : ""}${fmt(sv.net)}</td>
+    </tr>
+    <tr class="owners-grand-total-row">
+      <td class="owners-summary-label">Общо</td>
+      <td class="mono owners-grand-total-amount">${fmt(totalM)}</td>
+      <td class="mono owners-grand-total-amount">${fmt(totalV)}</td>
     </tr>`;
 }
 
