@@ -250,7 +250,12 @@ async function addRecord() {
     records.unshift({ id: docRef.id, date, type, method, amount, note, category, store, imageUrl });
 
     if (OWNER_CATEGORIES.includes(category)) {
-      await syncOwnerRecord(docRef.id, { name: category, amount, note, date, type });
+      try {
+        await syncOwnerRecord(docRef.id, { name: category, amount, note, date, type });
+      } catch (ownerErr) {
+        console.error("Грешка при запис в Собственици:", ownerErr);
+        alert("Записът е запазен, но грешка в Собственици: " + ownerErr.message);
+      }
     }
 
     clearForm();
@@ -453,15 +458,18 @@ const OWNER_CATEGORIES = ["Митко", "Велко"];
 async function syncOwnerRecord(recordId, { name, amount, note, date, type }) {
   const month = date.slice(0, 7);
   const data  = { name, amount, note, date, month, type, linkedRecordId: recordId };
+  console.log("syncOwnerRecord →", name, amount, date, type);
 
   // Търси дали вече има запис с този linkedRecordId
   const q = query(collection(db, "owners"), where("linkedRecordId", "==", recordId));
   const snap = await getDocs(q);
 
   if (snap.empty) {
-    await addDoc(collection(db, "owners"), { ...data, createdAt: new Date().toISOString() });
+    const ref = await addDoc(collection(db, "owners"), { ...data, createdAt: new Date().toISOString() });
+    console.log("owners: създаден запис", ref.id);
   } else {
     await updateDoc(doc(db, "owners", snap.docs[0].id), data);
+    console.log("owners: обновен запис", snap.docs[0].id);
   }
 }
 
@@ -1449,10 +1457,10 @@ window.ownersChangeMonth = ownersChangeMonth;
 function loadOwnersForMonth() {
   if (_ownersUnsub) { _ownersUnsub(); _ownersUnsub = null; }
 
+  // Само where без orderBy — избягва изискване за composite index
   const q = query(
     collection(db, "owners"),
-    where("month", "==", _ownersMonth),
-    orderBy("date", "asc")
+    where("month", "==", _ownersMonth)
   );
 
   document.getElementById("ownersMonthLabel").textContent = ownersMonthLabel(_ownersMonth);
@@ -1466,7 +1474,10 @@ function loadOwnersForMonth() {
   }
 
   _ownersUnsub = onSnapshot(q, snap => {
-    const entries = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    // Сортираме по дата в JS
+    const entries = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (a.date || "").localeCompare(b.date || ""));
     renderOwners(entries);
   }, err => {
     console.error("Owners snapshot error:", err);
