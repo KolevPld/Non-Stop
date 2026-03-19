@@ -1351,24 +1351,77 @@ function renderTasks() {
   }).join('');
 }
 
-// ── scheduleTaskReminders — напомняния за конкретни бележки ──
-function scheduleTaskReminders() {
+// ── Напомняния за бележки — polling на всяка минута ──────────
+// Следим кои вече са изпратени (в рамките на тази сесия + localStorage)
+const _firedReminders = new Set(
+  JSON.parse(localStorage.getItem('ns_fired_reminders') || '[]')
+);
+
+function _reminderKey(t) {
+  return `${t.firestoreId}|${t.reminderDate}|${t.reminderTime}`;
+}
+
+function checkTaskReminders() {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
-  const now = new Date();
+  const now   = new Date();
+  const nowYM = now.toISOString().slice(0, 10);        // "YYYY-MM-DD"
+  const nowHM = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
   _tasks.forEach(t => {
     if (t.done || !t.reminderDate || !t.reminderTime) return;
-    const dt = new Date(`${t.reminderDate}T${t.reminderTime}:00`);
-    if (dt <= now) return;
-    const delay = dt - now;
-    if (delay > 48 * 3600 * 1000) return; // планираме само до 48ч напред
-    setTimeout(() => {
-      const live = _tasks.find(x => x.firestoreId === t.firestoreId);
-      if (live && !live.done && Notification.permission === 'granted') {
-        new Notification('📝 Нон Стоп — Бележка', { body: t.text, icon: 'icon-192.png' });
-      }
-    }, delay);
+    const key = _reminderKey(t);
+    if (_firedReminders.has(key)) return;
+
+    if (t.reminderDate === nowYM && t.reminderTime === nowHM) {
+      new Notification('📝 Нон Стоп — Бележка', {
+        body: t.text,
+        icon: 'icon-192.png',
+        tag:  key   // предотвратява дублиране на OS ниво
+      });
+      _firedReminders.add(key);
+      // Запази само последните 200 ключа за да не расте без край
+      const arr = [..._firedReminders].slice(-200);
+      localStorage.setItem('ns_fired_reminders', JSON.stringify(arr));
+      console.log('📝 Reminder fired:', t.text);
+    }
   });
 }
+
+// Стартирай polling веднага при зареждане + на всяка минута
+// (синхронизиран с началото на следващата минута за точност)
+function startReminderPolling() {
+  checkTaskReminders();
+  const now   = new Date();
+  const msToNextMinute = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
+  setTimeout(() => {
+    checkTaskReminders();
+    setInterval(checkTaskReminders, 60_000);
+  }, msToNextMinute);
+}
+startReminderPolling();
+
+// scheduleTaskReminders остава като no-op за съвместимост
+function scheduleTaskReminders() { checkTaskReminders(); }
+
+// ── Тест: изпрати известие за първата бележка с напомняне ────
+window.testTaskReminder = function() {
+  if (!('Notification' in window)) { alert('Браузърът не поддържа известия.'); return; }
+  if (Notification.permission !== 'granted') {
+    alert('Известията не са разрешени. Включи ги от превключвателя по-горе.'); return;
+  }
+  const t = _tasks.find(x => !x.done && x.reminderDate && x.reminderTime);
+  const statusEl = document.getElementById('testTaskReminderStatus');
+  if (!t) {
+    if (statusEl) statusEl.textContent = '⚠️ Няма бележки с напомняне';
+    alert('Няма бележки с напомняне за тест.'); return;
+  }
+  new Notification('📝 Нон Стоп — Бележка (Тест)', {
+    body: `${t.text} | ${t.reminderDate} ${t.reminderTime}`,
+    icon: 'icon-192.png'
+  });
+  if (statusEl) statusEl.textContent = `✅ Изпратено: „${t.text}"`;
+  console.log('testTaskReminder → fired for:', t.text);
+};
 
 // ── Push нотификации ──────────────────────────────────────────
 function checkNotifStatus() {
