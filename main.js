@@ -1352,9 +1352,9 @@ function renderTasks() {
           <div class="task-body">
             <div class="task-text">${esc(t.text)}</div>
             <div class="task-meta">
-              ${t.dueDate  ? `<span class="task-due${isOverdue ? ' overdue' : ''}">📅 ${t.dueDate}</span>` : ''}
-              ${hasRemind  ? `<span class="task-bell" title="🔔 ${t.reminderDate} ${t.reminderTime}">🔔</span>` : ''}
-              ${t.created  ? `<span>${t.created}</span>` : ''}
+              ${t.dueDate  ? `<span class="task-due${isOverdue ? ' overdue' : ''}">📅 до ${t.dueDate}</span>` : ''}
+              ${hasRemind  ? `<span class="task-reminder">🔔 ${t.reminderDate} ${t.reminderTime}</span>` : ''}
+              ${t.created  ? `<span class="task-created">добавено: ${t.created}</span>` : ''}
             </div>
           </div>
           <button class="task-del btn-icon" onclick="deleteTask('${t.firestoreId}')">🗑️</button>

@@ -1443,8 +1443,10 @@ body.admin .table-responsive.admin-only { display: block; }
   gap: 6px;
   flex-wrap: wrap;
 }
-.task-due { }
+.task-due { color: var(--text2); }
 .task-due.overdue { color: var(--red); font-weight: 700; }
+.task-reminder { color: var(--amber, #f59e0b); }
+.task-created  { color: var(--text3); font-style: italic; }
 
 /* Checklist */
 .task-checklist {
