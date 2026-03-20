@@ -1238,7 +1238,12 @@ window.addTask = async function() {
     .filter(i => i.text.trim())
     .map(i => ({ id: String(Date.now() + Math.random()), text: i.text.trim(), done: false }));
 
-  console.log("Записвам бележка с дата:", dueDateVal, reminderDateVal, reminderTimeVal);
+  // Директно от DOM ПРЕДИ reset — трябва да видим правилните стойности
+  console.log("📋 addTask стойности ПРЕДИ reset:");
+  console.log("  dueDate el value:      ", document.getElementById('taskDueDate')?.value);
+  console.log("  reminderDate el value: ", document.getElementById('taskReminderDate')?.value);
+  console.log("  reminderTime el value: ", document.getElementById('taskReminderTime')?.value);
+  console.log("📦 Записани константи:", { dueDateVal, reminderDateVal, reminderTimeVal });
 
   // Reset form
   inp.value = '';
