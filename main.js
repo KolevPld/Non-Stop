@@ -1228,9 +1228,17 @@ window.addTask = async function() {
   const text = (inp?.value || '').trim();
   if (!text) { inp?.focus(); return; }
 
+  // Прочитаме стойностите ПРЕДИ да изчистваме формата
+  const dueDateVal      = due?.value   || null;
+  const reminderDateVal = remD?.value  || null;
+  const reminderTimeVal = remT?.value  || null;
+  const priorityVal     = prio?.value  || 'normal';
+
   const checklist = _newChecklist
     .filter(i => i.text.trim())
     .map(i => ({ id: String(Date.now() + Math.random()), text: i.text.trim(), done: false }));
+
+  console.log("Записвам бележка с дата:", dueDateVal, reminderDateVal, reminderTimeVal);
 
   // Reset form
   inp.value = '';
@@ -1244,10 +1252,10 @@ window.addTask = async function() {
   try {
     await addDoc(tasksCol, {
       text,
-      priority:     prio?.value  || 'normal',
-      dueDate:      due?.value   || null,
-      reminderDate: remD?.value  || null,
-      reminderTime: remT?.value  || null,
+      priority:     priorityVal,
+      dueDate:      dueDateVal,
+      reminderDate: reminderDateVal,
+      reminderTime: reminderTimeVal,
       checklist,
       done: false,
       createdAt: Date.now(),
