@@ -1708,3 +1708,49 @@ body.admin .table-responsive.admin-only { display: block; }
 }
 .owners-income  { background: color-mix(in srgb, var(--green) 15%, transparent); color: var(--green); }
 .owners-expense { background: color-mix(in srgb, var(--red)   15%, transparent); color: var(--red); }
+
+/* ════════════════════════════════════════════════
+   🖨️ PRINT STYLES
+   ════════════════════════════════════════════════ */
+@media print {
+  /* Скрий всичко освен екрана с отчети */
+  .bottom-nav, #logoutArea, .theme-toggle,
+  .filters-card, .filter-summary-box,
+  #notifCard, #screen-add, #screen-notes,
+  #screen-owners, #loginScreen, #status,
+  .btn-primary, .btn-secondary, .btn-danger,
+  .accordion-btn, #financePanel,
+  .chart-wrap, #liveBalance,
+  [onclick="printFilteredTable()"],
+  [onclick="exportFilteredToExcel()"],
+  [onclick="clearFilters()"] { display: none !important; }
+
+  /* Принудително показвай отчет екрана */
+  #app, #screen-report { display: block !important; visibility: visible !important; }
+
+  /* Черно-бял изглед */
+  body, .card, table, th, td {
+    background: #fff !important;
+    color: #000 !important;
+    box-shadow: none !important;
+    border-color: #999 !important;
+  }
+
+  /* Таблица на цяла страница */
+  .table-responsive { overflow: visible !important; }
+  table { width: 100% !important; font-size: 10pt; border-collapse: collapse; }
+  th, td { border: 1px solid #999 !important; padding: 4px 6px !important; }
+  th { background: #eee !important; font-weight: bold; }
+
+  /* Без нови страници в средата на таблица */
+  tr { page-break-inside: avoid; }
+
+  /* Заглавие */
+  #screen-report::before {
+    content: "Нон Стоп — Финансов Отчет";
+    display: block;
+    font-size: 16pt;
+    font-weight: bold;
+    margin-bottom: 12px;
+  }
+}

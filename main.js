@@ -1491,6 +1491,56 @@ if (localStorage.getItem('ns_notif') === '1' && 'Notification' in window && Noti
 }
 
 // --------------------------------------------------
+// 🖨️ Принтиране на филтрираните записи
+// --------------------------------------------------
+window.printFilteredTable = function() {
+  window.print();
+};
+
+// --------------------------------------------------
+// 📊 Експорт в Excel (SheetJS)
+// --------------------------------------------------
+window.exportFilteredToExcel = function() {
+  if (typeof XLSX === "undefined") {
+    alert("Excel библиотеката не е заредена. Провери интернет връзката.");
+    return;
+  }
+
+  const data = filteredRecords.length ? filteredRecords : records;
+  if (!data.length) { alert("Няма записи за експорт."); return; }
+
+  const rows = data.map(r => ({
+    "Дата":      r.date     || "",
+    "Тип":       r.type     || "",
+    "Сума (€)":  parseFloat(r.amount) || 0,
+    "Метод":     r.method   || "",
+    "Магазин":   storeLabel(effectiveStore(r)),
+    "Категория": r.category || "",
+    "Бележка":   r.note     || ""
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+
+  // Ширини на колоните
+  ws["!cols"] = [
+    { wch: 12 }, // Дата
+    { wch: 10 }, // Тип
+    { wch: 10 }, // Сума
+    { wch: 10 }, // Метод
+    { wch: 12 }, // Магазин
+    { wch: 16 }, // Категория
+    { wch: 30 }, // Бележка
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Отчет");
+
+  // Име на файла с текущия месец от филтъра или текущата дата
+  const month = (filteredRecords[0]?.date || new Date().toISOString()).slice(0, 7);
+  XLSX.writeFile(wb, `NonStop_Отчет_${month}.xlsx`);
+};
+
+// --------------------------------------------------
 // 🛡️ Глобален handler за необработени Promise грешки
 // --------------------------------------------------
 window.addEventListener('unhandledrejection', e => {
