@@ -595,6 +595,7 @@ function applyFilters() {
 
   renderTable(filteredRecords);
   updateFilterSummary(filteredRecords);
+  renderChart();
 }
 
 function clearFilters() {
@@ -863,35 +864,99 @@ function renderChart() {
   const canvas = document.getElementById("chart");
   if (!canvas || typeof Chart === "undefined") return;
 
-  const ctx = canvas.getContext("2d");
-  const monthData = {};
+  // Ползваме filteredRecords ако има активни филтри, иначе всички records
+  const src = filteredRecords.length > 0 ? filteredRecords : records;
 
-  records.forEach(r => {
-    const m = (r.date || "").slice(0, 7);
-    if (!m) return;
-    if (!monthData[m]) monthData[m] = { income: 0, expense: 0 };
-    if (r.type === "Приход") monthData[m].income += Number(r.amount || 0);
-    if (r.type === "Разход") monthData[m].expense += Number(r.amount || 0);
+  let totalInc = 0, totalExp = 0;
+  src.forEach(r => {
+    const a = Number(r.amount || 0);
+    if (r.type === "Приход") totalInc += a;
+    else if (r.type === "Разход") totalExp += a;
   });
 
-  const labels = Object.keys(monthData).sort();
-  const incomeData = labels.map(m => monthData[m].income);
-  const expenseData = labels.map(m => monthData[m].expense);
+  const saldo = totalInc - totalExp;
+  const fmt   = n => Number(n).toLocaleString("bg-BG", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
+  const total = totalInc + totalExp;
+  const incPct = total > 0 ? ((totalInc / total) * 100).toFixed(1) : "0.0";
+  const expPct = total > 0 ? ((totalExp / total) * 100).toFixed(1) : "0.0";
 
   if (chartRef) chartRef.destroy();
 
+  // Plugin за централен текст (салдо)
+  const centerTextPlugin = {
+    id: "centerText",
+    afterDraw(chart) {
+      const { ctx: c, chartArea: { top, bottom, left, right } } = chart;
+      const cx = (left + right) / 2;
+      const cy = (top + bottom) / 2;
+      c.save();
+      c.textAlign = "center";
+      c.textBaseline = "middle";
+      c.fillStyle = "#e2e8f0";
+      c.font = "bold 11px sans-serif";
+      c.fillText("Салдо", cx, cy - 12);
+      c.font = "bold 15px sans-serif";
+      c.fillStyle = saldo >= 0 ? "#4ade80" : "#f87171";
+      c.fillText(fmt(saldo), cx, cy + 6);
+      c.restore();
+    }
+  };
+
+  const ctx = canvas.getContext("2d");
   chartRef = new Chart(ctx, {
-    type: "bar",
+    type: "doughnut",
+    plugins: [centerTextPlugin],
     data: {
-      labels,
-      datasets: [
-        { label: "Приходи", data: incomeData, backgroundColor: "#4caf50", borderRadius: 6, barThickness: 30 },
-        { label: "Разходи", data: expenseData, backgroundColor: "#f44336", borderRadius: 6, barThickness: 30 }
-      ]
+      labels: [`Приходи (${incPct}%)`, `Разходи (${expPct}%)`],
+      datasets: [{
+        data: [totalInc || 0.001, totalExp || 0.001],
+        backgroundColor: ["#4caf50", "#f44336"],
+        borderColor: ["#388e3c", "#c62828"],
+        borderWidth: 2,
+        hoverOffset: 8
+      }]
     },
     options: {
       responsive: true,
-      maintainAspectRatio: false
+      maintainAspectRatio: false,
+      cutout: "65%",
+      plugins: {
+        title: {
+          display: true,
+          text: "Приходи vs Разходи",
+          color: "#ffffff",
+          font: { size: 14, weight: "bold" },
+          padding: { bottom: 10 }
+        },
+        legend: {
+          position: "bottom",
+          labels: {
+            color: "#ffffff",
+            padding: 16,
+            font: { size: 13 },
+            generateLabels(chart) {
+              const ds = chart.data.datasets[0];
+              return chart.data.labels.map((label, i) => ({
+                text: `${label}  ${fmt(ds.data[i] < 0.01 ? 0 : ds.data[i])}`,
+                fillStyle: ds.backgroundColor[i],
+                strokeStyle: ds.borderColor[i],
+                fontColor: "#ffffff",
+                color: "#ffffff",
+                lineWidth: 1,
+                index: i
+              }));
+            }
+          }
+        },
+        tooltip: {
+          callbacks: {
+            label(ctx) {
+              const val = ctx.raw < 0.01 ? 0 : ctx.raw;
+              return ` ${fmt(val)}`;
+            }
+          }
+        }
+      }
     }
   });
 }
