@@ -920,6 +920,10 @@ td.money {
 
 .muted { opacity: 0.45; }
 
+/* ── Пренос (carryover) редове ───────────────── */
+tr.carryover-row { background: var(--blue-dim) !important; }
+tr.carryover-row td { color: var(--blue) !important; }
+
 /* ── Chart ───────────────────────────────────── */
 #chart {
   max-width: 100%;

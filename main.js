@@ -216,6 +216,84 @@ async function loadRecords() {
     window.showScreen("add"); document.getElementById("bottomNav")?.classList.remove("hidden");
     renderTotalSummaryCards();
   }
+
+  await checkAndCreateMonthlyCarryover();
+}
+
+// --------------------------------------------------
+// 🔄 Автоматичен пренос на салдо в началото на месеца
+// --------------------------------------------------
+async function checkAndCreateMonthlyCarryover() {
+  // Само admin може да създава преносни записи
+  if (!document.body.classList.contains("admin")) return;
+
+  const now = new Date();
+  const currentYM   = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const firstOfMonth = `${currentYM}-01`;
+
+  // Ако вече има пренос за текущия месец → нищо
+  const alreadyHas = records.some(r =>
+    r.category === "Пренос" && (r.date || "").startsWith(currentYM)
+  );
+  if (alreadyHas) return;
+
+  // Вземи всички записи ПРЕДИ текущия месец
+  const prevRecords = records.filter(r => (r.date || "") < firstOfMonth);
+  if (!prevRecords.length) return;
+
+  // Изчисли салдата по метод (Кеш / Банка+Карта)
+  let kasaKesh = 0, kasaBanka = 0;
+  prevRecords.forEach(r => {
+    const amount = Number(r.amount || 0);
+    if (!Number.isFinite(amount) || amount === 0) return;
+    const signed = r.type === "Приход" ? amount : -amount;
+    if (normMethod(r.method) === "Кеш") {
+      kasaKesh += signed;
+    } else {
+      kasaBanka += signed;
+    }
+  });
+
+  kasaKesh  = Math.round(kasaKesh  * 100) / 100;
+  kasaBanka = Math.round(kasaBanka * 100) / 100;
+
+  if (kasaKesh === 0 && kasaBanka === 0) return;
+
+  const newRecords = [];
+
+  if (kasaKesh !== 0) {
+    const type   = kasaKesh > 0 ? "Приход" : "Разход";
+    const amount = Math.abs(kasaKesh);
+    const data   = {
+      date: firstOfMonth, type, method: "Кеш", amount,
+      store: "КасаКеш", category: "Пренос",
+      note: "Пренос от предходен месец", imageUrl: ""
+    };
+    const ref = await addDoc(collection(db, "records"), data);
+    newRecords.push({ id: ref.id, ...data });
+  }
+
+  if (kasaBanka !== 0) {
+    const type   = kasaBanka > 0 ? "Приход" : "Разход";
+    const amount = Math.abs(kasaBanka);
+    const data   = {
+      date: firstOfMonth, type, method: "Банка", amount,
+      store: "КасаБанка", category: "Пренос",
+      note: "Пренос от предходен месец", imageUrl: ""
+    };
+    const ref = await addDoc(collection(db, "records"), data);
+    newRecords.push({ id: ref.id, ...data });
+  }
+
+  if (newRecords.length) {
+    newRecords.forEach(r => records.unshift(r));
+    records.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+    refreshUI();
+    showStatusMsg(
+      `🔄 Пренос: Кеш ${kasaKesh.toFixed(2)} €  |  Банка ${kasaBanka.toFixed(2)} €`,
+      8000
+    );
+  }
 }
 
 // --------------------------------------------------
@@ -650,9 +728,10 @@ function renderTable(data = sortRecords(records)) {
 
   data.forEach(r => {
     const tr = document.createElement("tr");
+    if (r.category === "Пренос") tr.classList.add("carryover-row");
     tr.innerHTML = `
       <td>${r.date || ""}</td>
-      <td style="color:${r.type === "Приход" ? "#4caf50" : "#f44336"};">${r.type || ""}</td>
+      <td style="color:${r.category === "Пренос" ? "var(--blue)" : (r.type === "Приход" ? "#4caf50" : "#f44336")};">${r.type || ""}</td>
       <td class="money">${formatMoney(r.amount)}</td>
       <td>${r.method || ""}</td>
       <td class="store-cell" data-store="${effectiveStore(r)}" onclick="filterByStore(this.dataset.store)" title="Филтрирай по магазин">${storeLabel(effectiveStore(r))}</td>
@@ -751,23 +830,24 @@ function renderTaxSummary() {
   const tax = document.getElementById("taxSummary");
   if (!tax) return;
 
-  const isSalary = (cat) => {
+  const isSalary   = (cat) => {
     const v = String(cat ?? "").trim().toLowerCase();
     return v === "заплата" || v === "заплати";
   };
-  const isNoVat = (cat) => String(cat ?? "").trim().toLowerCase() === "без ддс";
+  const isNoVat    = (cat) => String(cat ?? "").trim().toLowerCase() === "без ддс";
+  const isCarryover = (cat) => String(cat ?? "").trim() === "Пренос";
 
   const sum = (arr) => arr.reduce((s, r) => s + Number(r.amount || 0), 0);
 
   // ── Приходи ────────────────────────────────────
-  // С ДДС (всичко без "Без ДДС")
-  const incGrossVat = sum(records.filter(r => r.type === "Приход" && !isNoVat(r.category)));
+  // С ДДС (всичко без "Без ДДС" и без "Пренос")
+  const incGrossVat = sum(records.filter(r => r.type === "Приход" && !isNoVat(r.category) && !isCarryover(r.category)));
   // Без ДДС
   const incNoVat    = sum(records.filter(r => r.type === "Приход" && isNoVat(r.category)));
 
   // ── Разходи ────────────────────────────────────
-  // С ДДС (без Заплати и без "Без ДДС")
-  const expGrossVat = sum(records.filter(r => r.type === "Разход" && !isSalary(r.category) && !isNoVat(r.category)));
+  // С ДДС (без Заплати, без "Без ДДС", без "Пренос")
+  const expGrossVat = sum(records.filter(r => r.type === "Разход" && !isSalary(r.category) && !isNoVat(r.category) && !isCarryover(r.category)));
   // Заплати — без ДДС, изключени и от печалбата
   const expSalary   = sum(records.filter(r => r.type === "Разход" && isSalary(r.category)));
   // Без ДДС — участват в печалбата, но не в ДДС
@@ -817,7 +897,7 @@ function renderTaxSummary() {
     </tr>
   </table>
   <div style="font-size:0.72rem;color:var(--text3);margin-top:10px;">
-    * Категории изключени от ДДС: Заплати, Без ДДС
+    * Категории изключени от ДДС: Заплати, Без ДДС, Пренос
   </div>`;
 }
 
