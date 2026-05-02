@@ -223,76 +223,87 @@ async function loadRecords() {
 // --------------------------------------------------
 // 🔄 Автоматичен пренос на салдо в началото на месеца
 // --------------------------------------------------
+let _carryoverRunning = false;
+
 async function checkAndCreateMonthlyCarryover() {
+  if (_carryoverRunning) return;
+  _carryoverRunning = true;
+
   // Само admin може да създава преносни записи
-  if (!document.body.classList.contains("admin")) return;
+  if (!document.body.classList.contains("admin")) { _carryoverRunning = false; return; }
 
   const now = new Date();
   const currentYM   = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   const firstOfMonth = `${currentYM}-01`;
 
-  // Ако вече има пренос за текущия месец → нищо
-  const alreadyHas = records.some(r =>
-    r.category === "Пренос" && (r.date || "").startsWith(currentYM)
-  );
-  if (alreadyHas) return;
-
-  // Вземи всички записи ПРЕДИ текущия месец
-  const prevRecords = records.filter(r => (r.date || "") < firstOfMonth);
-  if (!prevRecords.length) return;
-
-  // Изчисли салдата по метод (Кеш / Банка+Карта)
-  let kasaKesh = 0, kasaBanka = 0;
-  prevRecords.forEach(r => {
-    const amount = Number(r.amount || 0);
-    if (!Number.isFinite(amount) || amount === 0) return;
-    const signed = r.type === "Приход" ? amount : -amount;
-    if (normMethod(r.method) === "Кеш") {
-      kasaKesh += signed;
-    } else {
-      kasaBanka += signed;
-    }
-  });
-
-  kasaKesh  = Math.round(kasaKesh  * 100) / 100;
-  kasaBanka = Math.round(kasaBanka * 100) / 100;
-
-  if (kasaKesh === 0 && kasaBanka === 0) return;
-
-  const newRecords = [];
-
-  if (kasaKesh !== 0) {
-    const type   = kasaKesh > 0 ? "Приход" : "Разход";
-    const amount = Math.abs(kasaKesh);
-    const data   = {
-      date: firstOfMonth, type, method: "Кеш", amount,
-      store: "КасаКеш", category: "Пренос",
-      note: "Пренос от предходен месец", imageUrl: ""
-    };
-    const ref = await addDoc(collection(db, "records"), data);
-    newRecords.push({ id: ref.id, ...data });
-  }
-
-  if (kasaBanka !== 0) {
-    const type   = kasaBanka > 0 ? "Приход" : "Разход";
-    const amount = Math.abs(kasaBanka);
-    const data   = {
-      date: firstOfMonth, type, method: "Банка", amount,
-      store: "КасаБанка", category: "Пренос",
-      note: "Пренос от предходен месец", imageUrl: ""
-    };
-    const ref = await addDoc(collection(db, "records"), data);
-    newRecords.push({ id: ref.id, ...data });
-  }
-
-  if (newRecords.length) {
-    newRecords.forEach(r => records.unshift(r));
-    records.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
-    refreshUI();
-    showStatusMsg(
-      `🔄 Пренос: Кеш ${kasaKesh.toFixed(2)} €  |  Банка ${kasaBanka.toFixed(2)} €`,
-      8000
+  try {
+    // Ако вече има пренос за текущия месец → нищо
+    const alreadyHas = records.some(r =>
+      r.category === "Пренос" && (r.date || "").startsWith(currentYM)
     );
+    if (alreadyHas) return;
+
+    // Вземи всички записи ПРЕДИ текущия месец
+    const prevRecords = records.filter(r => (r.date || "") < firstOfMonth);
+    if (!prevRecords.length) return;
+
+    // Изчисли салдата по метод (Кеш / Банка+Карта)
+    let kasaKesh = 0, kasaBanka = 0;
+    prevRecords.forEach(r => {
+      const amount = Number(r.amount || 0);
+      if (!Number.isFinite(amount) || amount === 0) return;
+      const signed = r.type === "Приход" ? amount : -amount;
+      if (normMethod(r.method) === "Кеш") {
+        kasaKesh += signed;
+      } else {
+        kasaBanka += signed;
+      }
+    });
+
+    kasaKesh  = Math.round(kasaKesh  * 100) / 100;
+    kasaBanka = Math.round(kasaBanka * 100) / 100;
+
+    if (kasaKesh === 0 && kasaBanka === 0) return;
+
+    const newRecords = [];
+
+    if (kasaKesh !== 0) {
+      const type   = kasaKesh > 0 ? "Приход" : "Разход";
+      const amount = Math.abs(kasaKesh);
+      const data   = {
+        date: firstOfMonth, type, method: "Кеш", amount,
+        store: "КасаКеш", category: "Пренос",
+        note: "Пренос от предходен месец", imageUrl: ""
+      };
+      const ref = await addDoc(collection(db, "records"), data);
+      newRecords.push({ id: ref.id, ...data });
+    }
+
+    if (kasaBanka !== 0) {
+      const type   = kasaBanka > 0 ? "Приход" : "Разход";
+      const amount = Math.abs(kasaBanka);
+      const data   = {
+        date: firstOfMonth, type, method: "Банка", amount,
+        store: "КасаБанка", category: "Пренос",
+        note: "Пренос от предходен месец", imageUrl: ""
+      };
+      const ref = await addDoc(collection(db, "records"), data);
+      newRecords.push({ id: ref.id, ...data });
+    }
+
+    if (newRecords.length) {
+      newRecords.forEach(r => records.unshift(r));
+      records.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+      refreshUI();
+      showStatusMsg(
+        `🔄 Пренос: Кеш ${kasaKesh.toFixed(2)} €  |  Банка ${kasaBanka.toFixed(2)} €`,
+        8000
+      );
+    }
+  } catch (err) {
+    console.error("Грешка при автоматичен пренос:", err);
+  } finally {
+    _carryoverRunning = false;
   }
 }
 
@@ -767,7 +778,7 @@ function renderRecentTable() {
       <td style="color:${r.type === "Приход" ? "#4caf50" : "#f44336"};">${r.type || ""}</td>
       <td class="money">${formatMoney(r.amount)}</td>
       <td>${r.method || ""}</td>
-      <td>${storeLabel(r.store)}</td>
+      <td>${storeLabel(effectiveStore(r))}</td>
       <td>${r.category || ""}</td>
       <td>${r.note || ""}</td>
 
@@ -1820,6 +1831,7 @@ function renderOwners(entries) {
 window.addOwnerEntry = async function() {
   const amount = parseFloat(document.getElementById("ownerAmount").value);
   const name   = document.getElementById("ownerName").value;
+  const type   = document.getElementById("ownerType")?.value || "Разход";
   const note   = document.getElementById("ownerNote").value.trim();
   const date   = document.getElementById("ownerDate").value;
 
@@ -1830,6 +1842,7 @@ window.addOwnerEntry = async function() {
     await addDoc(collection(db, "owners"), {
       name,
       amount,
+      type,
       note,
       date,
       month: date.slice(0, 7),

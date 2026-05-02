@@ -450,6 +450,27 @@
         </select>
       </div>
       <div class="owners-form-row">
+        <label class="field-label">💵 Тип</label>
+        <div class="segment">
+          <button type="button" class="segment-btn active-income" id="btnOwnerIncome"
+                  onclick="document.getElementById('ownerType').value='Приход';
+                           document.getElementById('btnOwnerIncome').classList.add('active-income');
+                           document.getElementById('btnOwnerExpense').classList.remove('active-expense');">
+            📈 Приход
+          </button>
+          <button type="button" class="segment-btn" id="btnOwnerExpense"
+                  onclick="document.getElementById('ownerType').value='Разход';
+                           document.getElementById('btnOwnerExpense').classList.add('active-expense');
+                           document.getElementById('btnOwnerIncome').classList.remove('active-income');">
+            📉 Разход
+          </button>
+        </div>
+        <select id="ownerType" class="hidden">
+          <option value="Приход">Приход</option>
+          <option value="Разход">Разход</option>
+        </select>
+      </div>
+      <div class="owners-form-row">
         <label class="field-label" for="ownerNote">📝 Бележка</label>
         <input type="text" id="ownerNote" placeholder="Бележка..." autocomplete="off">
       </div>
