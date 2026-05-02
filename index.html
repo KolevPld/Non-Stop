@@ -520,6 +520,67 @@
 
   </div><!-- /screen-owners -->
 
+  <!-- ── SCREEN: АКАУНТИ ──────────────────────────── -->
+  <div id="screen-accounts" class="hidden admin-only">
+
+    <div class="acc-page-title">
+      <i class="fa-solid fa-users-gear"></i>
+      Управление на акаунти
+    </div>
+
+    <!-- Статус съобщение -->
+    <div id="accStatus" class="acc-status hidden"></div>
+
+    <!-- Съществуващи акаунти -->
+    <div class="card">
+      <div class="card-title">
+        <i class="fa-solid fa-users"></i> Акаунти
+      </div>
+      <div id="accountsList">
+        <div class="acc-loading">Зареждане...</div>
+      </div>
+    </div>
+
+    <!-- Форма за нов акаунт -->
+    <div class="card">
+      <div class="card-title">
+        <i class="fa-solid fa-user-plus"></i> Нов акаунт
+      </div>
+
+      <label class="field-label" for="newAccEmail">📧 Имейл</label>
+      <input type="email" id="newAccEmail" placeholder="magazin@nonstop.bg" autocomplete="off">
+
+      <label class="field-label" for="newAccPassword" style="margin-top:12px;">🔑 Парола</label>
+      <input type="password" id="newAccPassword" placeholder="Минимум 6 символа" autocomplete="new-password">
+
+      <label class="field-label" style="margin-top:12px;">🏪 Роля</label>
+      <div class="segment">
+        <button type="button" class="segment-btn acc-role-btn active" id="btnRoleStore1"
+                onclick="setNewAccRole('store1', this)">
+          🏪 Магазин 1
+        </button>
+        <button type="button" class="segment-btn acc-role-btn" id="btnRoleStore2"
+                onclick="setNewAccRole('store2', this)">
+          🏪 Магазин 2
+        </button>
+      </div>
+      <select id="newAccRole" class="hidden">
+        <option value="store1">store1</option>
+        <option value="store2">store2</option>
+      </select>
+
+      <div class="acc-create-note">
+        ℹ️ Управителят ще може да влезе веднага с тези данни.
+      </div>
+
+      <button type="button" class="btn-primary" id="createAccBtn" onclick="createManagedAccount()"
+              style="margin-top:14px;">
+        <i class="fa-solid fa-user-plus"></i> Създай акаунт
+      </button>
+    </div>
+
+  </div><!-- /screen-accounts -->
+
 </div><!-- /app -->
 
 <!-- ── Bottom Navigation ──────────────────────── -->
@@ -543,6 +604,11 @@
   <button class="nav-btn" id="navNotes" onclick="showScreen('notes')">
     <span class="nav-icon">📝</span>
     Бележки
+  </button>
+
+  <button class="nav-btn admin-only" id="navAccounts" onclick="showScreen('accounts')">
+    <span class="nav-icon">⚙️</span>
+    Акаунти
   </button>
 
 </nav>

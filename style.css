@@ -1949,3 +1949,83 @@ body.light .dr-input  { background: #f6f8fa; border-color: rgba(0,0,0,.12); }
 body.light .dr-table th { background: #f0f2f5; }
 body.light .dr-total-row { background: #f0f2f5; }
 body.light .dr-hist-item { background: #fff; border-color: rgba(0,0,0,.1); }
+
+/* ════════════════════════════════════════════════
+   ⚙️ УПРАВЛЕНИЕ НА АКАУНТИ
+   ════════════════════════════════════════════════ */
+
+.acc-page-title {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 1.1rem; font-weight: 700; color: var(--text);
+  padding: 18px 0 10px;
+}
+.acc-page-title i { color: var(--blue); }
+
+/* ── Status banner ──────────────────────────────── */
+.acc-status {
+  border-radius: var(--radius-sm); padding: 10px 14px;
+  font-size: .875rem; margin-bottom: 12px; font-weight: 500;
+}
+.acc-status-success { background: var(--green-dim); color: var(--green); }
+.acc-status-error   { background: var(--red-dim);   color: var(--red);   }
+
+/* ── Accounts list ──────────────────────────────── */
+.acc-loading, .acc-empty {
+  text-align: center; padding: 20px; color: var(--text3); font-size: .875rem;
+}
+
+.acc-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.acc-row:last-child { border-bottom: none; }
+.acc-row.acc-disabled { opacity: .55; }
+
+.acc-info {
+  display: flex; flex-direction: column; gap: 3px; min-width: 0;
+}
+.acc-email {
+  font-size: .9rem; color: var(--text); font-weight: 500;
+  word-break: break-all;
+}
+.acc-date { font-size: .72rem; color: var(--text3); }
+
+/* Role badges */
+.acc-badge {
+  display: inline-block; font-size: .72rem; padding: 2px 8px;
+  border-radius: 12px; font-weight: 600; width: fit-content;
+}
+.acc-badge-owner    { background: var(--amber-dim);  color: var(--amber); }
+.acc-badge-store1   { background: var(--green-dim);  color: var(--green); }
+.acc-badge-store2   { background: var(--blue-dim);   color: var(--blue);  }
+.acc-badge-disabled { background: var(--red-dim);    color: var(--red);   }
+
+.acc-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+.acc-del-btn {
+  background: var(--red-dim); color: var(--red); border: 1px solid transparent;
+  border-radius: var(--radius-sm); padding: 5px 10px;
+  font-size: .78rem; font-weight: 600; cursor: pointer;
+  white-space: nowrap; font-family: var(--font);
+  transition: var(--transition);
+}
+.acc-del-btn:hover { background: var(--red); color: #fff; }
+
+.acc-act-btn {
+  font-size: .78rem; padding: 5px 10px; white-space: nowrap;
+}
+
+.acc-you, .acc-owner-badge {
+  font-size: .72rem; color: var(--text3); font-style: italic;
+}
+
+/* ── Create form ────────────────────────────────── */
+.acc-create-note {
+  font-size: .78rem; color: var(--text3); margin-top: 10px;
+  padding: 8px 10px; background: var(--bg3);
+  border-radius: var(--radius-sm); border-left: 3px solid var(--blue);
+}
+
+/* ── Light theme ────────────────────────────────── */
+body.light .acc-del-btn { border-color: rgba(248,81,73,.3); }

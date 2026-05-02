@@ -1,4 +1,4 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
 import {
   getFirestore,
   collection,
@@ -153,8 +153,13 @@ let currentUserRole  = null;
 async function getUserRole(user) {
   try {
     const snap = await getDoc(doc(db, "users", user.uid));
-    if (snap.exists()) return snap.data().role;
-  } catch (e) { /* offline или липсва документа */ }
+    if (snap.exists()) {
+      const role = snap.data().role;
+      // Firestore винаги има приоритет — включително disabled
+      return role || null;
+    }
+  } catch (e) { /* offline */ }
+  // Fallback само ако Firestore документ липсва изцяло
   return ROLE_MAP[user.email] || null;
 }
 
@@ -177,6 +182,16 @@ onAuthStateChanged(auth, async user => {
 
     const role      = await getUserRole(user);
     currentUserRole = role;
+
+    // Блокиран акаунт
+    if (role === "disabled") {
+      await signOut(auth);
+      if (statusDiv) statusDiv.textContent = "⛔ Акаунтът е деактивиран.";
+      document.getElementById("loginScreen")?.classList.remove("hidden");
+      alert("⛔ Акаунтът е деактивиран. Свържете се с администратора.");
+      return;
+    }
+
     await ensureUserDoc(user, role);
 
     const isAdmin = role === "owner" || user.email === ADMIN_EMAIL;
@@ -1139,16 +1154,18 @@ window.toggleCustomCategory = toggleCustomCategory;
 
 // ── showScreen — единна функция (add / report / notes) ────────
 window.showScreen = function(screen) {
-  const addScreen    = document.getElementById("screen-add");
-  const reportScreen = document.getElementById("screen-report");
-  const notesScreen  = document.getElementById("screen-notes");
-  const ownersScreen = document.getElementById("screen-owners");
-  const isAdmin      = document.body.classList.contains("admin");
+  const addScreen      = document.getElementById("screen-add");
+  const reportScreen   = document.getElementById("screen-report");
+  const notesScreen    = document.getElementById("screen-notes");
+  const ownersScreen   = document.getElementById("screen-owners");
+  const accountsScreen = document.getElementById("screen-accounts");
+  const isAdmin        = document.body.classList.contains("admin");
 
   addScreen?.classList.add("hidden");
   reportScreen?.classList.add("hidden");
   notesScreen?.classList.add("hidden");
   ownersScreen?.classList.add("hidden");
+  accountsScreen?.classList.add("hidden");
 
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
 
@@ -1171,6 +1188,12 @@ window.showScreen = function(screen) {
     ownersScreen?.classList.remove("hidden");
     document.getElementById('navOwners')?.classList.add('active');
     loadOwnersForMonth();
+
+  } else if (screen === "accounts") {
+    if (!isAdmin) { alert("Нямаш достъп до този екран."); return; }
+    accountsScreen?.classList.remove("hidden");
+    document.getElementById('navAccounts')?.classList.add('active');
+    renderAccountsList();
 
   } else {
     addScreen?.classList.remove("hidden");
@@ -2427,4 +2450,167 @@ async function renderDrChangeLogs(reportId) {
           <span class="dr-log-time">${(l.timestamp || "").slice(0, 16).replace("T", " ")}</span>
         </div>`).join("")}`;
   } catch (e) { console.warn("renderDrChangeLogs:", e); }
+}
+
+// ════════════════════════════════════════════════
+// ⚙️ УПРАВЛЕНИЕ НА АКАУНТИ (само за owner)
+// ════════════════════════════════════════════════
+
+const ROLE_LABELS = {
+  owner:    "👑 Собственик",
+  store1:   "🏪 Магазин 1",
+  store2:   "🏪 Магазин 2",
+  disabled: "⛔ Деактивиран"
+};
+
+// ── Списък на акаунтите ──────────────────────────
+async function renderAccountsList() {
+  const el = document.getElementById("accountsList");
+  if (!el) return;
+  el.innerHTML = '<div class="acc-loading">Зареждане...</div>';
+
+  try {
+    const snap  = await getDocs(collection(db, "users"));
+    const users = snap.docs
+      .map(d => ({ uid: d.id, ...d.data() }))
+      .sort((a, b) => {
+        const order = { owner: 0, store1: 1, store2: 2, disabled: 9 };
+        return (order[a.role] ?? 5) - (order[b.role] ?? 5);
+      });
+
+    if (!users.length) {
+      el.innerHTML = '<div class="acc-empty">Няма акаунти в базата.</div>';
+      return;
+    }
+
+    el.innerHTML = users.map(u => {
+      const isOwner   = u.role === "owner";
+      const isMe      = u.uid  === currentUserId;
+      const isDisabled = u.role === "disabled";
+      const canDelete = !isOwner && !isMe;
+
+      return `
+        <div class="acc-row ${isDisabled ? "acc-disabled" : ""}">
+          <div class="acc-info">
+            <span class="acc-email">${escHtml(u.email || "—")}</span>
+            <span class="acc-badge acc-badge-${u.role || "unknown"}">${ROLE_LABELS[u.role] || u.role}</span>
+            ${u.createdAt ? `<span class="acc-date">от ${u.createdAt.slice(0,10)}</span>` : ""}
+          </div>
+          <div class="acc-actions">
+            ${canDelete && !isDisabled ? `
+              <button class="btn-danger acc-del-btn" onclick="deactivateAccount('${u.uid}', '${escHtml(u.email || "")}')"
+                      title="Деактивирай акаунта">
+                <i class="fa-solid fa-ban"></i> Изтрий
+              </button>` : ""}
+            ${canDelete && isDisabled ? `
+              <button class="btn-secondary acc-act-btn" onclick="reactivateAccount('${u.uid}', '${escHtml(u.email || "")}')"
+                      title="Реактивирай акаунта">
+                <i class="fa-solid fa-rotate-right"></i> Реактивирай
+              </button>` : ""}
+            ${isMe   ? '<span class="acc-you">← Ти</span>' : ""}
+            ${isOwner ? '<span class="acc-owner-badge">Собственик</span>' : ""}
+          </div>
+        </div>`;
+    }).join("");
+  } catch (err) {
+    console.error("renderAccountsList:", err);
+    el.innerHTML = `<div class="acc-empty">Грешка: ${err.message}</div>`;
+  }
+}
+
+// ── Задаване на роля в UI формата ───────────────
+window.setNewAccRole = function(role, btn) {
+  document.getElementById("newAccRole").value = role;
+  document.querySelectorAll(".acc-role-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+};
+
+// ── Създаване на нов акаунт (вторичен Firebase App) ──
+window.createManagedAccount = async function() {
+  const email    = (document.getElementById("newAccEmail")?.value    || "").trim();
+  const password = (document.getElementById("newAccPassword")?.value || "").trim();
+  const role     = document.getElementById("newAccRole")?.value || "store1";
+
+  if (!email || !password) { alert("Попълни имейл и парола."); return; }
+  if (password.length < 6) { alert("Паролата трябва да е поне 6 символа."); return; }
+
+  const btn = document.getElementById("createAccBtn");
+  if (btn) { btn.disabled = true; btn.textContent = "Създаване..."; }
+
+  // Вторичен app — не изписва текущата сесия на собственика
+  const secondaryApp  = initializeApp(firebaseConfig, "acc_reg_" + Date.now());
+  const { getAuth: getSecondaryAuth, createUserWithEmailAndPassword: createSecondary } =
+    await import("https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js");
+  const secondaryAuth = getSecondaryAuth(secondaryApp);
+
+  try {
+    const cred = await createSecondary(secondaryAuth, email, password);
+    const uid  = cred.user.uid;
+
+    await setDoc(doc(db, "users", uid), {
+      email, role,
+      createdAt:    new Date().toISOString(),
+      createdByUid: currentUserId
+    });
+
+    await signOut(secondaryAuth);
+
+    // Изчисти формата
+    document.getElementById("newAccEmail").value    = "";
+    document.getElementById("newAccPassword").value = "";
+
+    renderAccountsList();
+    showAccStatus(`✅ Акаунтът "${email}" е създаден успешно (роля: ${ROLE_LABELS[role] || role}).`, "success");
+  } catch (err) {
+    console.error("createManagedAccount:", err);
+    const msg = err.code === "auth/email-already-in-use"
+      ? "Имейлът вече е регистриран."
+      : err.message;
+    showAccStatus("❌ Грешка: " + msg, "error");
+  } finally {
+    await deleteApp(secondaryApp);
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-user-plus"></i> Създай акаунт'; }
+  }
+};
+
+// ── Деактивиране (soft-delete) ───────────────────
+window.deactivateAccount = async function(uid, email) {
+  if (!confirm(`Деактивирай акаунта "${email}"?\n\nПотребителят ще загуби достъп веднага. Можеш да го реактивираш по-късно.`)) return;
+  try {
+    await updateDoc(doc(db, "users", uid), {
+      role:         "disabled",
+      disabledAt:   new Date().toISOString(),
+      disabledByUid: currentUserId
+    });
+    renderAccountsList();
+    showAccStatus(`✅ Акаунтът "${email}" е деактивиран.`, "success");
+  } catch (err) {
+    showAccStatus("❌ Грешка: " + err.message, "error");
+  }
+};
+
+// ── Реактивиране ─────────────────────────────────
+window.reactivateAccount = async function(uid, email) {
+  const role = prompt(`Роля за реактивиране на "${email}":\n\nВъведи: store1 или store2`);
+  if (!role || !["store1", "store2"].includes(role)) { alert("Невалидна роля."); return; }
+  try {
+    await updateDoc(doc(db, "users", uid), {
+      role,
+      reactivatedAt:   new Date().toISOString(),
+      reactivatedByUid: currentUserId
+    });
+    renderAccountsList();
+    showAccStatus(`✅ Акаунтът "${email}" е реактивиран като ${ROLE_LABELS[role]}.`, "success");
+  } catch (err) {
+    showAccStatus("❌ Грешка: " + err.message, "error");
+  }
+};
+
+function showAccStatus(msg, type) {
+  const el = document.getElementById("accStatus");
+  if (!el) return;
+  el.textContent = msg;
+  el.className   = `acc-status acc-status-${type}`;
+  el.classList.remove("hidden");
+  setTimeout(() => el.classList.add("hidden"), 6000);
 }
