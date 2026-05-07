@@ -632,6 +632,79 @@
 
   </div><!-- /screen-dailyreports -->
 
+  <!-- ── SCREEN: ЧАСОВЕ И ЗАПЛАТИ (само за owner) ─── -->
+  <div id="screen-workhours" class="hidden admin-only">
+
+    <div class="wh-owner-title">
+      <i class="fa-solid fa-clock" style="color:var(--blue)"></i>
+      Часове и заплати
+    </div>
+
+    <!-- Навигация по месец -->
+    <div class="wh-owner-month-nav">
+      <button class="wh-month-btn" onclick="wageChangeMonth(-1)">&#8249;</button>
+      <span id="wageMonthLabel" class="wh-month-label">—</span>
+      <button class="wh-month-btn" onclick="wageChangeMonth(1)">&#8250;</button>
+      <input type="month" id="wageMonth" class="wh-month-input" onchange="wageMonthInput()">
+    </div>
+
+    <!-- Карти обобщение -->
+    <div id="wageSummaryCards" class="wh-sum-cards"></div>
+
+    <!-- Tabs -->
+    <div class="wh-owner-tabs">
+      <button class="wage-tab active" data-tab="month" onclick="wageSetTab('month')">По месец</button>
+      <button class="wage-tab" data-tab="summary" onclick="wageSetTab('summary')">Обобщение</button>
+      <button class="wage-tab" data-tab="history" onclick="wageSetTab('history')">История</button>
+    </div>
+
+    <!-- Tab: По месец -->
+    <div id="wageTabMonth">
+      <div class="table-responsive">
+        <table class="wh-wage-table">
+          <thead>
+            <tr>
+              <th>Служител</th>
+              <th>Маг.</th>
+              <th>Часове</th>
+              <th>Ставка</th>
+              <th>Сума</th>
+              <th>—</th>
+            </tr>
+          </thead>
+          <tbody id="wageTableBody">
+            <tr><td colspan="6" class="tasks-empty">Зареждане...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="wh-wage-actions">
+        <button class="btn-secondary" onclick="exportWagePdf()">
+          <i class="fa-solid fa-print"></i> Ведомост PDF
+        </button>
+      </div>
+      <div class="wh-wage-note">
+        ℹ️ Заплатите са изчислени само от часовете × ставка.
+        Допълнителни компоненти (бонуси, удръжки, осигуровки)
+        ще се добавят в следващ модул.
+      </div>
+    </div>
+
+    <!-- Tab: Обобщение -->
+    <div id="wageTabSummary" class="hidden">
+      <div id="wageSummaryDetail">
+        <div class="tasks-empty">Зареждане...</div>
+      </div>
+    </div>
+
+    <!-- Tab: История -->
+    <div id="wageTabHistory" class="hidden">
+      <div id="wageHistoryContent">
+        <div class="tasks-empty">Зареждане...</div>
+      </div>
+    </div>
+
+  </div><!-- /screen-workhours -->
+
 </div><!-- /app -->
 
 <!-- ── Bottom Navigation ──────────────────────── -->
@@ -660,6 +733,11 @@
   <button class="nav-btn admin-only" id="navDailyReports" onclick="showScreen('dailyreports')">
     <span class="nav-icon">📋</span>
     Дневни
+  </button>
+
+  <button class="nav-btn admin-only" id="navWorkHours" onclick="showScreen('workhours')">
+    <span class="nav-icon">🕐</span>
+    Часове
   </button>
 
   <button class="nav-btn admin-only" id="navAccounts" onclick="showScreen('accounts')">
@@ -691,6 +769,19 @@
 
   <!-- ── Статус банер ─────────────────────────────── -->
   <div id="drStatusBanner" class="hidden"></div>
+
+  <!-- ── Tab навигация ───────────────────────────── -->
+  <div class="store-tabs">
+    <button class="store-tab active" id="storeTabDr" onclick="storeShowTab('dailyreport')">
+      📋 Дневен отчет
+    </button>
+    <button class="store-tab" id="storeTabWh" onclick="storeShowTab('workhours')">
+      🕐 Работни часове
+    </button>
+  </div>
+
+  <!-- ── Дневен отчет (съдържание) ───────────────── -->
+  <div id="storeTabDrContent">
 
   <!-- ── Лента: дата + бутони ────────────────────── -->
   <div class="dr-top-bar">
@@ -831,6 +922,108 @@
   <!-- Autocomplete за доставчици -->
   <datalist id="drSuppliersList"></datalist>
 
+  </div><!-- /storeTabDrContent -->
+
+  <!-- ── Работни часове (съдържание) ─────────────── -->
+  <div id="storeWhScreen" class="hidden">
+    <div class="wh-content">
+
+      <!-- Служители (сгъваемо) -->
+      <div class="card dr-card">
+        <div class="wh-section-header" onclick="whToggleEmpSection()">
+          <span>👥 Служители</span>
+          <span id="whEmpArrow">▾</span>
+        </div>
+        <div id="whEmpBody">
+          <div id="whEmpList">
+            <div class="tasks-empty">Зареждане...</div>
+          </div>
+
+          <!-- Форма за добавяне/редакция -->
+          <div id="whEmpForm" class="hidden wh-emp-form">
+            <div id="whEmpFormTitle" class="wh-emp-form-title">Нов служител</div>
+            <label class="field-label">Три имена</label>
+            <input type="text" id="whEmpName" placeholder="Иван Иванов" autocomplete="off">
+            <label class="field-label" style="margin-top:10px;">Длъжност</label>
+            <select id="whEmpPosition">
+              <option>Касиер</option>
+              <option>Управител</option>
+              <option>Друго</option>
+            </select>
+            <div class="wh-toggle-row" style="margin-top:10px;">
+              <span class="field-label">Активен</span>
+              <label class="toggle-switch">
+                <input type="checkbox" id="whEmpActive" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="wh-form-btns">
+              <button class="btn-primary" onclick="saveEmployee()">
+                <i class="fa-solid fa-floppy-disk"></i> Запази
+              </button>
+              <button class="btn-secondary" onclick="cancelEmpForm()">Откажи</button>
+            </div>
+          </div>
+
+          <button class="btn-secondary wh-add-emp-btn" onclick="showAddEmpForm()">
+            <i class="fa-solid fa-plus"></i> Нов служител
+          </button>
+        </div>
+      </div>
+
+      <!-- Таблица с часове -->
+      <div class="card dr-card">
+        <!-- Навигация по месец -->
+        <div class="wh-month-bar">
+          <button class="wh-month-btn" onclick="whChangeMonth(-1)">&#8249;</button>
+          <span id="whMonthLabel" class="wh-month-label">—</span>
+          <button class="wh-month-btn" onclick="whChangeMonth(1)">&#8250;</button>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="wh-toolbar">
+          <button class="btn-secondary wh-tool-btn" onclick="whQuickFillModal()">
+            <i class="fa-solid fa-bolt"></i> Бърз вход
+          </button>
+          <button class="btn-secondary wh-tool-btn" onclick="exportWhExcel()">
+            <i class="fa-solid fa-file-excel"></i> Excel
+          </button>
+        </div>
+
+        <!-- Desktop таблица -->
+        <div class="wh-table-scroll-wrap">
+          <div id="whTableWrap"></div>
+        </div>
+
+        <!-- Мобилен изглед -->
+        <div class="wh-mobile-wrap">
+          <div class="wh-mob-day-nav">
+            <input type="date" id="whMobileDay" onchange="whMobileDayChange(this.value)">
+          </div>
+          <div id="whMobileView"></div>
+        </div>
+      </div>
+
+      <!-- Бърз вход панел -->
+      <div id="whQuickFillPanel" class="hidden card dr-card">
+        <div class="wh-section-header" style="cursor:default">
+          <span>⚡ Бърз вход — работни дни</span>
+        </div>
+        <label class="field-label">Служител</label>
+        <select id="whQuickEmp"></select>
+        <label class="field-label" style="margin-top:10px;">Часове на ден</label>
+        <input type="number" id="whQuickHours" value="8" min="1" max="24" step="0.5">
+        <div class="wh-form-btns">
+          <button class="btn-primary" onclick="whDoQuickFill()">
+            <i class="fa-solid fa-bolt"></i> Попълни
+          </button>
+          <button class="btn-secondary" onclick="closeWhQuickFill()">Откажи</button>
+        </div>
+      </div>
+
+    </div><!-- /wh-content -->
+  </div><!-- /storeWhScreen -->
+
 </div><!-- /storeApp -->
 
 <!-- ── Daily Report Detail Modal ───────────────── -->
@@ -853,6 +1046,41 @@
       </button>
       <button class="btn-danger" onclick="deleteCurrentReport()">
         <i class="fa-solid fa-trash"></i> Изтрий
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Work Hours Cell Edit Modal ───────────────── -->
+<div id="whCellModal" class="hidden">
+  <div class="dr-detail-backdrop" onclick="closeWhCellModal()"></div>
+  <div class="dr-detail-panel wh-cell-panel">
+    <div class="dr-detail-header">
+      <span id="whCellTitle" class="dr-detail-title-text">Часове</span>
+      <button class="dr-detail-close" onclick="closeWhCellModal()">✖</button>
+    </div>
+    <div class="dr-detail-body">
+      <label class="field-label">🕐 Часове</label>
+      <input type="number" id="whCellHours" min="0" max="24" step="0.5" placeholder="0"
+             class="dr-big-input" style="font-size:1.6rem;"
+             onkeydown="if(event.key==='Enter')saveWhCell()">
+      <label class="field-label" style="margin-top:12px;">Смяна (по желание)</label>
+      <select id="whCellShift">
+        <option value="">— без смяна —</option>
+        <option>Сутрешна</option>
+        <option>Следобедна</option>
+        <option>Нощна</option>
+      </select>
+      <label class="field-label" style="margin-top:12px;">Бележка (по желание)</label>
+      <input type="text" id="whCellNote" placeholder="Бележка...">
+    </div>
+    <div class="dr-detail-footer">
+      <button id="whCellDelete" class="btn-danger" onclick="deleteWhCell()" style="margin-right:auto;">
+        <i class="fa-solid fa-trash"></i> Изтрий
+      </button>
+      <button class="btn-secondary" onclick="closeWhCellModal()">Откажи</button>
+      <button class="btn-primary" onclick="saveWhCell()">
+        <i class="fa-solid fa-floppy-disk"></i> Запази
       </button>
     </div>
   </div>

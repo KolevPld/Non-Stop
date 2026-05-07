@@ -215,6 +215,7 @@ onAuthStateChanged(auth, async user => {
       document.getElementById("bottomNav")?.classList.add("hidden");
       document.getElementById("logoutArea")?.classList.remove("hidden");
       initDailyReport(role);
+      initWorkHours(role);
     } else {
       // ── Собственик/Owner изглед ──────────────────
       document.body.classList.toggle("admin", isAdmin);
@@ -1168,6 +1169,7 @@ window.showScreen = function(screen) {
   const ownersScreen   = document.getElementById("screen-owners");
   const accountsScreen = document.getElementById("screen-accounts");
   const drScreen       = document.getElementById("screen-dailyreports");
+  const whScreen       = document.getElementById("screen-workhours");
   const isAdmin        = document.body.classList.contains("admin");
 
   addScreen?.classList.add("hidden");
@@ -1176,6 +1178,7 @@ window.showScreen = function(screen) {
   ownersScreen?.classList.add("hidden");
   accountsScreen?.classList.add("hidden");
   drScreen?.classList.add("hidden");
+  whScreen?.classList.add("hidden");
 
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
 
@@ -1210,6 +1213,12 @@ window.showScreen = function(screen) {
     drScreen?.classList.remove("hidden");
     document.getElementById('navDailyReports')?.classList.add('active');
     loadDailyReportsScreen();
+
+  } else if (screen === "workhours") {
+    if (!isAdmin) { alert("Нямаш достъп до този екран."); return; }
+    whScreen?.classList.remove("hidden");
+    document.getElementById('navWorkHours')?.classList.add('active');
+    loadWageScreen();
 
   } else {
     addScreen?.classList.remove("hidden");
@@ -3204,3 +3213,767 @@ function showAccStatus(msg, type) {
   el.classList.remove("hidden");
   setTimeout(() => el.classList.add("hidden"), 6000);
 }
+
+// ════════════════════════════════════════════════════════════
+// 🕐 МОДУЛ 4 — РАБОТНИ ЧАСОВЕ
+// ════════════════════════════════════════════════════════════
+
+// ── Стейт ─────────────────────────────────────────────────
+let _whShopId    = null;
+let _whMonth     = "";
+let _whEmployees = [];
+let _whData      = {};      // {empId: {"YYYY-MM-DD": {hours,shift,note,docId}}}
+let _whEmpOpen   = true;
+let _whEditEmpId = null;
+let _whCellEmpId = null;
+let _whCellDate  = null;
+let _whMobileDay = "";
+
+// Owner state
+let _wageMonth        = "";
+let _wageTab          = "month";
+let _wageEmployeesAll = [];
+let _wageHoursMap     = {};  // {empId: totalHours} for current month
+
+// ── Helpers ────────────────────────────────────────────────
+function formatMonth(ym) {
+  const [y, m] = ym.split("-").map(Number);
+  const names  = ["Януари","Февруари","Март","Април","Май","Юни",
+                  "Юли","Август","Септември","Октомври","Ноември","Декември"];
+  return `${names[m - 1]} ${y}`;
+}
+
+function whCellClass(h) {
+  if (!h || h <= 0)  return "";
+  if (h <= 9)  return "wh-cell-normal";
+  if (h <= 12) return "wh-cell-long";
+  if (h <= 15) return "wh-cell-extra";
+  return "wh-cell-double";
+}
+
+// ── Init (called at login for store managers) ──────────────
+function initWorkHours(shopId) {
+  _whShopId = shopId;
+  _whMonth  = new Date().toISOString().slice(0, 7);
+  _whMobileDay = new Date().toISOString().slice(0, 10);
+  const mobDay = document.getElementById("whMobileDay");
+  if (mobDay) mobDay.value = _whMobileDay;
+  loadEmployees();
+}
+
+// ── Tab switching ──────────────────────────────────────────
+window.storeShowTab = function(tab) {
+  document.getElementById("storeTabDrContent")?.classList.toggle("hidden", tab !== "dailyreport");
+  document.getElementById("storeWhScreen")?.classList.toggle("hidden",     tab !== "workhours");
+  document.getElementById("storeTabDr")?.classList.toggle("active", tab === "dailyreport");
+  document.getElementById("storeTabWh")?.classList.toggle("active", tab === "workhours");
+  if (tab === "workhours" && _whShopId) loadWhData();
+};
+
+// ── Employee management ────────────────────────────────────
+async function loadEmployees() {
+  if (!_whShopId) return;
+  try {
+    const q    = query(
+      collection(db, "employees"),
+      where("shopId", "==", _whShopId),
+      orderBy("active", "desc"),
+      orderBy("name",   "asc")
+    );
+    const snap = await getDocs(q);
+    _whEmployees = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderEmployeeList();
+    await loadWhData();
+  } catch (e) { console.error("loadEmployees:", e); }
+}
+
+function renderEmployeeList() {
+  const el = document.getElementById("whEmpList");
+  if (!el) return;
+  if (!_whEmployees.length) {
+    el.innerHTML = `<div class="tasks-empty">Добави служители с бутона по-долу</div>`;
+    return;
+  }
+  el.innerHTML = _whEmployees.map(emp => `
+    <div class="wh-emp-row ${emp.active ? "" : "wh-emp-inactive"}">
+      <div class="wh-emp-info">
+        <div class="wh-emp-name">${escHtml(emp.name)}</div>
+        <div class="wh-emp-pos">${escHtml(emp.position || "—")}</div>
+      </div>
+      <div class="wh-emp-actions">
+        <button class="btn-icon" onclick="editEmployee('${emp.id}')" title="Редакция">✏️</button>
+        <button class="btn-icon" onclick="toggleEmployeeActive('${emp.id}',${!emp.active})"
+                title="${emp.active ? "Деактивирай" : "Активирай"}">
+          ${emp.active ? "🚫" : "✅"}
+        </button>
+      </div>
+    </div>`).join("");
+}
+
+window.showAddEmpForm = function() {
+  _whEditEmpId = null;
+  document.getElementById("whEmpFormTitle").textContent = "Нов служител";
+  document.getElementById("whEmpName").value     = "";
+  document.getElementById("whEmpPosition").value = "Касиер";
+  document.getElementById("whEmpActive").checked = true;
+  document.getElementById("whEmpForm").classList.remove("hidden");
+  document.getElementById("whEmpName").focus();
+};
+
+window.editEmployee = function(id) {
+  const emp = _whEmployees.find(e => e.id === id);
+  if (!emp) return;
+  _whEditEmpId = id;
+  document.getElementById("whEmpFormTitle").textContent = "Редакция";
+  document.getElementById("whEmpName").value     = emp.name || "";
+  document.getElementById("whEmpPosition").value = emp.position || "Касиер";
+  document.getElementById("whEmpActive").checked = !!emp.active;
+  document.getElementById("whEmpForm").classList.remove("hidden");
+  document.getElementById("whEmpName").focus();
+};
+
+window.cancelEmpForm = function() {
+  document.getElementById("whEmpForm").classList.add("hidden");
+  _whEditEmpId = null;
+};
+
+window.saveEmployee = async function() {
+  const name     = document.getElementById("whEmpName").value.trim();
+  const position = document.getElementById("whEmpPosition").value;
+  const active   = document.getElementById("whEmpActive").checked;
+  if (!name) { alert("Въведи три имена."); return; }
+
+  const data = { shopId: _whShopId, name, position, active };
+  try {
+    if (_whEditEmpId) {
+      await updateDoc(doc(db, "employees", _whEditEmpId), data);
+    } else {
+      data.createdAt          = new Date().toISOString();
+      data.hourlyRate         = 0;
+      data.hourlyRateHistory  = [];
+      await addDoc(collection(db, "employees"), data);
+    }
+    document.getElementById("whEmpForm").classList.add("hidden");
+    _whEditEmpId = null;
+    await loadEmployees();
+  } catch (e) { alert("Грешка: " + e.message); }
+};
+
+window.toggleEmployeeActive = async function(id, newState) {
+  try {
+    await updateDoc(doc(db, "employees", id), { active: newState });
+    const idx = _whEmployees.findIndex(e => e.id === id);
+    if (idx >= 0) _whEmployees[idx].active = newState;
+    renderEmployeeList();
+    renderWhTable();
+  } catch (e) { alert("Грешка: " + e.message); }
+};
+
+window.whToggleEmpSection = function() {
+  _whEmpOpen = !_whEmpOpen;
+  document.getElementById("whEmpBody")?.classList.toggle("hidden", !_whEmpOpen);
+  const arrow = document.getElementById("whEmpArrow");
+  if (arrow) arrow.textContent = _whEmpOpen ? "▴" : "▾";
+};
+
+// ── Month navigation ───────────────────────────────────────
+window.whChangeMonth = function(delta) {
+  const [y, m] = _whMonth.split("-").map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  _whMonth = d.toISOString().slice(0, 7);
+  const lbl = document.getElementById("whMonthLabel");
+  if (lbl) lbl.textContent = formatMonth(_whMonth);
+  loadWhData();
+};
+
+// ── Load monthly hours data ────────────────────────────────
+async function loadWhData() {
+  if (!_whShopId || !_whMonth) return;
+  const lbl = document.getElementById("whMonthLabel");
+  if (lbl) lbl.textContent = formatMonth(_whMonth);
+  try {
+    const q    = query(
+      collection(db, "work_hours"),
+      where("shopId", "==", _whShopId),
+      where("date",   ">=", _whMonth + "-01"),
+      where("date",   "<=", _whMonth + "-31")
+    );
+    const snap = await getDocs(q);
+    _whData = {};
+    snap.docs.forEach(d => {
+      const r = d.data();
+      if (!_whData[r.employeeId]) _whData[r.employeeId] = {};
+      _whData[r.employeeId][r.date] = {
+        hours: r.hours, shift: r.shift || "", note: r.note || "", docId: d.id
+      };
+    });
+    renderWhTable();
+    renderWhMobile();
+  } catch (e) { console.error("loadWhData:", e); }
+}
+
+// ── Desktop monthly table ──────────────────────────────────
+function renderWhTable() {
+  const wrap = document.getElementById("whTableWrap");
+  if (!wrap) return;
+
+  const [y, m]    = _whMonth.split("-").map(Number);
+  const daysInMon = new Date(y, m, 0).getDate();
+  const days      = Array.from({ length: daysInMon }, (_, i) => i + 1);
+
+  const active   = _whEmployees.filter(e => e.active);
+  const inactive = _whEmployees.filter(e => !e.active);
+  const all      = [...active, ...inactive];
+
+  if (!all.length) {
+    wrap.innerHTML = `<div class="tasks-empty">Добави служители за да видиш таблицата</div>`;
+    return;
+  }
+
+  const dayHeaders = days.map(d => {
+    const dow = new Date(y, m - 1, d).getDay();
+    const cls = (dow === 0 || dow === 6) ? "wh-day-weekend" : "";
+    return `<th class="wh-day-th ${cls}">${d}</th>`;
+  }).join("");
+
+  const rows = all.map(emp => {
+    let total = 0;
+    const cells = days.map(d => {
+      const dateStr = `${_whMonth}-${String(d).padStart(2, "0")}`;
+      const cell    = _whData[emp.id]?.[dateStr];
+      const h       = cell?.hours;
+      if (h) total += h;
+      const cls = h ? whCellClass(h) : "";
+      const dow = new Date(y, m - 1, d).getDay();
+      const wkd = (dow === 0 || dow === 6) ? "wh-cell-weekend" : "";
+      return `<td class="wh-cell ${cls} ${wkd} ${emp.active ? "" : "wh-cell-inactive"}"
+                  onclick="openWhCell('${emp.id}','${dateStr}')">${h || ""}</td>`;
+    }).join("");
+    return `<tr class="${emp.active ? "" : "wh-row-inactive"}">
+      <td class="wh-emp-cell">${escHtml(emp.name)}</td>
+      ${cells}
+      <td class="wh-total-cell">${total || ""}</td>
+    </tr>`;
+  }).join("");
+
+  const totals = days.map(d => {
+    const dateStr  = `${_whMonth}-${String(d).padStart(2, "0")}`;
+    const dayTotal = all.reduce((s, e) => s + ((_whData[e.id]?.[dateStr]?.hours) || 0), 0);
+    return `<td class="wh-total-cell">${dayTotal || ""}</td>`;
+  }).join("");
+
+  const grand = all.reduce((s, e) =>
+    s + days.reduce((ss, d) =>
+      ss + ((_whData[e.id]?.[`${_whMonth}-${String(d).padStart(2,"0")}`]?.hours) || 0), 0), 0);
+
+  wrap.innerHTML = `
+    <div class="wh-table-scroll">
+      <table class="wh-table">
+        <thead>
+          <tr>
+            <th class="wh-emp-th">Служител</th>${dayHeaders}
+            <th class="wh-total-th">Общо</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+        <tfoot>
+          <tr class="wh-totals-row">
+            <td class="wh-emp-cell"><strong>Общо</strong></td>
+            ${totals}
+            <td class="wh-total-cell"><strong>${grand || ""}</strong></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>`;
+}
+
+// ── Mobile day view ────────────────────────────────────────
+function renderWhMobile() {
+  const wrap = document.getElementById("whMobileView");
+  if (!wrap) return;
+  const date   = _whMobileDay || new Date().toISOString().slice(0, 10);
+  const active = _whEmployees.filter(e => e.active);
+  if (!active.length) {
+    wrap.innerHTML = `<div class="tasks-empty">Добави служители</div>`;
+    return;
+  }
+  const dayTotal = active.reduce((s, e) => s + ((_whData[e.id]?.[date]?.hours) || 0), 0);
+  const rows = active.map(emp => {
+    const cell = _whData[emp.id]?.[date];
+    const h    = cell?.hours ?? "";
+    const cls  = h !== "" ? whCellClass(Number(h)) : "";
+    return `
+      <div class="wh-mob-row">
+        <div class="wh-mob-name">${escHtml(emp.name)}</div>
+        <div class="wh-mob-input-wrap">
+          <input type="number" class="wh-mob-input ${cls}" value="${h}"
+                 min="0" max="24" step="0.5" placeholder="—"
+                 onchange="whMobileUpdate('${emp.id}','${date}',this.value)">
+          <span class="wh-mob-unit">ч</span>
+        </div>
+      </div>`;
+  }).join("");
+  wrap.innerHTML = `
+    <div class="wh-mob-total">Общо за деня: <strong>${dayTotal} ч</strong></div>
+    ${rows}`;
+}
+
+window.whMobileDayChange = function(val) {
+  _whMobileDay = val;
+  renderWhMobile();
+};
+
+window.whMobileUpdate = async function(empId, date, val) {
+  const h = parseFloat(val);
+  if (isNaN(h) || h < 0) return;
+  await whSaveHours(empId, date, h, null, null);
+};
+
+// ── Cell edit popup ────────────────────────────────────────
+window.openWhCell = function(empId, date) {
+  _whCellEmpId = empId;
+  _whCellDate  = date;
+  const existing = _whData[empId]?.[date];
+  const emp      = _whEmployees.find(e => e.id === empId);
+  document.getElementById("whCellTitle").textContent =
+    `${escHtml(emp?.name || "")}  —  ${date}`;
+  document.getElementById("whCellHours").value = existing?.hours  ?? "";
+  document.getElementById("whCellShift").value = existing?.shift  ?? "";
+  document.getElementById("whCellNote").value  = existing?.note   ?? "";
+  const del = document.getElementById("whCellDelete");
+  if (del) del.style.display = existing ? "" : "none";
+  document.getElementById("whCellModal").classList.remove("hidden");
+  setTimeout(() => document.getElementById("whCellHours")?.focus(), 80);
+};
+
+window.saveWhCell = async function() {
+  const hours = parseFloat(document.getElementById("whCellHours").value);
+  if (isNaN(hours) || hours < 0 || hours > 24) {
+    alert("Въведи валидни часове (0–24)."); return;
+  }
+  const shift = document.getElementById("whCellShift").value;
+  const note  = document.getElementById("whCellNote").value.trim();
+  await whSaveHours(_whCellEmpId, _whCellDate, hours, shift, note);
+  closeWhCellModal();
+};
+
+window.deleteWhCell = async function() {
+  const docId = _whData[_whCellEmpId]?.[_whCellDate]?.docId;
+  if (!docId) { closeWhCellModal(); return; }
+  try {
+    await deleteDoc(doc(db, "work_hours", docId));
+    if (_whData[_whCellEmpId]) delete _whData[_whCellEmpId][_whCellDate];
+    renderWhTable();
+    renderWhMobile();
+    closeWhCellModal();
+  } catch (e) { alert("Грешка: " + e.message); }
+};
+
+window.closeWhCellModal = function() {
+  document.getElementById("whCellModal")?.classList.add("hidden");
+  _whCellEmpId = null;
+  _whCellDate  = null;
+};
+
+async function whSaveHours(empId, date, hours, shift, note) {
+  if (!_whShopId || !empId || !date) return;
+  const existing = _whData[empId]?.[date];
+  const data = {
+    shopId:     _whShopId,
+    employeeId: empId,
+    date,
+    hours,
+    shift:     shift  || "",
+    note:      note   || "",
+    updatedAt: new Date().toISOString()
+  };
+  try {
+    if (existing?.docId) {
+      await updateDoc(doc(db, "work_hours", existing.docId), data);
+      _whData[empId][date] = { ...data, docId: existing.docId };
+    } else {
+      data.createdAt = new Date().toISOString();
+      const ref = await addDoc(collection(db, "work_hours"), data);
+      if (!_whData[empId]) _whData[empId] = {};
+      _whData[empId][date] = { hours, shift: shift||"", note: note||"", docId: ref.id };
+    }
+    renderWhTable();
+    renderWhMobile();
+  } catch (e) { alert("Грешка: " + e.message); }
+}
+
+// ── Quick fill ─────────────────────────────────────────────
+window.whQuickFillModal = function() {
+  const sel = document.getElementById("whQuickEmp");
+  if (!sel) return;
+  const active = _whEmployees.filter(e => e.active);
+  sel.innerHTML = active.length
+    ? active.map(e => `<option value="${e.id}">${escHtml(e.name)}</option>`).join("")
+    : `<option value="">Няма активни служители</option>`;
+  document.getElementById("whQuickFillPanel")?.classList.remove("hidden");
+};
+
+window.closeWhQuickFill = function() {
+  document.getElementById("whQuickFillPanel")?.classList.add("hidden");
+};
+
+window.whDoQuickFill = async function() {
+  const empId = document.getElementById("whQuickEmp").value;
+  const hours = parseFloat(document.getElementById("whQuickHours").value) || 8;
+  if (!empId) { alert("Избери служител."); return; }
+
+  const [y, m]    = _whMonth.split("-").map(Number);
+  const daysInMon = new Date(y, m, 0).getDate();
+  let count = 0;
+  for (let d = 1; d <= daysInMon; d++) {
+    const dow     = new Date(y, m - 1, d).getDay();
+    if (dow === 0 || dow === 6) continue;
+    const dateStr = `${_whMonth}-${String(d).padStart(2, "0")}`;
+    if (_whData[empId]?.[dateStr]?.hours) continue;
+    await whSaveHours(empId, dateStr, hours, "", "");
+    count++;
+  }
+  document.getElementById("whQuickFillPanel")?.classList.add("hidden");
+  showStatusMsg(`✅ Попълнени ${count} работни дни × ${hours} ч`);
+};
+
+// ── Excel export ───────────────────────────────────────────
+window.exportWhExcel = function() {
+  if (!window.XLSX) { alert("XLSX библиотеката не е заредена."); return; }
+  const [y, m]    = _whMonth.split("-").map(Number);
+  const daysInMon = new Date(y, m, 0).getDate();
+  const days      = Array.from({ length: daysInMon }, (_, i) => i + 1);
+  const shopName  = _whShopId === "store1" ? "Магазин 1" : "Магазин 2";
+
+  const header = ["Служител", ...days.map(String), "Общо"];
+  const rows   = _whEmployees.map(emp => {
+    let total = 0;
+    const cells = days.map(d => {
+      const dateStr = `${_whMonth}-${String(d).padStart(2, "0")}`;
+      const h = _whData[emp.id]?.[dateStr]?.hours || 0;
+      total += h;
+      return h || "";
+    });
+    return [emp.name, ...cells, total || ""];
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Часове");
+  XLSX.writeFile(wb, `часове-${shopName}-${_whMonth}.xlsx`);
+};
+
+// ════════════════════════════════════════════════════════════
+// 🕐 МОДУЛ 4 — ЧАСОВЕ И ЗАПЛАТИ (Собственик)
+// ════════════════════════════════════════════════════════════
+
+window.loadWageScreen = async function() {
+  const monthInput = document.getElementById("wageMonth");
+  if (!monthInput) return;
+  if (!_wageMonth) {
+    _wageMonth = new Date().toISOString().slice(0, 7);
+    monthInput.value = _wageMonth;
+  }
+  const lbl = document.getElementById("wageMonthLabel");
+  if (lbl) lbl.textContent = formatMonth(_wageMonth);
+  await loadWageData();
+};
+
+window.wageChangeMonth = function(delta) {
+  const [y, m] = _wageMonth.split("-").map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  _wageMonth = d.toISOString().slice(0, 7);
+  const lbl = document.getElementById("wageMonthLabel");
+  if (lbl) lbl.textContent = formatMonth(_wageMonth);
+  const inp = document.getElementById("wageMonth");
+  if (inp) inp.value = _wageMonth;
+  loadWageData();
+};
+
+window.wageMonthInput = function() {
+  const val = document.getElementById("wageMonth")?.value;
+  if (val) { _wageMonth = val; loadWageData(); }
+};
+
+async function loadWageData() {
+  const tbody = document.getElementById("wageTableBody");
+  if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="tasks-empty">Зареждане...</td></tr>`;
+
+  try {
+    // Employees from both stores
+    const [snap1, snap2] = await Promise.all([
+      getDocs(query(collection(db,"employees"), where("shopId","==","store1"), orderBy("active","desc"), orderBy("name","asc"))),
+      getDocs(query(collection(db,"employees"), where("shopId","==","store2"), orderBy("active","desc"), orderBy("name","asc")))
+    ]);
+    _wageEmployeesAll = [
+      ...snap1.docs.map(d => ({ id: d.id, ...d.data() })),
+      ...snap2.docs.map(d => ({ id: d.id, ...d.data() }))
+    ];
+
+    // Hours for month (two separate indexed queries)
+    const start = _wageMonth + "-01";
+    const end   = _wageMonth + "-31";
+    const [wh1, wh2] = await Promise.all([
+      getDocs(query(collection(db,"work_hours"), where("shopId","==","store1"), where("date",">=",start), where("date","<=",end))),
+      getDocs(query(collection(db,"work_hours"), where("shopId","==","store2"), where("date",">=",start), where("date","<=",end)))
+    ]);
+    _wageHoursMap = {};
+    [...wh1.docs, ...wh2.docs].forEach(d => {
+      const r = d.data();
+      _wageHoursMap[r.employeeId] = (_wageHoursMap[r.employeeId] || 0) + (r.hours || 0);
+    });
+
+    renderWageTable();
+    renderWageSummaryCards();
+    if (_wageTab === "summary") renderWageSummaryDetail();
+    if (_wageTab === "history") loadWageHistory();
+  } catch (e) { console.error("loadWageData:", e); }
+}
+
+function renderWageTable() {
+  const tbody = document.getElementById("wageTableBody");
+  if (!tbody) return;
+  if (!_wageEmployeesAll.length) {
+    tbody.innerHTML = `<tr><td colspan="6" class="tasks-empty">Няма служители</td></tr>`;
+    return;
+  }
+
+  let totalH = 0, totalCost = 0;
+  const rows = _wageEmployeesAll.map(emp => {
+    const hours   = _wageHoursMap[emp.id] || 0;
+    const rate    = emp.hourlyRate || 0;
+    const salary  = hours * rate;
+    const store   = emp.shopId === "store1" ? "М1" : "М2";
+    const scls    = emp.shopId === "store1" ? "store1" : "store2";
+    totalH    += hours;
+    totalCost += salary;
+    return `
+      <tr class="${emp.active ? "" : "wh-row-inactive"}">
+        <td>${escHtml(emp.name)}</td>
+        <td><span class="dr-owner-store-badge ${scls}">${store}</span></td>
+        <td class="mono">${hours || "0"}</td>
+        <td>
+          <div class="wage-rate-cell">
+            <input type="number" class="wage-rate-input" value="${rate.toFixed(2)}"
+                   min="0" step="0.01" placeholder="0.00"
+                   onchange="saveHourlyRate('${emp.id}', this.value)">
+            <span class="wage-rate-unit">лв./ч</span>
+          </div>
+        </td>
+        <td class="mono ${salary > 0 ? "pos" : ""}">${salary > 0 ? salary.toFixed(2)+" лв." : "—"}</td>
+        <td></td>
+      </tr>`;
+  }).join("");
+
+  tbody.innerHTML = rows + `
+    <tr class="dr-owner-totals-row">
+      <td colspan="2"><strong>Общо</strong></td>
+      <td class="mono"><strong>${totalH}</strong></td>
+      <td></td>
+      <td class="mono pos"><strong>${totalCost > 0 ? totalCost.toFixed(2)+" лв." : "—"}</strong></td>
+      <td></td>
+    </tr>`;
+}
+
+function renderWageSummaryCards() {
+  const el = document.getElementById("wageSummaryCards");
+  if (!el) return;
+  const s1emps = _wageEmployeesAll.filter(e => e.shopId === "store1");
+  const s2emps = _wageEmployeesAll.filter(e => e.shopId === "store2");
+  const h1   = s1emps.reduce((s, e) => s + (_wageHoursMap[e.id] || 0), 0);
+  const h2   = s2emps.reduce((s, e) => s + (_wageHoursMap[e.id] || 0), 0);
+  const cost = _wageEmployeesAll.reduce((s, e) =>
+    s + (_wageHoursMap[e.id] || 0) * (e.hourlyRate || 0), 0);
+
+  el.innerHTML = `
+    <div class="wh-sum-card">
+      <div class="wh-sum-label">М1 — Часове</div>
+      <div class="wh-sum-value">${h1} ч</div>
+    </div>
+    <div class="wh-sum-card">
+      <div class="wh-sum-label">М2 — Часове</div>
+      <div class="wh-sum-value">${h2} ч</div>
+    </div>
+    <div class="wh-sum-card wh-sum-card-total">
+      <div class="wh-sum-label">Разход заплати</div>
+      <div class="wh-sum-value">${cost > 0 ? cost.toFixed(2)+" лв." : "—"}</div>
+    </div>`;
+}
+
+function renderWageSummaryDetail() {
+  const el = document.getElementById("wageSummaryDetail");
+  if (!el) return;
+  const stores = ["store1","store2"];
+  el.innerHTML = stores.map(sid => {
+    const emps  = _wageEmployeesAll.filter(e => e.shopId === sid && e.active);
+    const total = emps.reduce((s, e) => s + (_wageHoursMap[e.id]||0)*(e.hourlyRate||0), 0);
+    const hours = emps.reduce((s, e) => s + (_wageHoursMap[e.id]||0), 0);
+    const name  = sid === "store1" ? "Магазин 1" : "Магазин 2";
+    return `
+      <div class="wh-sum-detail-card">
+        <div class="wh-sum-detail-title">${name}</div>
+        <div class="dr-detail-sum-row">
+          <span>Служители</span><span>${emps.length}</span>
+        </div>
+        <div class="dr-detail-sum-row">
+          <span>Часове</span><span class="mono">${hours} ч</span>
+        </div>
+        <div class="dr-detail-sum-final">
+          <span>Заплати</span>
+          <span>${total > 0 ? total.toFixed(2)+" лв." : "—"}</span>
+        </div>
+      </div>`;
+  }).join("");
+}
+
+window.wageSetTab = function(tab) {
+  _wageTab = tab;
+  ["month","summary","history"].forEach(t => {
+    const id = "wageTab" + t.charAt(0).toUpperCase() + t.slice(1);
+    document.getElementById(id)?.classList.toggle("hidden", t !== tab);
+    document.querySelector(`.wage-tab[data-tab="${t}"]`)
+      ?.classList.toggle("active", t === tab);
+  });
+  if (tab === "summary") renderWageSummaryDetail();
+  if (tab === "history") loadWageHistory();
+};
+
+async function loadWageHistory() {
+  const el = document.getElementById("wageHistoryContent");
+  if (!el) return;
+  el.innerHTML = `<div class="tasks-empty">Зареждане...</div>`;
+  try {
+    const base      = _wageMonth || new Date().toISOString().slice(0, 7);
+    const [by, bm]  = base.split("-").map(Number);
+    const months    = Array.from({ length: 6 }, (_, i) => {
+      const d = new Date(by, bm - 1 - i, 1);
+      return d.toISOString().slice(0, 7);
+    });
+
+    const rows = await Promise.all(months.map(async mo => {
+      const start = mo + "-01";
+      const end   = mo + "-31";
+      const [w1, w2] = await Promise.all([
+        getDocs(query(collection(db,"work_hours"), where("shopId","==","store1"), where("date",">=",start), where("date","<=",end))),
+        getDocs(query(collection(db,"work_hours"), where("shopId","==","store2"), where("date",">=",start), where("date","<=",end)))
+      ]);
+      const allDocs = [...w1.docs, ...w2.docs];
+      const totalH  = allDocs.reduce((s, d) => s + (d.data().hours || 0), 0);
+      const totalC  = allDocs.reduce((s, d) => {
+        const emp  = _wageEmployeesAll.find(e => e.id === d.data().employeeId);
+        const rate = getHistoricalRate(emp, mo);
+        return s + (d.data().hours || 0) * rate;
+      }, 0);
+      return { mo, totalH, totalC };
+    }));
+
+    el.innerHTML = `
+      <table class="wh-hist-table">
+        <thead>
+          <tr><th>Месец</th><th>Часове</th><th>Разход заплати</th></tr>
+        </thead>
+        <tbody>
+          ${rows.map(r => `
+            <tr>
+              <td>${formatMonth(r.mo)}</td>
+              <td class="mono">${r.totalH} ч</td>
+              <td class="mono ${r.totalC > 0 ? "pos" : ""}">${r.totalC > 0 ? r.totalC.toFixed(2)+" лв." : "—"}</td>
+            </tr>`).join("")}
+        </tbody>
+      </table>`;
+  } catch (e) { el.innerHTML = `<div class="tasks-empty">Грешка при зареждане</div>`; }
+}
+
+function getHistoricalRate(emp, month) {
+  if (!emp) return 0;
+  const hist  = emp.hourlyRateHistory || [];
+  const entry = hist.find(h => h.month === month);
+  return entry ? entry.rate : (emp.hourlyRate || 0);
+}
+
+window.saveHourlyRate = async function(empId, rateStr) {
+  const rate = parseFloat(rateStr);
+  if (isNaN(rate) || rate < 0) return;
+  const emp = _wageEmployeesAll.find(e => e.id === empId);
+  if (!emp) return;
+
+  const hist = emp.hourlyRateHistory ? [...emp.hourlyRateHistory] : [];
+  const idx  = hist.findIndex(h => h.month === _wageMonth);
+  if (idx >= 0) hist[idx].rate = rate;
+  else          hist.push({ month: _wageMonth, rate });
+
+  try {
+    await updateDoc(doc(db, "employees", empId), { hourlyRate: rate, hourlyRateHistory: hist });
+    emp.hourlyRate        = rate;
+    emp.hourlyRateHistory = hist;
+    renderWageTable();
+    renderWageSummaryCards();
+  } catch (e) { console.error("saveHourlyRate:", e); }
+};
+
+window.exportWagePdf = function() {
+  const month = formatMonth(_wageMonth);
+  let tableRows = "";
+  let grand = 0;
+  _wageEmployeesAll.forEach(emp => {
+    const hours  = _wageHoursMap[emp.id] || 0;
+    const rate   = emp.hourlyRate || 0;
+    const salary = hours * rate;
+    grand += salary;
+    tableRows += `<tr>
+      <td>${emp.name}</td>
+      <td>${emp.shopId === "store1" ? "М1" : "М2"}</td>
+      <td style="text-align:right">${hours}</td>
+      <td style="text-align:right">${rate.toFixed(2)}</td>
+      <td style="text-align:right">${salary > 0 ? salary.toFixed(2) : "—"}</td>
+      <td></td>
+    </tr>`;
+  });
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <style>
+    body { font-family: Arial, sans-serif; font-size: 13px; padding: 24px; color:#000; }
+    h1 { font-size: 17px; margin-bottom: 4px; }
+    h2 { font-size: 13px; color: #555; margin-bottom: 16px; font-weight: normal; }
+    table { width: 100%; border-collapse: collapse; }
+    th,td { border: 1px solid #ccc; padding: 6px 10px; }
+    th { background: #f0f0f0; text-align: left; }
+    .total { font-weight: bold; background: #f5f5f5; }
+    .sig { margin-top: 40px; display: flex; gap: 60px; }
+    .sig-line { border-top: 1px solid #000; width: 160px; padding-top: 4px; font-size: 11px; }
+    .note { margin-top: 20px; font-size: 11px; color: #888; font-style: italic; }
+    @media print { body { padding: 0; } }
+  </style></head><body>
+  <h1>Нон Стоп — Ведомост за заплати</h1>
+  <h2>Период: ${month}</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Служител</th><th>Маг.</th><th>Часове</th>
+        <th>Ставка (лв./ч)</th><th>Сума (лв.)</th><th>Подпис</th>
+      </tr>
+    </thead>
+    <tbody>${tableRows}</tbody>
+    <tfoot>
+      <tr class="total">
+        <td colspan="4"><strong>Общо</strong></td>
+        <td><strong>${grand > 0 ? grand.toFixed(2) : "—"}</strong></td>
+        <td></td>
+      </tr>
+    </tfoot>
+  </table>
+  <p class="note">Заплатите са изчислени само от часовете × ставка.
+  Допълнителни компоненти (бонуси, удръжки, осигуровки) ще се добавят в следващ модул.</p>
+  <div class="sig">
+    <div><div class="sig-line">Изготвил: ___________</div></div>
+    <div><div class="sig-line">Собственик: ___________</div></div>
+  </div>
+  </body></html>`;
+
+  const win = window.open("", "_blank");
+  if (!win) { alert("Разреши изскачащи прозорци за да принтираш."); return; }
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  setTimeout(() => win.print(), 400);
+};

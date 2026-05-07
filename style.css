@@ -1787,12 +1787,15 @@ body.admin .table-responsive.admin-only { display: block; }
 .store-tabs {
   display: flex; background: var(--bg2);
   border-bottom: 1px solid var(--border); padding: 0 12px;
+  position: sticky; top: 56px; z-index: 95;
+  height: 44px; align-items: stretch;
 }
 .store-tab {
   flex: 1; background: none; border: none; border-bottom: 3px solid transparent;
   color: var(--text3); font-size: .875rem; font-weight: 500;
-  padding: 12px 8px; cursor: pointer; transition: var(--transition);
-  font-family: var(--font);
+  padding: 0 8px; cursor: pointer; transition: var(--transition);
+  font-family: var(--font); display: flex; align-items: center; justify-content: center;
+  gap: 6px;
 }
 .store-tab.active { color: var(--green); border-bottom-color: var(--green); }
 
@@ -1963,7 +1966,7 @@ body.admin .table-responsive.admin-only { display: block; }
   display: flex; align-items: center; gap: 8px;
   padding: 10px 12px; background: var(--bg2);
   border-bottom: 1px solid var(--border);
-  position: sticky; top: 56px; z-index: 90;
+  position: sticky; top: 100px; z-index: 90;
 }
 .dr-top-bar input[type="date"] {
   flex: 1; min-height: 40px; padding: 8px 10px; font-size: .875rem;
@@ -2354,3 +2357,330 @@ body.light #drOwnerTable td  { color: #24292f; }
 body.light .dr-detail-panel  { background: #fff; }
 body.light .dr-detail-summary { background: #f6f8fa; }
 body.light .dr-owner-totals-row td { background: #f0f2f5 !important; }
+
+/* ════════════════════════════════════════════════
+   🕐 РАБОТНИ ЧАСОВЕ — Модул 4
+   ════════════════════════════════════════════════ */
+
+/* ── Work hours screen container ─────────────────── */
+#storeWhScreen { padding-bottom: 24px; }
+.wh-content {
+  padding: 10px 12px 40px;
+  max-width: 680px; margin: 0 auto;
+}
+
+/* ── Section header (collapsible) ────────────────── */
+.wh-section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer; padding-bottom: 10px; margin-bottom: 8px;
+  font-size: .9rem; font-weight: 600; color: var(--text);
+  border-bottom: 1px solid var(--border);
+  user-select: none;
+}
+
+/* ── Employee list ────────────────────────────────── */
+.wh-emp-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 0; border-bottom: 1px solid var(--border);
+  gap: 10px;
+}
+.wh-emp-row:last-of-type { border-bottom: none; }
+.wh-emp-inactive { opacity: .5; }
+.wh-emp-info { flex: 1; min-width: 0; }
+.wh-emp-name {
+  font-weight: 600; font-size: .9rem; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.wh-emp-pos { font-size: .75rem; color: var(--text3); margin-top: 2px; }
+.wh-emp-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+/* ── Employee add/edit form ──────────────────────── */
+.wh-emp-form {
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm); padding: 14px; margin: 10px 0;
+}
+.wh-emp-form-title {
+  font-size: .85rem; font-weight: 700; color: var(--text);
+  margin-bottom: 10px;
+}
+.wh-emp-form input[type="text"],
+.wh-emp-form select {
+  width: 100%; background: var(--bg2); color: var(--text);
+  border: 1px solid var(--border2); border-radius: var(--radius-sm);
+  padding: 8px 10px; font-size: .875rem; font-family: var(--font);
+}
+.wh-emp-form input[type="text"]:focus,
+.wh-emp-form select:focus { outline: none; border-color: var(--blue); }
+.wh-toggle-row {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.wh-form-btns {
+  display: flex; gap: 8px; margin-top: 14px;
+}
+.wh-add-emp-btn {
+  margin-top: 12px; width: 100%;
+}
+
+/* ── Month navigation bar ────────────────────────── */
+.wh-month-bar {
+  display: flex; align-items: center; justify-content: center;
+  gap: 16px; padding: 10px 0 8px;
+}
+.wh-owner-month-nav {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 0 14px;
+}
+.wh-month-btn {
+  background: var(--bg3); border: 1px solid var(--border2); color: var(--text);
+  border-radius: var(--radius-sm); width: 36px; height: 36px;
+  font-size: 1.2rem; cursor: pointer; display: flex; align-items: center;
+  justify-content: center; transition: var(--transition); flex-shrink: 0;
+}
+.wh-month-btn:hover { background: var(--bg2); border-color: var(--blue); }
+.wh-month-label {
+  font-weight: 700; font-size: 1rem; color: var(--text);
+  min-width: 150px; text-align: center;
+}
+.wh-month-input {
+  background: var(--bg3); color: var(--text);
+  border: 1px solid var(--border2); border-radius: var(--radius-sm);
+  padding: 6px 10px; font-size: .85rem; font-family: var(--font);
+}
+.wh-month-input:focus { outline: none; border-color: var(--blue); }
+
+/* ── Toolbar ─────────────────────────────────────── */
+.wh-toolbar {
+  display: flex; gap: 8px; padding: 6px 0 10px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 10px;
+}
+.wh-tool-btn { font-size: .8rem; padding: 0 12px; min-height: 36px; }
+
+/* ── Desktop monthly table ───────────────────────── */
+.wh-table-scroll-wrap { overflow-x: auto; }
+.wh-table-scroll      { min-width: max-content; }
+.wh-table {
+  border-collapse: collapse;
+  font-size: .8rem;
+}
+.wh-table th {
+  background: var(--bg3); color: var(--text2); font-weight: 600;
+  padding: 6px 4px; text-align: center; border: 1px solid var(--border);
+  white-space: nowrap; font-size: .72rem;
+}
+.wh-emp-th    { text-align: left !important; padding: 6px 8px !important; min-width: 110px; position: sticky; left: 0; z-index: 2; background: var(--bg3); }
+.wh-total-th  { min-width: 46px; background: var(--bg2) !important; }
+.wh-day-th    { min-width: 28px; max-width: 28px; }
+.wh-day-weekend { color: var(--text3); }
+
+.wh-table td {
+  border: 1px solid var(--border);
+  padding: 5px 3px; text-align: center;
+  color: var(--text); font-size: .8rem;
+}
+.wh-emp-cell {
+  text-align: left !important; padding: 5px 8px !important;
+  white-space: nowrap; font-weight: 500;
+  position: sticky; left: 0; z-index: 1; background: var(--bg);
+  min-width: 110px;
+}
+.wh-total-cell {
+  font-weight: 700; background: var(--bg2); min-width: 40px;
+}
+.wh-totals-row td {
+  background: var(--bg3) !important;
+  font-weight: 700; border-top: 2px solid var(--border2);
+}
+
+/* Cell colours */
+.wh-cell { cursor: pointer; transition: background .1s; }
+.wh-cell:hover             { background: rgba(255,255,255,.06) !important; }
+.wh-cell-normal            { background: rgba(63,185,80,.18);  color: var(--green); }
+.wh-cell-long              { background: rgba(227,179,65,.18); color: var(--amber); }
+.wh-cell-extra             { background: rgba(249,120,58,.20); color: #f9783a; }
+.wh-cell-double            { background: rgba(248,81,73,.18);  color: var(--red);   }
+.wh-cell-weekend           { background: rgba(255,255,255,.02); }
+.wh-cell-inactive          { cursor: default; }
+.wh-row-inactive td        { opacity: .45; }
+
+/* ── Mobile day view ─────────────────────────────── */
+.wh-table-scroll-wrap { display: block; }
+.wh-mobile-wrap       { display: none;  }
+@media (max-width: 639px) {
+  .wh-table-scroll-wrap { display: none;  }
+  .wh-mobile-wrap       { display: block; }
+}
+.wh-mob-day-nav {
+  padding: 8px 0; margin-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.wh-mob-day-nav input[type="date"] {
+  width: 100%; padding: 10px; font-size: .9rem;
+  background: var(--bg3); color: var(--text);
+  border: 1px solid var(--border2); border-radius: var(--radius-sm);
+  font-family: var(--font);
+}
+.wh-mob-total {
+  font-size: .8rem; color: var(--text2); padding: 6px 0 10px;
+  border-bottom: 1px solid var(--border); margin-bottom: 8px;
+}
+.wh-mob-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 0; border-bottom: 1px solid var(--border); gap: 12px;
+}
+.wh-mob-row:last-child { border-bottom: none; }
+.wh-mob-name { flex: 1; font-weight: 500; font-size: .875rem; color: var(--text); }
+.wh-mob-input-wrap { display: flex; align-items: center; gap: 6px; }
+.wh-mob-input {
+  width: 72px; padding: 8px 6px; text-align: center;
+  background: var(--bg3); color: var(--text);
+  border: 1px solid var(--border2); border-radius: var(--radius-sm);
+  font-size: .9rem; font-family: var(--font-mono);
+}
+.wh-mob-input:focus  { outline: none; border-color: var(--blue); }
+.wh-mob-input.wh-cell-normal { border-color: var(--green); color: var(--green); }
+.wh-mob-input.wh-cell-long   { border-color: var(--amber); color: var(--amber); }
+.wh-mob-input.wh-cell-extra  { border-color: #f9783a; color: #f9783a; }
+.wh-mob-input.wh-cell-double { border-color: var(--red); color: var(--red); }
+.wh-mob-unit { font-size: .75rem; color: var(--text3); }
+
+/* ── Cell edit modal ─────────────────────────────── */
+.wh-cell-panel { max-width: 400px !important; }
+.wh-cell-panel .dr-detail-body {
+  padding: 16px 18px;
+}
+.wh-cell-panel .field-label { margin-top: 0; }
+.wh-cell-panel input[type="number"],
+.wh-cell-panel input[type="text"],
+.wh-cell-panel select {
+  width: 100%; background: var(--bg3); color: var(--text);
+  border: 1px solid var(--border2); border-radius: var(--radius-sm);
+  padding: 8px 10px; font-family: var(--font); font-size: .875rem;
+  margin-bottom: 4px;
+}
+.wh-cell-panel input:focus,
+.wh-cell-panel select:focus { outline: none; border-color: var(--blue); }
+
+/* ── Owner work hours screen ─────────────────────── */
+.wh-owner-title {
+  font-size: 1.05rem; font-weight: 700; color: var(--text);
+  padding: 18px 0 10px; display: flex; align-items: center; gap: 8px;
+}
+
+/* Summary cards */
+.wh-sum-cards {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 10px; margin-bottom: 14px;
+}
+@media (max-width: 480px) { .wh-sum-cards { grid-template-columns: 1fr 1fr; } }
+.wh-sum-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 12px 14px;
+}
+.wh-sum-card-total {
+  border-color: var(--green); background: var(--green-dim);
+}
+.wh-sum-label { font-size: .72rem; color: var(--text3); margin-bottom: 4px; }
+.wh-sum-value {
+  font-size: 1.1rem; font-weight: 700; color: var(--text);
+  font-family: var(--font-mono);
+}
+.wh-sum-card-total .wh-sum-value { color: var(--green); }
+
+/* Owner tabs */
+.wh-owner-tabs {
+  display: flex; gap: 0; margin-bottom: 14px;
+  border-bottom: 2px solid var(--border);
+}
+.wage-tab {
+  background: none; border: none; border-bottom: 2px solid transparent;
+  color: var(--text3); font-size: .875rem; font-weight: 500;
+  padding: 8px 16px; cursor: pointer; margin-bottom: -2px;
+  font-family: var(--font); transition: var(--transition);
+}
+.wage-tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+.wage-tab:hover  { color: var(--text); }
+
+/* Wage table */
+.wh-wage-table {
+  width: 100%; border-collapse: collapse; font-size: .85rem;
+}
+.wh-wage-table th {
+  background: var(--bg3); color: var(--text2); font-weight: 600;
+  font-size: .75rem; text-transform: uppercase; letter-spacing: .04em;
+  padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border2);
+  white-space: nowrap;
+}
+.wh-wage-table td {
+  padding: 9px 12px; color: var(--text);
+  border-bottom: 1px solid var(--border); vertical-align: middle;
+}
+.wh-wage-table tr:last-child td { border-bottom: none; }
+.wh-wage-table tr:hover td      { background: rgba(255,255,255,.02); }
+
+.wage-rate-cell  { display: flex; align-items: center; gap: 5px; }
+.wage-rate-input {
+  width: 70px; padding: 5px 6px; text-align: right;
+  background: var(--bg3); color: var(--text);
+  border: 1px solid var(--border2); border-radius: var(--radius-sm);
+  font-size: .85rem; font-family: var(--font-mono);
+}
+.wage-rate-input:focus { outline: none; border-color: var(--green); }
+.wage-rate-unit { font-size: .75rem; color: var(--text3); white-space: nowrap; }
+
+/* Wage actions + note */
+.wh-wage-actions { margin: 12px 0 6px; }
+.wh-wage-note {
+  background: var(--blue-dim); border-left: 3px solid var(--blue);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: 10px 14px; font-size: .78rem; color: var(--text2);
+  margin-top: 12px; line-height: 1.6;
+}
+
+/* Summary detail card */
+.wh-sum-detail-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px;
+}
+.wh-sum-detail-title {
+  font-weight: 700; font-size: .9rem; color: var(--text); margin-bottom: 10px;
+}
+
+/* History table */
+.wh-hist-table {
+  width: 100%; border-collapse: collapse; font-size: .875rem;
+}
+.wh-hist-table th {
+  background: var(--bg3); color: var(--text2); padding: 8px 12px;
+  font-size: .75rem; text-transform: uppercase; letter-spacing: .04em;
+  border-bottom: 1px solid var(--border2); text-align: left;
+}
+.wh-hist-table td {
+  padding: 8px 12px; border-bottom: 1px solid var(--border); color: var(--text);
+}
+.wh-hist-table tr:last-child td { border-bottom: none; }
+
+/* ── Legend ──────────────────────────────────────── */
+.wh-legend {
+  display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 2px;
+  font-size: .72rem;
+}
+.wh-legend-item {
+  display: flex; align-items: center; gap: 4px; color: var(--text3);
+}
+.wh-legend-dot {
+  width: 10px; height: 10px; border-radius: 2px;
+}
+
+/* ── Light theme ─────────────────────────────────── */
+body.light #storeWhScreen        { background: #f6f8fa; }
+body.light .wh-emp-form          { background: #fff; }
+body.light .wh-emp-form input,
+body.light .wh-emp-form select   { background: #fff; }
+body.light .wh-cell-panel .dr-detail-panel { background: #fff; }
+body.light .wh-table th          { background: #f0f2f5; }
+body.light .wh-emp-cell          { background: #f6f8fa; }
+body.light .wh-totals-row td     { background: #f0f2f5 !important; }
+body.light .wh-sum-card          { background: #fff; }
+body.light .wh-wage-table th     { background: #f0f2f5; }
+body.light .wage-rate-input      { background: #fff; }
