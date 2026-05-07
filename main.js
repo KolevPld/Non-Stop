@@ -819,6 +819,7 @@ function renderTable(data = sortRecords(records)) {
   data.forEach(r => {
     const tr = document.createElement("tr");
     if (r.category === "Пренос") tr.classList.add("carryover-row");
+    if (r.fromDailyReport)       tr.classList.add("record-from-dr");
     tr.innerHTML = `
       <td>${r.date || ""}</td>
       <td style="color:${r.category === "Пренос" ? "var(--blue)" : (r.type === "Приход" ? "#4caf50" : "#f44336")};">${r.type || ""}</td>
@@ -828,17 +829,16 @@ function renderTable(data = sortRecords(records)) {
       <td>${r.category || ""}</td>
       <td>${r.note || ""}</td>
       <td style="white-space: nowrap;">
-        ${
-          r.imageUrl
-            ? `<button class="btn-icon btn-photo" type="button" title="Снимка" data-imgurl="${escHtml(r.imageUrl)}" onclick="openImageModal(this.dataset.imgurl)">📷</button>`
-            : `<span class="muted">—</span>`
-        }
-        ${
-          isAdmin
-            ? `<button class="btn-icon btn-edit" type="button" title="Редакция" onclick="editImage('${r.id}')">✏️</button>
-               <button class="btn-icon btn-del" type="button" title="Изтриване" onclick="deleteRecord('${r.id}')">🗑️</button>`
-            : ``
-        }
+        ${r.fromDailyReport && r.dailyReportId
+          ? `<button class="btn-icon btn-dr-link" type="button" title="От дневен отчет" onclick="openDrDetailModal('${r.dailyReportId}')">📋</button>`
+          : ''}
+        ${r.imageUrl
+          ? `<button class="btn-icon btn-photo" type="button" title="Снимка" data-imgurl="${escHtml(r.imageUrl)}" onclick="openImageModal(this.dataset.imgurl)">📷</button>`
+          : `<span class="muted">—</span>`}
+        ${isAdmin
+          ? `<button class="btn-icon btn-edit" type="button" title="Редакция" onclick="editImage('${r.id}')">✏️</button>
+             <button class="btn-icon btn-del" type="button" title="Изтриване" onclick="deleteRecord('${r.id}')">🗑️</button>`
+          : ''}
       </td>
     `;
     tbody.appendChild(tr);
@@ -1167,6 +1167,7 @@ window.showScreen = function(screen) {
   const notesScreen    = document.getElementById("screen-notes");
   const ownersScreen   = document.getElementById("screen-owners");
   const accountsScreen = document.getElementById("screen-accounts");
+  const drScreen       = document.getElementById("screen-dailyreports");
   const isAdmin        = document.body.classList.contains("admin");
 
   addScreen?.classList.add("hidden");
@@ -1174,6 +1175,7 @@ window.showScreen = function(screen) {
   notesScreen?.classList.add("hidden");
   ownersScreen?.classList.add("hidden");
   accountsScreen?.classList.add("hidden");
+  drScreen?.classList.add("hidden");
 
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
 
@@ -1203,6 +1205,12 @@ window.showScreen = function(screen) {
     document.getElementById('navAccounts')?.classList.add('active');
     renderAccountsList();
 
+  } else if (screen === "dailyreports") {
+    if (!isAdmin) { alert("Нямаш достъп до този екран."); return; }
+    drScreen?.classList.remove("hidden");
+    document.getElementById('navDailyReports')?.classList.add('active');
+    loadDailyReportsScreen();
+
   } else {
     addScreen?.classList.remove("hidden");
     document.getElementById('navAdd')?.classList.add('active');
@@ -1225,16 +1233,20 @@ function renderRecentList() {
     const isIncome = r.type === "Приход";
     const sign = isIncome ? "+" : "−";
     const cls  = isIncome ? "income" : "expense";
+    const drBtn = r.fromDailyReport && r.dailyReportId
+      ? `<button class="btn-icon btn-dr-link" onclick="openDrDetailModal('${r.dailyReportId}')" title="От дневен отчет">📋</button>`
+      : '';
     const adminBtns = isAdmin
       ? `<div class="record-actions">
+          ${drBtn}
           ${r.imageUrl ? `<button class="btn-icon btn-photo" data-imgurl="${escHtml(r.imageUrl)}" onclick="openImageModal(this.dataset.imgurl)">📷</button>` : ''}
           <button class="btn-icon btn-edit" onclick="editImage('${r.id}')">✏️</button>
           <button class="btn-icon btn-del"  onclick="deleteRecord('${r.id}')">🗑️</button>
          </div>`
-      : (r.imageUrl ? `<button class="btn-icon btn-photo" data-imgurl="${escHtml(r.imageUrl)}" onclick="openImageModal(this.dataset.imgurl)">📷</button>` : '');
+      : `${drBtn}${r.imageUrl ? `<button class="btn-icon btn-photo" data-imgurl="${escHtml(r.imageUrl)}" onclick="openImageModal(this.dataset.imgurl)">📷</button>` : ''}`;
 
     return `
-      <div class="record-row">
+      <div class="record-row${r.fromDailyReport ? ' record-from-dr' : ''}">
         <span class="record-type-dot ${cls}"></span>
         <div class="record-meta">
           <span class="record-date">${r.date || ''} · ${r.method || ''}</span>
@@ -1988,6 +2000,36 @@ function initDailyReport(storeRole) {
   loadSuppliers();
   loadOrCreateReport();
   loadRecentReports();
+  checkManagerNotifications();
+}
+
+// ── Известия към управителя (разрешена редакция) ──────────
+async function checkManagerNotifications() {
+  if (!_drShopId) return;
+  try {
+    const q = query(
+      collection(db, "notifications"),
+      where("forShopId", "==", _drShopId),
+      where("type", "==", "edit_allowed"),
+      where("read", "==", false)
+    );
+    const snap = await getDocs(q);
+    if (snap.empty) return;
+
+    const banner = document.getElementById("drStatusBanner");
+    snap.forEach(d => {
+      const n = d.data();
+      if (banner) {
+        banner.textContent = `📝 ${n.message}`;
+        banner.className = "dr-status-banner dr-banner-info";
+        banner.classList.remove("hidden");
+        setTimeout(() => banner.classList.add("hidden"), 8000);
+      }
+      updateDoc(doc(db, "notifications", d.id), { read: true }).catch(() => {});
+    });
+
+    if (_drDocId) loadOrCreateReport();
+  } catch (e) { console.warn("checkManagerNotifications:", e); }
 }
 
 // ── Доставчици (autocomplete) ─────────────────────────
@@ -2258,8 +2300,15 @@ window.drScrollToHistory = function() {
   document.getElementById("drRecentSection")?.scrollIntoView({ behavior: "smooth" });
 };
 
-// ── Запази (draft) ───────────────────────────────────
+// ── Запази (draft или редакция на затворен) ──────────
 window.saveDailyReport = async function() {
+  if (_drStatus === "closed" && _drData?.editAllowed) {
+    try {
+      await saveClosedReportEdits();
+      await loadRecentReports();
+    } catch (_) {}
+    return;
+  }
   try {
     await persistReport("draft");
     await loadRecentReports();
@@ -2271,10 +2320,19 @@ window.confirmCloseDay = async function() {
   if (_drStatus === "closed") return;
 
   const d = collectDrData();
-  if (d.endCash < 0) {
-    if (!confirm(`⚠️ Крайната каса е отрицателна (${d.endCash.toFixed(2)} €).\nСигурни ли сте, че данните са верни?`)) return;
-  }
-  if (!confirm("🔒 Затвори деня?\n\nСлед затваряне отчетът се прехвърля към собственика и не може да се променя без негово разрешение.")) return;
+
+  // Preview на транзакциите
+  const store = _drShopId === "store1" ? "М1" : "М2";
+  let preview = `📋 ЗАТВОРИ ДЕН — ${d.date} (${store})\n\nЩе се създадат записи в системата:\n`;
+  if (d.totalCashIncome   > 0) preview += `\n  ✅ Приход КЕШ:    ${d.totalCashIncome.toFixed(2)} €`;
+  if (d.totalPosIncome    > 0) preview += `\n  ✅ Приход POS:    ${d.totalPosIncome.toFixed(2)} €`;
+  if (d.totalGoodsExpense > 0) preview += `\n  🔴 Разход Стоки:  ${d.totalGoodsExpense.toFixed(2)} €`;
+  if (d.totalOtherExpense > 0) preview += `\n  🔴 Разход Други:  ${d.totalOtherExpense.toFixed(2)} €`;
+  preview += `\n\n📊 Крайна каса: ${d.endCash.toFixed(2)} €`;
+  if (d.endCash < 0) preview += `\n⚠️  Внимание: Крайната каса е отрицателна!`;
+  preview += `\n\nСлед затваряне не може да се редактира без разрешение от Собственика.\nПродължи?`;
+
+  if (!confirm(preview)) return;
 
   const saveBtn  = document.getElementById("drSaveBtn");
   const closeBtn = document.getElementById("drCloseBtn");
@@ -2285,8 +2343,9 @@ window.confirmCloseDay = async function() {
     const report = await persistReport("closed");
     await updateSuppliersLastUsed(report.expensesGoods);
     await createMainRecordsFromDr(report);
+    await sendOwnerNotification(report);
     updateDrStatusUI();
-    showDrBanner("✅ Денят е затворен! Данните са изпратени към собственика.", "success");
+    showDrBanner("✅ Денят е затворен! Данните са изпратени към Собственика.", "success");
     await loadRecentReports();
   } catch (err) {
     console.error("confirmCloseDay:", err);
@@ -2396,14 +2455,16 @@ async function updateSuppliersLastUsed(expensesGoods) {
 
 // ── Прехвърляне към главната система (records) ────────
 async function createMainRecordsFromDr(report) {
-  const store = report.shopId === "store1" ? "1" : "2";
-  const note  = `Дневен отчет М${store}`;
-  const ids   = [];
+  const store       = report.shopId === "store1" ? "1" : "2";
+  const note        = `Дневен отчет М${store}`;
+  const ids         = [];
+  const drDocId     = _drDocId;
+  const drMeta      = { fromDailyReport: true, dailyReportId: drDocId };
 
   if (report.totalCashIncome > 0) {
     const ref = await addDoc(collection(db, "records"), {
       date: report.date, type: "Приход", method: "Кеш",
-      amount: report.totalCashIncome, store, category: "Оборот", note, imageUrl: ""
+      amount: report.totalCashIncome, store, category: "Оборот", note, imageUrl: "", ...drMeta
     });
     ids.push(ref.id);
   }
@@ -2411,7 +2472,7 @@ async function createMainRecordsFromDr(report) {
   if (report.totalPosIncome > 0) {
     const ref = await addDoc(collection(db, "records"), {
       date: report.date, type: "Приход", method: "Карта",
-      amount: report.totalPosIncome, store, category: "Оборот", note, imageUrl: ""
+      amount: report.totalPosIncome, store, category: "Оборот", note, imageUrl: "", ...drMeta
     });
     ids.push(ref.id);
   }
@@ -2422,39 +2483,110 @@ async function createMainRecordsFromDr(report) {
       .map(g => g.supplier).join(", ") || note;
     const ref = await addDoc(collection(db, "records"), {
       date: report.date, type: "Разход", method: "Кеш",
-      amount: report.totalGoodsExpense, store, category: "Стока", note: suppNames, imageUrl: ""
+      amount: report.totalGoodsExpense, store, category: "Стока", note: suppNames, imageUrl: "", ...drMeta
     });
     ids.push(ref.id);
   }
 
-  for (const o of (report.expensesOther || [])) {
-    if (!o.amount || o.amount <= 0) continue;
+  if (report.totalOtherExpense > 0) {
+    const otherNote = (report.expensesOther || [])
+      .filter(o => o.amount > 0 && o.description)
+      .map(o => o.description).join(", ") || note;
     const ref = await addDoc(collection(db, "records"), {
       date: report.date, type: "Разход", method: "Кеш",
-      amount: o.amount, store, category: "Друго", note: o.description || note, imageUrl: ""
+      amount: report.totalOtherExpense, store, category: "Друго", note: otherNote, imageUrl: "", ...drMeta
     });
     ids.push(ref.id);
   }
 
-  if (_drDocId && ids.length) {
-    await updateDoc(doc(db, "daily_reports", _drDocId), { linkedTransactionIds: ids });
+  if (drDocId && ids.length) {
+    await updateDoc(doc(db, "daily_reports", drDocId), { linkedTransactionIds: ids });
     if (_drData) _drData.linkedTransactionIds = ids;
   }
+  return ids;
+}
+
+// ── Обновяване на свързаните транзакции (при редакция) ─
+async function updateLinkedTransactions(report) {
+  const oldIds = _drData?.linkedTransactionIds || [];
+  for (const id of oldIds) {
+    try { await deleteDoc(doc(db, "records", id)); } catch (_) {}
+  }
+  await createMainRecordsFromDr(report);
+}
+
+// ── Изпращане на известие към Собственика ──────────────
+async function sendOwnerNotification(report) {
+  try {
+    const store = report.shopId === "store1" ? "1" : "2";
+    await addDoc(collection(db, "notifications"), {
+      type:          "daily_report_closed",
+      shopId:        report.shopId,
+      date:          report.date,
+      endCash:       report.endCash,
+      message:       `Магазин ${store} затвори деня ${report.date} — Крайна каса: ${report.endCash.toFixed(2)} €`,
+      forOwner:      true,
+      read:          false,
+      timestamp:     new Date().toISOString(),
+      dailyReportId: _drDocId
+    });
+  } catch (e) { console.warn("sendOwnerNotification:", e); }
+}
+
+// ── Запази редакция на затворен отчет ──────────────────
+async function saveClosedReportEdits() {
+  const data = collectDrData();
+  const now  = new Date().toISOString();
+
+  const changeLog = [...(_drData?.changeLog || []), {
+    userId: currentUserId, email: currentUserEmail, timestamp: now, action: "edit"
+  }];
+
+  const payload = {
+    shopId: _drShopId, date: data.date, status: "closed",
+    startCash: data.startCash, shifts: data.shifts,
+    expensesGoods: data.expensesGoods, expensesOther: data.expensesOther,
+    totalCashIncome: data.totalCashIncome, totalPosIncome: data.totalPosIncome,
+    totalGoodsExpense: data.totalGoodsExpense, totalOtherExpense: data.totalOtherExpense,
+    endCash: data.endCash,
+    createdBy: _drData.createdBy, createdAt: _drData.createdAt,
+    lastModifiedBy: currentUserId, lastModifiedAt: now,
+    changeLog,
+    editAllowed:          false,
+    transferredToOwner:   true,
+    linkedTransactionIds: _drData.linkedTransactionIds || []
+  };
+
+  await updateDoc(doc(db, "daily_reports", _drDocId), payload);
+  _drData   = payload;
+  _drStatus = "closed";
+
+  await updateLinkedTransactions(payload);
+  renderDrChangeLog(changeLog);
+  updateDrStatusUI();
+  showDrBanner("✅ Промените са запазени и изпратени към Собственика.", "success");
 }
 
 // ── Статус UI ────────────────────────────────────────
 function updateDrStatusUI() {
-  const closed = _drStatus === "closed";
+  const closed      = _drStatus === "closed";
+  const editAllowed = closed && !!_drData?.editAllowed;
 
   document.querySelectorAll("#storeApp .dr-input, #drStartCash").forEach(el => {
-    el.disabled = closed;
+    el.disabled = closed && !editAllowed;
   });
   const dateEl = document.getElementById("drDate");
-  if (dateEl) dateEl.disabled = closed;
+  if (dateEl) dateEl.disabled = closed && !editAllowed;
 
   const saveBtn  = document.getElementById("drSaveBtn");
   const closeBtn = document.getElementById("drCloseBtn");
-  if (saveBtn)  saveBtn.disabled = closed;
+
+  if (saveBtn) {
+    saveBtn.disabled = closed && !editAllowed;
+    saveBtn.innerHTML = editAllowed
+      ? '<i class="fa-solid fa-floppy-disk"></i> Запази промените'
+      : '<i class="fa-solid fa-floppy-disk"></i> Запази черновата';
+  }
   if (closeBtn) closeBtn.disabled = closed;
 
   const badge = document.getElementById("drStatusBadge");
@@ -2463,7 +2595,9 @@ function updateDrStatusUI() {
     badge.className   = "dr-status-badge " + (closed ? "dr-badge-closed" : "dr-badge-draft");
   }
 
-  if (closed) {
+  if (editAllowed) {
+    showDrBanner("✏️ Редакцията е разрешена от Собственика — запази промените след корекцията.", "info");
+  } else if (closed) {
     const t = (_drData?.closedAt || "").slice(0, 16).replace("T", " ") || "—";
     showDrBanner(`🔒 Затворен (${t}) — само за четене`, "closed");
   } else {
@@ -2572,6 +2706,341 @@ function renderDrChangeLog(log) {
         <span class="dr-log-time">${(l.timestamp || "").slice(0, 16).replace("T", " ")}</span>
       </div>`).join("")}`;
 }
+
+// ════════════════════════════════════════════════
+// 📋 ДНЕВНИ ОТЧЕТИ — изглед за Собственика
+// ════════════════════════════════════════════════
+
+let _drOwnerReports       = [];
+let _currentModalReportId = null;
+
+// ── Зареждане на екрана ──────────────────────────────
+async function loadDailyReportsScreen() {
+  const tbody = document.getElementById("drOwnerTableBody");
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="8" class="tasks-empty">Зареждане...</td></tr>';
+
+  loadOwnerNotifications();
+
+  try {
+    const snap = await getDocs(query(collection(db, "daily_reports"), orderBy("date", "desc")));
+    _drOwnerReports = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    const monthEl = document.getElementById("drFilterMonth");
+    if (monthEl && !monthEl.value) {
+      monthEl.value = new Date().toISOString().slice(0, 7);
+    }
+    applyDrFilters();
+  } catch (err) {
+    console.error("loadDailyReportsScreen:", err);
+    tbody.innerHTML = `<tr><td colspan="8" class="tasks-empty">Грешка: ${err.message}</td></tr>`;
+  }
+}
+
+window.applyDrFilters = function() {
+  const store  = document.getElementById("drFilterStore")?.value  || "";
+  const month  = document.getElementById("drFilterMonth")?.value  || "";
+  const status = document.getElementById("drFilterStatus")?.value || "";
+
+  let list = _drOwnerReports;
+  if (store)  list = list.filter(r => r.shopId === store);
+  if (month)  list = list.filter(r => (r.date || "").startsWith(month));
+  if (status) list = list.filter(r => r.status === status);
+
+  renderDrOwnerTable(list);
+};
+
+function renderDrOwnerTable(reports) {
+  const tbody = document.getElementById("drOwnerTableBody");
+  if (!tbody) return;
+
+  if (!reports.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="tasks-empty">Няма отчети за избраните критерии</td></tr>';
+    return;
+  }
+
+  const fmt = n => (n || 0).toFixed(2) + " €";
+  const tot = reports.reduce((acc, r) => ({
+    inc: acc.inc + (r.totalCashIncome || 0) + (r.totalPosIncome || 0),
+    exp: acc.exp + (r.totalGoodsExpense || 0) + (r.totalOtherExpense || 0),
+    end: acc.end + (r.endCash || 0)
+  }), { inc: 0, exp: 0, end: 0 });
+
+  tbody.innerHTML = reports.map(r => {
+    const closed  = r.status === "closed";
+    const store   = r.shopId === "store1" ? "М1" : "М2";
+    const income  = r2((r.totalCashIncome || 0) + (r.totalPosIncome || 0));
+    const expense = r2((r.totalGoodsExpense || 0) + (r.totalOtherExpense || 0));
+    const endOk   = (r.endCash || 0) >= 0;
+    return `
+      <tr class="${closed ? "" : "dr-owner-draft-row"}">
+        <td>${r.date || "—"}</td>
+        <td>${store}</td>
+        <td><span class="dr-hist-badge ${closed ? "badge-closed" : "badge-draft"}">${closed ? "✅ Затворен" : "📝 Чернова"}</span></td>
+        <td class="mono">${fmt(r.startCash)}</td>
+        <td class="mono pos">${fmt(income)}</td>
+        <td class="mono neg">${fmt(expense)}</td>
+        <td class="mono ${endOk ? "pos" : "neg"}">${fmt(r.endCash)}</td>
+        <td><button class="btn-icon btn-dr-link" onclick="openDrDetailModal('${r.id}')" title="Детайли">📋</button></td>
+      </tr>`;
+  }).join("") + `
+    <tr class="dr-owner-totals-row">
+      <td colspan="4"><strong>Общо (${reports.length})</strong></td>
+      <td class="mono pos"><strong>${fmt(r2(tot.inc))}</strong></td>
+      <td class="mono neg"><strong>${fmt(r2(tot.exp))}</strong></td>
+      <td class="mono ${tot.end >= 0 ? "pos" : "neg"}"><strong>${fmt(r2(tot.end))}</strong></td>
+      <td></td>
+    </tr>`;
+}
+
+// ── Известия за Собственика ──────────────────────────
+async function loadOwnerNotifications() {
+  const el = document.getElementById("drOwnerNotifArea");
+  if (!el) return;
+
+  try {
+    const q    = query(
+      collection(db, "notifications"),
+      where("forOwner", "==", true),
+      where("read",     "==", false),
+      orderBy("timestamp", "desc"),
+      limit(10)
+    );
+    const snap = await getDocs(q);
+
+    if (snap.empty) { el.innerHTML = ""; return; }
+
+    el.innerHTML = snap.docs.map(d => {
+      const n = { id: d.id, ...d.data() };
+      return `
+        <div class="dr-notif-item">
+          <span class="dr-notif-icon">🔔</span>
+          <span class="dr-notif-msg">${escHtml(n.message)}</span>
+          <button class="dr-notif-dismiss" onclick="markNotificationRead('${n.id}', this.parentElement)"
+                  title="Маркирай като прочетено">✓</button>
+        </div>`;
+    }).join("");
+  } catch (e) { console.warn("loadOwnerNotifications:", e); }
+}
+
+window.markNotificationRead = async function(id, el) {
+  try {
+    await updateDoc(doc(db, "notifications", id), { read: true });
+    el?.remove();
+  } catch (e) { console.warn("markNotificationRead:", e); }
+};
+
+// ── Детайлен модал ───────────────────────────────────
+window.openDrDetailModal = async function(docId) {
+  _currentModalReportId = docId;
+  const modal = document.getElementById("drDetailModal");
+  const body  = document.getElementById("drDetailBody");
+  if (!modal || !body) return;
+
+  body.innerHTML = '<div class="tasks-empty">Зареждане...</div>';
+  modal.classList.remove("hidden");
+
+  try {
+    const snap = await getDoc(doc(db, "daily_reports", docId));
+    if (!snap.exists()) { body.innerHTML = '<div class="tasks-empty">Не е намерен.</div>'; return; }
+
+    const r      = snap.data();
+    const closed = r.status === "closed";
+    const store  = r.shopId === "store1" ? "Магазин 1" : "Магазин 2";
+
+    document.getElementById("drDetailTitle").textContent = `${store} — ${r.date || ""}`;
+
+    const allowBtn = document.getElementById("drDetailAllowEdit");
+    if (allowBtn) {
+      allowBtn.disabled  = !closed || r.editAllowed;
+      allowBtn.innerHTML = r.editAllowed
+        ? '<i class="fa-solid fa-unlock-keyhole"></i> Разрешена'
+        : '<i class="fa-solid fa-unlock"></i> Разреши редакция';
+    }
+
+    body.innerHTML = buildDrDetailHtml(r);
+  } catch (err) {
+    body.innerHTML = `<div class="tasks-empty">Грешка: ${err.message}</div>`;
+  }
+};
+
+window.closeDrDetailModal = function() {
+  document.getElementById("drDetailModal")?.classList.add("hidden");
+  _currentModalReportId = null;
+};
+
+function buildDrDetailHtml(r) {
+  const fmt = n => (n || 0).toFixed(2) + " €";
+
+  const shiftsHtml = (r.shifts || []).map(sh => `
+    <tr>
+      <td>${sh.name}</td><td>${sh.from}–${sh.to}</td>
+      <td>${escHtml(sh.operator || "—")}</td>
+      <td class="mono">${(sh.cash  || 0).toFixed(2)}</td>
+      <td class="mono">${(sh.pos   || 0).toFixed(2)}</td>
+      <td class="mono">${(sh.plus  || 0).toFixed(2)}</td>
+      <td class="mono">${(sh.minus || 0).toFixed(2)}</td>
+    </tr>`).join("") || '<tr><td colspan="7" class="tasks-empty">—</td></tr>';
+
+  const goodsHtml = (r.expensesGoods || []).map((g, i) => `
+    <tr>
+      <td class="dr-num">${i + 1}</td>
+      <td>${escHtml(g.supplier || "—")}</td>
+      <td class="mono">${fmt(g.amount)}</td>
+    </tr>`).join("") || '<tr><td colspan="3" class="tasks-empty">—</td></tr>';
+
+  const otherHtml = (r.expensesOther || []).map((o, i) => `
+    <tr>
+      <td class="dr-num">${i + 1}</td>
+      <td>${escHtml(o.description || "—")}</td>
+      <td class="mono">${fmt(o.amount)}</td>
+    </tr>`).join("") || '<tr><td colspan="3" class="tasks-empty">—</td></tr>';
+
+  const logLabels = { create: "📋 Създаден", save: "💾 Запазен", close: "🔒 Затворен", edit: "✏️ Редактиран" };
+  const logHtml = (r.changeLog || []).slice().reverse().map(l => `
+    <div class="dr-log-row">
+      <span class="dr-log-action">${logLabels[l.action] || l.action}</span>
+      <span class="dr-log-user">${escHtml(l.email || "—")}</span>
+      <span class="dr-log-time">${(l.timestamp || "").slice(0, 16).replace("T", " ")}</span>
+    </div>`).join("") || '<div class="tasks-empty" style="padding:8px 0;">—</div>';
+
+  const endOk = (r.endCash || 0) >= 0;
+  return `
+    <div class="dr-detail-summary">
+      <div class="dr-detail-sum-row"><span>Начална каса</span><span class="mono">${fmt(r.startCash)}</span></div>
+      <div class="dr-detail-sum-row"><span>+ Приходи КЕШ</span><span class="mono pos">${fmt(r.totalCashIncome)}</span></div>
+      <div class="dr-detail-sum-row"><span>+ Приходи POS</span><span class="mono pos">${fmt(r.totalPosIncome)}</span></div>
+      <div class="dr-detail-sum-row"><span>− Разход Стоки</span><span class="mono neg">${fmt(r.totalGoodsExpense)}</span></div>
+      <div class="dr-detail-sum-row"><span>− Разход Други</span><span class="mono neg">${fmt(r.totalOtherExpense)}</span></div>
+      <div class="dr-sum-divider"></div>
+      <div class="dr-detail-sum-row dr-detail-sum-final">
+        <span><strong>Крайна каса</strong></span>
+        <span class="mono ${endOk ? "pos" : "neg"}"><strong>${fmt(r.endCash)}</strong></span>
+      </div>
+    </div>
+
+    <div class="dr-section-title" style="margin-top:16px;">👥 Смени</div>
+    <div class="table-responsive">
+      <table class="dr-table">
+        <thead><tr><th>Смяна</th><th>Час</th><th>Оператор</th><th>КЕШ</th><th>POS</th><th>+</th><th>−</th></tr></thead>
+        <tbody>${shiftsHtml}</tbody>
+      </table>
+    </div>
+
+    <div class="dr-section-title" style="margin-top:16px;">📦 Разход Стоки</div>
+    <div class="table-responsive">
+      <table class="dr-table dr-table-narrow">
+        <thead><tr><th>#</th><th>Доставчик</th><th>Сума</th></tr></thead>
+        <tbody>${goodsHtml}</tbody>
+      </table>
+    </div>
+
+    <div class="dr-section-title" style="margin-top:16px;">💸 Разход Други</div>
+    <div class="table-responsive">
+      <table class="dr-table dr-table-narrow">
+        <thead><tr><th>#</th><th>Описание</th><th>Сума</th></tr></thead>
+        <tbody>${otherHtml}</tbody>
+      </table>
+    </div>
+
+    <div class="dr-section-title" style="margin-top:16px;">📋 Лог на промени</div>
+    ${logHtml}
+
+    <div class="dr-detail-meta">
+      Създаден: ${(r.createdAt || "").slice(0, 16).replace("T", " ")} |
+      Последна промяна: ${(r.lastModifiedAt || "").slice(0, 16).replace("T", " ")}
+      ${r.editAllowed ? ' | <span style="color:var(--amber)">✏️ Редакцията е разрешена</span>' : ''}
+    </div>`;
+}
+
+// ── Разреши редакция ─────────────────────────────────
+window.allowReportEdit = async function() {
+  if (!_currentModalReportId) return;
+  if (!confirm("Разреши редакция?\n\nУправителят ще може да промени затворения отчет и транзакциите ще се обновят автоматично.")) return;
+
+  try {
+    await updateDoc(doc(db, "daily_reports", _currentModalReportId), {
+      editAllowed:    true,
+      editAllowedAt:  new Date().toISOString(),
+      editAllowedBy:  currentUserId
+    });
+
+    const snap = await getDoc(doc(db, "daily_reports", _currentModalReportId));
+    if (snap.exists()) {
+      const r = snap.data();
+      await addDoc(collection(db, "notifications"), {
+        type:          "edit_allowed",
+        shopId:        r.shopId,
+        date:          r.date,
+        message:       `Собственикът разреши редакция на отчет ${r.date}`,
+        forShopId:     r.shopId,
+        dailyReportId: _currentModalReportId,
+        read:          false,
+        timestamp:     new Date().toISOString()
+      });
+    }
+
+    const btn = document.getElementById("drDetailAllowEdit");
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-unlock-keyhole"></i> Разрешена'; }
+    showStatusMsg("✅ Редакцията е разрешена. Управителят ще получи известие.");
+  } catch (err) {
+    alert("Грешка: " + err.message);
+  }
+};
+
+// ── Изтриване на отчет ───────────────────────────────
+window.deleteCurrentReport = async function() {
+  if (!_currentModalReportId) return;
+  if (!confirm("⚠️ Изтрий отчета и всички свързани транзакции?\n\nОперацията е необратима!")) return;
+
+  try {
+    const snap = await getDoc(doc(db, "daily_reports", _currentModalReportId));
+    if (snap.exists()) {
+      for (const id of (snap.data().linkedTransactionIds || [])) {
+        try { await deleteDoc(doc(db, "records", id)); } catch (_) {}
+      }
+    }
+    await deleteDoc(doc(db, "daily_reports", _currentModalReportId));
+
+    _drOwnerReports = _drOwnerReports.filter(r => r.id !== _currentModalReportId);
+    closeDrDetailModal();
+    applyDrFilters();
+    showStatusMsg("🗑️ Отчетът е изтрит.");
+  } catch (err) {
+    alert("Грешка при изтриване: " + err.message);
+  }
+};
+
+// ── Принтиране / PDF ─────────────────────────────────
+window.exportReportPdf = function() {
+  const title   = document.getElementById("drDetailTitle")?.textContent || "Дневен отчет";
+  const content = document.getElementById("drDetailBody")?.innerHTML    || "";
+  const win     = window.open("", "_blank", "width=820,height=700");
+  if (!win) { alert("Моля, разреши pop-up прозорците за тази страница."); return; }
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${title}</title>
+    <style>
+      body{font-family:Arial,sans-serif;font-size:12px;color:#000;padding:20px}
+      h1{font-size:16px;margin-bottom:12px}
+      table{width:100%;border-collapse:collapse;margin:8px 0}
+      th,td{border:1px solid #ccc;padding:4px 6px;text-align:left}
+      th{background:#f0f0f0;font-weight:bold}
+      .mono{font-family:monospace;text-align:right}
+      .pos{color:green}.neg{color:red}
+      .dr-detail-summary,.dr-detail-sum-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #eee}
+      .dr-detail-sum-final{font-weight:bold;margin-top:4px}
+      .dr-section-title{font-weight:bold;margin:12px 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+      .dr-log-row{display:flex;gap:8px;padding:2px 0;font-size:11px}
+      .dr-log-action{font-weight:bold;min-width:80px}.dr-log-time{color:#666}
+      .dr-num{color:#888;width:24px}.tasks-empty{color:#888;font-style:italic}
+      .dr-sum-divider{border-top:2px solid #ccc;margin:4px 0}
+      .dr-detail-meta{margin-top:12px;font-size:10px;color:#666}
+    </style></head><body>
+    <h1>${title}</h1>${content}
+    </body></html>`);
+  win.document.close();
+  win.focus();
+  setTimeout(() => win.print(), 400);
+};
 
 // ════════════════════════════════════════════════
 // ⚙️ УПРАВЛЕНИЕ НА АКАУНТИ (само за owner)

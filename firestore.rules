@@ -99,5 +99,16 @@ service cloud.firestore {
         if (isStore1() && resource.data.shopId == 'store1')
         || (isStore2() && resource.data.shopId == 'store2');
     }
+
+    // notifications — owner вижда всичко; manager-и четат/изтриват само своите (по forShopId)
+    match /notifications/{notifId} {
+      allow read, write: if isOwner();
+
+      allow read, delete:
+        if (isStore1() && resource.data.forShopId == 'store1')
+        || (isStore2() && resource.data.forShopId == 'store2');
+
+      allow create: if isAuth();
+    }
   }
 }
