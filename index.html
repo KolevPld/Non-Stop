@@ -618,64 +618,67 @@
      ══════════════════════════════════════════════ -->
 <div id="storeApp" class="hidden">
 
-  <!-- Header -->
+  <!-- ── Хедър ───────────────────────────────────── -->
   <div class="store-header">
     <div class="store-header-left">
       <i class="fa-solid fa-store"></i>
       <span id="storeTitle">Магазин</span>
       <span class="store-header-sub">Нон Стоп</span>
     </div>
-    <button class="store-logout-btn" onclick="logout()" title="Изход">
-      <i class="fa-solid fa-right-from-bracket"></i>
-    </button>
+    <div class="store-header-right">
+      <span id="drStatusBadge" class="dr-status-badge dr-badge-draft">Чернова</span>
+      <button class="store-logout-btn" onclick="logout()" title="Изход">
+        <i class="fa-solid fa-right-from-bracket"></i>
+      </button>
+    </div>
   </div>
 
-  <!-- Tabs -->
-  <div class="store-tabs">
-    <button class="store-tab active" id="storeTabReport"  onclick="showStoreTab('report')">📋 Дневен отчет</button>
-    <button class="store-tab"        id="storeTabHistory" onclick="showStoreTab('history')">📅 История</button>
+  <!-- ── Статус банер ─────────────────────────────── -->
+  <div id="drStatusBanner" class="hidden"></div>
+
+  <!-- ── Лента: дата + бутони ────────────────────── -->
+  <div class="dr-top-bar">
+    <input type="date" id="drDate" onchange="loadOrCreateReport()">
+    <div class="dr-top-btns">
+      <button class="btn-secondary dr-top-btn" onclick="drNewReport()">
+        <i class="fa-solid fa-plus"></i> Нов
+      </button>
+      <button class="btn-secondary dr-top-btn" onclick="drScrollToHistory()">
+        <i class="fa-solid fa-clock-rotate-left"></i> Последни 5
+      </button>
+    </div>
   </div>
 
-  <!-- ── Дневен отчет ──────────────────────────── -->
-  <div id="storeScreenReport">
+  <!-- ── Форма ────────────────────────────────────── -->
+  <div id="drFormContent">
 
-    <!-- Статус банер (затворен/draft) -->
-    <div id="drStatusBanner" class="hidden"></div>
-
-    <!-- Секция 1: Дата и начална каса -->
+    <!-- Секция 1: Начална каса -->
     <div class="card dr-card">
-      <div class="dr-section-title">📅 Дата и начална каса</div>
-      <div class="dr-field-row">
-        <label class="field-label">Дата</label>
-        <input type="date" id="drDate" onchange="loadOrCreateReport()">
-      </div>
-      <div class="dr-field-row">
-        <label class="field-label">💰 Начална каса (€)</label>
-        <input type="number" id="drStartingCash" step="0.01" placeholder="0.00" oninput="drCalc()">
-        <div class="dr-hint" id="drStartingCashHint"></div>
-      </div>
+      <div class="dr-section-title">💰 Начална каса</div>
+      <div id="drCarryoverHint" class="dr-hint" style="margin-bottom:8px;"></div>
+      <input type="number" id="drStartCash" class="dr-big-input" step="0.01" placeholder="0.00" oninput="drCalc()">
     </div>
 
-    <!-- Секция 2: Смени / Оператори -->
+    <!-- Секция 2: Смени (3 фиксирани) -->
     <div class="card dr-card">
-      <div class="dr-section-title">👥 Смени / Оператори</div>
+      <div class="dr-section-title">👥 Смени</div>
       <div class="table-responsive">
         <table class="dr-table">
           <thead>
             <tr>
-              <th>#</th><th>Час от-до</th><th>Оператор</th>
-              <th>Оборот</th><th>Кеш</th><th>POS</th><th>+</th><th>−</th>
+              <th>Смяна</th><th>Час</th><th>Оператор</th>
+              <th>Оборот</th><th>КЕШ</th><th>POS</th><th>+</th><th>−</th>
             </tr>
           </thead>
-          <tbody id="drOperatorsBody"></tbody>
+          <tbody id="drShiftsBody"></tbody>
           <tfoot>
             <tr class="dr-total-row">
               <td colspan="3"><strong>Общо</strong></td>
-              <td id="drTotalRevenue">0.00</td>
-              <td id="drTotalCash">0.00</td>
-              <td id="drTotalPos">0.00</td>
-              <td id="drTotalPlus">0.00</td>
-              <td id="drTotalMinus">0.00</td>
+              <td id="drTotalRevenue" class="mono">0.00</td>
+              <td id="drTotalCash"    class="mono">0.00</td>
+              <td id="drTotalPos"     class="mono">0.00</td>
+              <td id="drTotalPlus"    class="mono">0.00</td>
+              <td id="drTotalMinus"   class="mono">0.00</td>
             </tr>
           </tfoot>
         </table>
@@ -694,7 +697,7 @@
           <tfoot>
             <tr class="dr-total-row">
               <td colspan="2"><strong>Общо стоки</strong></td>
-              <td id="drTotalGoods">0.00</td>
+              <td id="drTotalGoods" class="mono">0.00</td>
             </tr>
           </tfoot>
         </table>
@@ -713,7 +716,7 @@
           <tfoot>
             <tr class="dr-total-row">
               <td colspan="2"><strong>Общо други</strong></td>
-              <td id="drTotalOther">0.00</td>
+              <td id="drTotalOther" class="mono">0.00</td>
             </tr>
           </tfoot>
         </table>
@@ -728,8 +731,12 @@
         <span id="drSumStarting" class="mono">0.00 €</span>
       </div>
       <div class="dr-sum-row">
-        <span>+ КЕШ оборот</span>
+        <span>+ Общо КЕШ приходи</span>
         <span id="drSumCash" class="mono pos">0.00 €</span>
+      </div>
+      <div class="dr-sum-row">
+        <span>+ Общо POS приходи</span>
+        <span id="drSumPos" class="mono pos">0.00 €</span>
       </div>
       <div class="dr-sum-row">
         <span>− Общо разходи</span>
@@ -737,35 +744,36 @@
       </div>
       <div class="dr-sum-divider"></div>
       <div class="dr-sum-row dr-sum-final">
-        <span><strong>Крайна КАСА</strong></span>
+        <span><strong>КРАЙНА КАСА</strong></span>
         <span id="drSumEnding" class="dr-ending-value pos">0.00 €</span>
       </div>
     </div>
 
     <!-- Бутони -->
     <div class="dr-btn-row">
-      <button class="btn-secondary" id="drSaveBtn" onclick="saveDailyReport()">
-        <i class="fa-solid fa-floppy-disk"></i> Запази
+      <button class="btn-amber" id="drSaveBtn" onclick="saveDailyReport()">
+        <i class="fa-solid fa-floppy-disk"></i> Запази черновата
       </button>
       <button class="btn-primary" id="drCloseBtn" onclick="confirmCloseDay()">
         <i class="fa-solid fa-lock"></i> Затвори деня
       </button>
     </div>
 
-    <!-- Лог на промени (показва се при отваряне на архивен отчет) -->
-    <div id="drChangeLogs" class="card dr-card hidden" style="margin-bottom:100px;"></div>
+    <!-- Лог на промени -->
+    <div id="drChangeLog" class="card dr-card hidden"></div>
 
-  </div><!-- /storeScreenReport -->
-
-  <!-- ── История ───────────────────────────────── -->
-  <div id="storeScreenHistory" class="hidden" style="margin-bottom:80px;">
-    <div class="card dr-card">
-      <div class="dr-section-title" style="margin-top:0">📅 Отчети за текущия месец</div>
-      <div id="drHistoryList">
+    <!-- Последни 5 отчета -->
+    <div class="card dr-card" id="drRecentSection" style="margin-bottom:40px;">
+      <div class="dr-section-title" style="margin-top:0;">📅 Последни отчети</div>
+      <div id="drRecentList">
         <div class="tasks-empty">Зареждане...</div>
       </div>
     </div>
-  </div>
+
+  </div><!-- /drFormContent -->
+
+  <!-- Autocomplete за доставчици -->
+  <datalist id="drSuppliersList"></datalist>
 
 </div><!-- /storeApp -->
 

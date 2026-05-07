@@ -1,0 +1,103 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Взима ролята на влезлия потребител от users/{uid}.role
+    function getRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isOwner()  { return request.auth != null && getRole() == 'owner';  }
+    function isStore1() { return request.auth != null && getRole() == 'store1'; }
+    function isStore2() { return request.auth != null && getRole() == 'store2'; }
+    function isAuth()   { return request.auth != null; }
+
+    // ─────────────────────────────────────────────────────
+    // Съществуващи колекции — само authenticated (непроменени)
+    // ─────────────────────────────────────────────────────
+
+    match /records/{id}          { allow read, write: if isAuth(); }
+    match /owners/{id}           { allow read, write: if isAuth(); }
+    match /tasks/{id}            { allow read, write: if isAuth(); }
+    match /notes/{id}            { allow read, write: if isAuth(); }
+    match /dailyReports/{id}     { allow read, write: if isAuth(); }
+    match /reportChangeLogs/{id} { allow read, write: if isAuth(); }
+
+    match /users/{id} {
+      allow read:  if isAuth();
+      allow write: if isOwner() || request.auth.uid == id;
+    }
+
+    // ─────────────────────────────────────────────────────
+    // НОВИ колекции — роли по shopId
+    // ─────────────────────────────────────────────────────
+
+    // daily_reports
+    match /daily_reports/{reportId} {
+      allow read, write: if isOwner();
+
+      allow read:
+        if (isStore1() && resource.data.shopId == 'store1')
+        || (isStore2() && resource.data.shopId == 'store2');
+
+      allow create:
+        if (isStore1() && request.resource.data.shopId == 'store1')
+        || (isStore2() && request.resource.data.shopId == 'store2');
+
+      allow update, delete:
+        if (isStore1() && resource.data.shopId == 'store1')
+        || (isStore2() && resource.data.shopId == 'store2');
+    }
+
+    // employees
+    match /employees/{employeeId} {
+      allow read, write: if isOwner();
+
+      allow read:
+        if (isStore1() && resource.data.shopId == 'store1')
+        || (isStore2() && resource.data.shopId == 'store2');
+
+      allow create:
+        if (isStore1() && request.resource.data.shopId == 'store1')
+        || (isStore2() && request.resource.data.shopId == 'store2');
+
+      allow update, delete:
+        if (isStore1() && resource.data.shopId == 'store1')
+        || (isStore2() && resource.data.shopId == 'store2');
+    }
+
+    // work_hours
+    match /work_hours/{recordId} {
+      allow read, write: if isOwner();
+
+      allow read:
+        if (isStore1() && resource.data.shopId == 'store1')
+        || (isStore2() && resource.data.shopId == 'store2');
+
+      allow create:
+        if (isStore1() && request.resource.data.shopId == 'store1')
+        || (isStore2() && request.resource.data.shopId == 'store2');
+
+      allow update, delete:
+        if (isStore1() && resource.data.shopId == 'store1')
+        || (isStore2() && resource.data.shopId == 'store2');
+    }
+
+    // suppliers
+    match /suppliers/{supplierId} {
+      allow read, write: if isOwner();
+
+      allow read:
+        if (isStore1() && resource.data.shopId == 'store1')
+        || (isStore2() && resource.data.shopId == 'store2');
+
+      allow create:
+        if (isStore1() && request.resource.data.shopId == 'store1')
+        || (isStore2() && request.resource.data.shopId == 'store2');
+
+      allow update, delete:
+        if (isStore1() && resource.data.shopId == 'store1')
+        || (isStore2() && resource.data.shopId == 'store2');
+    }
+  }
+}

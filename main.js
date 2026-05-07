@@ -1,6 +1,7 @@
 import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
 import {
   getFirestore,
+  enableIndexedDbPersistence,
   collection,
   addDoc,
   getDocs,
@@ -36,9 +37,16 @@ const firebaseConfig = {
   appId: "1:368870682423:web:5f0ff3245c07c7796a74b2"
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+const app  = initializeApp(firebaseConfig);
+const db   = getFirestore(app);
 const auth = getAuth(app);
+
+// Offline persistence — важно за слаб интернет в магазина
+enableIndexedDbPersistence(db).catch(err => {
+  if (err.code !== "failed-precondition" && err.code !== "unimplemented") {
+    console.warn("Firestore offline:", err.code);
+  }
+});
 const ADMIN_EMAIL = "kmet.zapaden@gmail.com";
 
 // --------------------------------------------------
@@ -1944,52 +1952,71 @@ window.deleteOwnerEntry = async function(id) {
 };
 
 // ════════════════════════════════════════════════
-// 🏪 ДНЕВЕН ОТЧЕТ (Управители)
+// 🏪 ДНЕВЕН ОТЧЕТ v2 (Управители)
+// Колекция: daily_reports  ·  shopId: "store1"|"store2"
 // ════════════════════════════════════════════════
 
-const DR_OPERATORS = 6;
-const DR_GOODS     = 15;
-const DR_OTHER     = 5;
+const DR_SHIFTS_DEF = [
+  { name: "Сутрешна",   from: "07:00", to: "15:00" },
+  { name: "Следобедна", from: "15:00", to: "23:00" },
+  { name: "Нощна",      from: "23:00", to: "07:00" }
+];
+const DR_GOODS = 15;
+const DR_OTHER = 5;
 
-let _drStore  = null;   // "1" | "2"
-let _drStatus = "draft";
-let _drData   = null;
-
-function drReportId(store, date) {
-  return `store${store}_${date}`;
-}
+let _drShopId  = null;   // "store1" | "store2"
+let _drStatus  = "draft";
+let _drDocId   = null;   // Firestore document ID
+let _drData    = null;
+let _suppliers = [];
 
 // ── Инициализация ────────────────────────────────────
 function initDailyReport(storeRole) {
-  _drStore = storeRole === "store1" ? "1" : "2";
+  _drShopId = storeRole;
+  const num = storeRole === "store1" ? "1" : "2";
   const titleEl = document.getElementById("storeTitle");
-  if (titleEl) titleEl.textContent = `Магазин ${_drStore}`;
+  if (titleEl) titleEl.textContent = `Магазин ${num}`;
 
-  renderDrOperatorsTable();
+  renderDrShiftsTable();
   renderDrGoodsTable();
   renderDrOtherTable();
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today  = new Date().toISOString().slice(0, 10);
   const dateEl = document.getElementById("drDate");
   if (dateEl) { dateEl.value = today; dateEl.max = today; }
 
+  loadSuppliers();
   loadOrCreateReport();
+  loadRecentReports();
+}
+
+// ── Доставчици (autocomplete) ─────────────────────────
+async function loadSuppliers() {
+  try {
+    const q    = query(collection(db, "suppliers"), where("shopId", "==", _drShopId));
+    const snap = await getDocs(q);
+    _suppliers = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (b.lastUsed || "").localeCompare(a.lastUsed || ""));
+    const dl = document.getElementById("drSuppliersList");
+    if (dl) dl.innerHTML = _suppliers.map(s => `<option value="${escHtml(s.name)}">`).join("");
+  } catch (e) { console.warn("loadSuppliers:", e); }
 }
 
 // ── Рендиране на таблиците ───────────────────────────
-function renderDrOperatorsTable() {
-  const tbody = document.getElementById("drOperatorsBody");
+function renderDrShiftsTable() {
+  const tbody = document.getElementById("drShiftsBody");
   if (!tbody) return;
-  tbody.innerHTML = Array.from({ length: DR_OPERATORS }, (_, i) => `
+  tbody.innerHTML = DR_SHIFTS_DEF.map((sh, i) => `
     <tr>
-      <td class="dr-num">${i + 1}</td>
-      <td><input type="text"   class="dr-input"      placeholder="08:00-16:00" data-op="${i}" data-field="time"></td>
-      <td><input type="text"   class="dr-input"      placeholder="Оператор"   data-op="${i}" data-field="name"></td>
-      <td><input type="number" class="dr-input mono" step="0.01" placeholder="0.00" data-op="${i}" data-field="revenue" oninput="drCalc()"></td>
-      <td><input type="number" class="dr-input mono" step="0.01" placeholder="0.00" data-op="${i}" data-field="cash"    oninput="drCalc()"></td>
-      <td><input type="number" class="dr-input mono" step="0.01" placeholder="0.00" data-op="${i}" data-field="pos"     oninput="drCalc()"></td>
-      <td><input type="number" class="dr-input mono" step="0.01" placeholder="0.00" data-op="${i}" data-field="plus"    oninput="drCalc()"></td>
-      <td><input type="number" class="dr-input mono" step="0.01" placeholder="0.00" data-op="${i}" data-field="minus"   oninput="drCalc()"></td>
+      <td class="dr-shift-name">${sh.name}</td>
+      <td class="dr-shift-time">${sh.from}–${sh.to}</td>
+      <td><input type="text"   class="dr-input"      placeholder="Оператор" data-shift="${i}" data-field="operator"></td>
+      <td class="mono dr-auto-cell" id="drShiftRev${i}">0.00</td>
+      <td><input type="number" class="dr-input mono" step="0.01" placeholder="0.00" data-shift="${i}" data-field="cash"  oninput="drCalc()"></td>
+      <td><input type="number" class="dr-input mono" step="0.01" placeholder="0.00" data-shift="${i}" data-field="pos"   oninput="drCalc()"></td>
+      <td><input type="number" class="dr-input mono" step="0.01" placeholder="0.00" data-shift="${i}" data-field="plus"  oninput="drCalc()"></td>
+      <td><input type="number" class="dr-input mono" step="0.01" placeholder="0.00" data-shift="${i}" data-field="minus" oninput="drCalc()"></td>
     </tr>`).join("");
 }
 
@@ -1999,7 +2026,7 @@ function renderDrGoodsTable() {
   tbody.innerHTML = Array.from({ length: DR_GOODS }, (_, i) => `
     <tr>
       <td class="dr-num">${i + 1}</td>
-      <td><input type="text"   class="dr-input"      placeholder="Доставчик" data-goods="${i}" data-field="supplier"></td>
+      <td><input type="text"   class="dr-input"      placeholder="Доставчик" list="drSuppliersList" data-goods="${i}" data-field="supplier"></td>
       <td><input type="number" class="dr-input mono" step="0.01" placeholder="0.00" data-goods="${i}" data-field="amount" oninput="drCalc()"></td>
     </tr>`).join("");
 }
@@ -2017,44 +2044,42 @@ function renderDrOtherTable() {
 
 // ── Събиране на данни от формата ─────────────────────
 function collectDrData() {
-  const date         = document.getElementById("drDate")?.value || "";
-  const startingCash = parseFloat(document.getElementById("drStartingCash")?.value) || 0;
+  const date      = document.getElementById("drDate")?.value || "";
+  const startCash = parseFloat(document.getElementById("drStartCash")?.value) || 0;
 
-  const operators = Array.from({ length: DR_OPERATORS }, (_, i) => ({
-    time:    drField("op",    i, "time")    || "",
-    name:    drField("op",    i, "name")    || "",
-    revenue: parseFloat(drField("op", i, "revenue")) || 0,
-    cash:    parseFloat(drField("op", i, "cash"))    || 0,
-    pos:     parseFloat(drField("op", i, "pos"))     || 0,
-    plus:    parseFloat(drField("op", i, "plus"))    || 0,
-    minus:   parseFloat(drField("op", i, "minus"))   || 0
-  }));
+  const shifts = DR_SHIFTS_DEF.map((def, i) => {
+    const cash  = parseFloat(drField("shift", i, "cash"))  || 0;
+    const pos   = parseFloat(drField("shift", i, "pos"))   || 0;
+    const plus  = parseFloat(drField("shift", i, "plus"))  || 0;
+    const minus = parseFloat(drField("shift", i, "minus")) || 0;
+    return {
+      name: def.name, from: def.from, to: def.to,
+      operator: drField("shift", i, "operator") || "",
+      cash, pos, plus, minus
+    };
+  });
 
-  const goodsExpenses = Array.from({ length: DR_GOODS }, (_, i) => ({
+  const expensesGoods = Array.from({ length: DR_GOODS }, (_, i) => ({
     supplier: drField("goods", i, "supplier") || "",
     amount:   parseFloat(drField("goods", i, "amount")) || 0
-  }));
+  })).filter(g => g.supplier || g.amount > 0);
 
-  const otherExpenses = Array.from({ length: DR_OTHER }, (_, i) => ({
-    desc:   drField("other", i, "desc")   || "",
-    amount: parseFloat(drField("other", i, "amount")) || 0
-  }));
+  const expensesOther = Array.from({ length: DR_OTHER }, (_, i) => ({
+    description: drField("other", i, "desc") || "",
+    amount:      parseFloat(drField("other", i, "amount")) || 0
+  })).filter(o => o.description || o.amount > 0);
 
-  const totalCash     = r2(operators.reduce((s, o) => s + o.cash, 0));
-  const totalPos      = r2(operators.reduce((s, o) => s + o.pos, 0));
-  const totalRevenue  = r2(operators.reduce((s, o) => s + o.revenue, 0));
-  const totalPlus     = r2(operators.reduce((s, o) => s + o.plus, 0));
-  const totalMinus    = r2(operators.reduce((s, o) => s + o.minus, 0));
-  const totalGoods    = r2(goodsExpenses.reduce((s, g) => s + g.amount, 0));
-  const totalOther    = r2(otherExpenses.reduce((s, o) => s + o.amount, 0));
-  const totalExpenses = r2(totalGoods + totalOther);
-  const endingCash    = r2(startingCash + totalCash - totalExpenses);
+  const totalCashIncome   = r2(shifts.reduce((s, sh) => s + sh.cash, 0));
+  const totalPosIncome    = r2(shifts.reduce((s, sh) => s + sh.pos, 0));
+  const totalGoodsExpense = r2(expensesGoods.reduce((s, g) => s + g.amount, 0));
+  const totalOtherExpense = r2(expensesOther.reduce((s, o) => s + o.amount, 0));
+  const endCash = r2(startCash + totalCashIncome - totalGoodsExpense - totalOtherExpense);
 
   return {
-    store: _drStore, date, startingCash,
-    operators, goodsExpenses, otherExpenses,
-    totalCash, totalPos, totalRevenue, totalPlus, totalMinus,
-    totalGoods, totalOther, totalExpenses, endingCash
+    shopId: _drShopId, date, startCash, shifts,
+    expensesGoods, expensesOther,
+    totalCashIncome, totalPosIncome,
+    totalGoodsExpense, totalOtherExpense, endCash
   };
 }
 
@@ -2073,22 +2098,34 @@ function r2(n) { return Math.round(n * 100) / 100; }
 window.drCalc = function() {
   const d = collectDrData();
 
-  setText("drTotalRevenue", d.totalRevenue.toFixed(2));
-  setText("drTotalCash",    d.totalCash.toFixed(2));
-  setText("drTotalPos",     d.totalPos.toFixed(2));
-  setText("drTotalPlus",    d.totalPlus.toFixed(2));
-  setText("drTotalMinus",   d.totalMinus.toFixed(2));
-  setText("drTotalGoods",   d.totalGoods.toFixed(2));
-  setText("drTotalOther",   d.totalOther.toFixed(2));
+  DR_SHIFTS_DEF.forEach((_, i) => {
+    const sh  = d.shifts[i];
+    const rev = r2(sh.cash + sh.pos + sh.plus - sh.minus);
+    const el  = document.getElementById(`drShiftRev${i}`);
+    if (el) el.textContent = rev.toFixed(2);
+  });
 
-  setText("drSumStarting",  d.startingCash.toFixed(2) + " €");
-  setText("drSumCash",      d.totalCash.toFixed(2) + " €");
-  setText("drSumExpenses",  d.totalExpenses.toFixed(2) + " €");
+  const totalRev   = r2(d.shifts.reduce((s, sh) => s + sh.cash + sh.pos + sh.plus - sh.minus, 0));
+  const totalPlus  = r2(d.shifts.reduce((s, sh) => s + sh.plus, 0));
+  const totalMinus = r2(d.shifts.reduce((s, sh) => s + sh.minus, 0));
+
+  setText("drTotalRevenue", totalRev.toFixed(2));
+  setText("drTotalCash",    d.totalCashIncome.toFixed(2));
+  setText("drTotalPos",     d.totalPosIncome.toFixed(2));
+  setText("drTotalPlus",    totalPlus.toFixed(2));
+  setText("drTotalMinus",   totalMinus.toFixed(2));
+  setText("drTotalGoods",   d.totalGoodsExpense.toFixed(2));
+  setText("drTotalOther",   d.totalOtherExpense.toFixed(2));
+
+  setText("drSumStarting",  d.startCash.toFixed(2) + " €");
+  setText("drSumCash",      d.totalCashIncome.toFixed(2) + " €");
+  setText("drSumPos",       d.totalPosIncome.toFixed(2) + " €");
+  setText("drSumExpenses",  r2(d.totalGoodsExpense + d.totalOtherExpense).toFixed(2) + " €");
 
   const endEl = document.getElementById("drSumEnding");
   if (endEl) {
-    endEl.textContent = d.endingCash.toFixed(2) + " €";
-    endEl.className   = "dr-ending-value " + (d.endingCash >= 0 ? "pos" : "neg");
+    endEl.textContent = d.endCash.toFixed(2) + " €";
+    endEl.className   = "dr-ending-value " + (d.endCash >= 0 ? "pos" : "neg");
   }
 };
 
@@ -2100,27 +2137,30 @@ function setText(id, val) {
 // ── Зареждане / Нов отчет ────────────────────────────
 window.loadOrCreateReport = async function() {
   const date = document.getElementById("drDate")?.value;
-  if (!date || !_drStore) return;
+  if (!date || !_drShopId) return;
 
   drSetLoading(true);
   try {
-    const snap = await getDoc(doc(db, "dailyReports", drReportId(_drStore, date)));
+    const q    = query(
+      collection(db, "daily_reports"),
+      where("shopId", "==", _drShopId),
+      where("date",   "==", date),
+      limit(1)
+    );
+    const snap = await getDocs(q);
 
-    if (snap.exists()) {
-      _drData   = snap.data();
+    if (!snap.empty) {
+      const docSnap = snap.docs[0];
+      _drDocId  = docSnap.id;
+      _drData   = docSnap.data();
       _drStatus = _drData.status || "draft";
       populateDrForm(_drData);
     } else {
+      _drDocId  = null;
       _drData   = null;
       _drStatus = "draft";
       clearDrForm();
-      const prev = await getPrevEndingCash(_drStore, date);
-      if (prev !== null) {
-        const el = document.getElementById("drStartingCash");
-        if (el) el.value = prev.toFixed(2);
-        const hint = document.getElementById("drStartingCashHint");
-        if (hint) hint.textContent = `↑ автоматично от ${prevDate(date)}`;
-      }
+      await loadPrevEndCash(date);
       drCalc();
     }
     updateDrStatusUI();
@@ -2132,198 +2172,300 @@ window.loadOrCreateReport = async function() {
   }
 };
 
-async function getPrevEndingCash(store, date) {
+async function loadPrevEndCash(date) {
   try {
-    const q    = query(collection(db, "dailyReports"), where("store", "==", store));
+    const q    = query(
+      collection(db, "daily_reports"),
+      where("shopId", "==", _drShopId),
+      where("status", "==", "closed")
+    );
     const snap = await getDocs(q);
     const prev = snap.docs
       .map(d => d.data())
-      .filter(r => r.date < date && r.status === "closed")
+      .filter(r => r.date < date)
       .sort((a, b) => b.date.localeCompare(a.date));
-    return prev.length ? (prev[0].endingCash ?? 0) : null;
-  } catch (e) { return null; }
-}
 
-function prevDate(dateStr) {
-  const d = new Date(dateStr + "T00:00:00");
-  d.setDate(d.getDate() - 1);
-  return d.toISOString().slice(0, 10);
+    if (prev.length) {
+      const el = document.getElementById("drStartCash");
+      if (el) el.value = (prev[0].endCash ?? 0).toFixed(2);
+      const hint = document.getElementById("drCarryoverHint");
+      if (hint) hint.textContent = `↑ прехвърлено от ${prev[0].date}`;
+    }
+  } catch (e) { console.warn("loadPrevEndCash:", e); }
 }
 
 // ── Попълване / Изчистване на формата ───────────────
 function populateDrForm(data) {
-  const el = document.getElementById("drDate");
-  if (el) el.value = data.date || "";
-  const sc = document.getElementById("drStartingCash");
-  if (sc) sc.value = data.startingCash != null ? data.startingCash.toFixed(2) : "";
+  const dateEl = document.getElementById("drDate");
+  if (dateEl) dateEl.value = data.date || "";
+  const scEl = document.getElementById("drStartCash");
+  if (scEl) scEl.value = data.startCash != null ? data.startCash.toFixed(2) : "";
+  const hintEl = document.getElementById("drCarryoverHint");
+  if (hintEl) hintEl.textContent = "";
 
-  (data.operators || []).forEach((o, i) => {
-    if (i >= DR_OPERATORS) return;
-    setDrField("op", i, "time",    o.time    || "");
-    setDrField("op", i, "name",    o.name    || "");
-    setDrField("op", i, "revenue", o.revenue || "");
-    setDrField("op", i, "cash",    o.cash    || "");
-    setDrField("op", i, "pos",     o.pos     || "");
-    setDrField("op", i, "plus",    o.plus    || "");
-    setDrField("op", i, "minus",   o.minus   || "");
+  (data.shifts || []).forEach((sh, i) => {
+    if (i >= DR_SHIFTS_DEF.length) return;
+    setDrField("shift", i, "operator", sh.operator || "");
+    setDrField("shift", i, "cash",     sh.cash     || "");
+    setDrField("shift", i, "pos",      sh.pos      || "");
+    setDrField("shift", i, "plus",     sh.plus     || "");
+    setDrField("shift", i, "minus",    sh.minus    || "");
   });
 
-  (data.goodsExpenses || []).forEach((g, i) => {
-    if (i >= DR_GOODS) return;
+  const goods = data.expensesGoods || [];
+  for (let i = 0; i < DR_GOODS; i++) {
+    const g = goods[i] || {};
     setDrField("goods", i, "supplier", g.supplier || "");
     setDrField("goods", i, "amount",   g.amount   || "");
-  });
+  }
 
-  (data.otherExpenses || []).forEach((o, i) => {
-    if (i >= DR_OTHER) return;
-    setDrField("other", i, "desc",   o.desc   || "");
-    setDrField("other", i, "amount", o.amount || "");
-  });
+  const other = data.expensesOther || [];
+  for (let i = 0; i < DR_OTHER; i++) {
+    const o = other[i] || {};
+    setDrField("other", i, "desc",   o.description || "");
+    setDrField("other", i, "amount", o.amount       || "");
+  }
 
   drCalc();
+  renderDrChangeLog(data.changeLog);
 }
 
 function clearDrForm() {
-  document.getElementById("drStartingCash") && (document.getElementById("drStartingCash").value = "");
-  document.getElementById("drStartingCashHint") && (document.getElementById("drStartingCashHint").textContent = "");
+  const sc = document.getElementById("drStartCash");
+  if (sc) sc.value = "";
+  const hint = document.getElementById("drCarryoverHint");
+  if (hint) hint.textContent = "";
   document.querySelectorAll(".dr-input").forEach(el => { el.value = ""; });
+  document.getElementById("drChangeLog")?.classList.add("hidden");
   drCalc();
 }
 
+window.drNewReport = function() {
+  _drDocId  = null;
+  _drData   = null;
+  _drStatus = "draft";
+  const today  = new Date().toISOString().slice(0, 10);
+  const dateEl = document.getElementById("drDate");
+  if (dateEl) { dateEl.value = today; dateEl.disabled = false; }
+  clearDrForm();
+  updateDrStatusUI();
+  hideDrBanner();
+  loadOrCreateReport();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+};
+
+window.drScrollToHistory = function() {
+  document.getElementById("drRecentSection")?.scrollIntoView({ behavior: "smooth" });
+};
+
 // ── Запази (draft) ───────────────────────────────────
 window.saveDailyReport = async function() {
-  await persistReport("draft");
+  try {
+    await persistReport("draft");
+    await loadRecentReports();
+  } catch (_) { /* handled inside persistReport */ }
 };
 
 // ── Затвори деня ─────────────────────────────────────
 window.confirmCloseDay = async function() {
   if (_drStatus === "closed") return;
-  if (!confirm("Затвори деня? Данните ще се изпратят към собственика и не може да се отменят.")) return;
+
+  const d = collectDrData();
+  if (d.endCash < 0) {
+    if (!confirm(`⚠️ Крайната каса е отрицателна (${d.endCash.toFixed(2)} €).\nСигурни ли сте, че данните са верни?`)) return;
+  }
+  if (!confirm("🔒 Затвори деня?\n\nСлед затваряне отчетът се прехвърля към собственика и не може да се променя без негово разрешение.")) return;
 
   const saveBtn  = document.getElementById("drSaveBtn");
   const closeBtn = document.getElementById("drCloseBtn");
-  if (saveBtn)  saveBtn.disabled  = true;
+  if (saveBtn)  saveBtn.disabled = true;
   if (closeBtn) closeBtn.disabled = true;
 
   try {
     const report = await persistReport("closed");
+    await updateSuppliersLastUsed(report.expensesGoods);
     await createMainRecordsFromDr(report);
     updateDrStatusUI();
-    showDrBanner("✅ Денят е затворен! Данните са изпратени.", "success");
-    await loadDrHistory();
+    showDrBanner("✅ Денят е затворен! Данните са изпратени към собственика.", "success");
+    await loadRecentReports();
   } catch (err) {
     console.error("confirmCloseDay:", err);
-    alert("Грешка: " + err.message);
-    if (saveBtn)  saveBtn.disabled  = false;
+    if (err.message !== "Дублиран отчет" && err.message !== "Липсва дата") {
+      alert("Грешка: " + err.message);
+    }
+    if (saveBtn)  saveBtn.disabled = false;
     if (closeBtn) closeBtn.disabled = false;
   }
 };
 
 async function persistReport(status) {
-  const data    = collectDrData();
-  const now     = new Date().toISOString();
-  const isNew   = !_drData;
-  const reportId = drReportId(_drStore, data.date);
+  const data  = collectDrData();
+  const now   = new Date().toISOString();
+  const isNew = !_drDocId;
+
+  if (!data.date) {
+    alert("⚠️ Моля, въведи дата.");
+    throw new Error("Липсва дата");
+  }
+
+  // Проверка за дублиран отчет само при нов документ
+  if (isNew) {
+    const dupQ    = query(
+      collection(db, "daily_reports"),
+      where("shopId", "==", _drShopId),
+      where("date",   "==", data.date),
+      limit(1)
+    );
+    const dupSnap = await getDocs(dupQ);
+    if (!dupSnap.empty) {
+      _drDocId  = dupSnap.docs[0].id;
+      _drData   = dupSnap.docs[0].data();
+      alert(`⚠️ Вече има отчет за ${data.date}! Заредено е съществуващото.`);
+      populateDrForm(_drData);
+      updateDrStatusUI();
+      throw new Error("Дублиран отчет");
+    }
+  }
+
+  const action    = isNew ? "create" : (status === "closed" ? "close" : "save");
+  const changeLog = [...(_drData?.changeLog || []), {
+    userId: currentUserId, email: currentUserEmail, timestamp: now, action
+  }];
 
   const payload = {
-    ...data, status,
-    lastModifiedBy:    currentUserId,
-    lastModifiedEmail: currentUserEmail,
-    lastModifiedAt:    now,
+    shopId:             _drShopId,
+    date:               data.date,
+    status,
+    startCash:          data.startCash,
+    shifts:             data.shifts,
+    expensesGoods:      data.expensesGoods,
+    expensesOther:      data.expensesOther,
+    totalCashIncome:    data.totalCashIncome,
+    totalPosIncome:     data.totalPosIncome,
+    totalGoodsExpense:  data.totalGoodsExpense,
+    totalOtherExpense:  data.totalOtherExpense,
+    endCash:            data.endCash,
     createdBy:    isNew ? currentUserId    : (_drData?.createdBy    || currentUserId),
-    createdEmail: isNew ? currentUserEmail : (_drData?.createdEmail || currentUserEmail),
     createdAt:    isNew ? now              : (_drData?.createdAt    || now),
-    linkedRecordIds: _drData?.linkedRecordIds || []
+    lastModifiedBy:    currentUserId,
+    lastModifiedAt:    now,
+    changeLog,
+    transferredToOwner:   status === "closed",
+    linkedTransactionIds: _drData?.linkedTransactionIds || []
   };
 
   if (status === "closed") {
-    payload.closedBy    = currentUserId;
-    payload.closedEmail = currentUserEmail;
-    payload.closedAt    = now;
+    payload.closedBy = currentUserId;
+    payload.closedAt = now;
   }
 
-  await setDoc(doc(db, "dailyReports", reportId), payload);
-
-  await addDoc(collection(db, "reportChangeLogs"), {
-    reportId,
-    userId:    currentUserId,
-    userEmail: currentUserEmail,
-    action:    isNew ? "create" : (status === "closed" ? "close" : "save"),
-    timestamp: now,
-    endingCash: data.endingCash,
-    summary: `М${data.store} | ${data.date} | Крайна каса: ${data.endingCash.toFixed(2)} €`
-  });
+  if (_drDocId) {
+    await updateDoc(doc(db, "daily_reports", _drDocId), payload);
+  } else {
+    const ref = await addDoc(collection(db, "daily_reports"), payload);
+    _drDocId  = ref.id;
+  }
 
   _drData   = payload;
   _drStatus = status;
 
   if (status === "draft") showDrBanner("💾 Запазено!", "info");
+  renderDrChangeLog(changeLog);
   return payload;
 }
 
-// ── Прехвърляне към главната система ────────────────
+// ── Обновяване на доставчиците ───────────────────────
+async function updateSuppliersLastUsed(expensesGoods) {
+  const now   = new Date().toISOString();
+  const names = [...new Set(
+    (expensesGoods || [])
+      .filter(g => g.supplier?.trim() && g.amount > 0)
+      .map(g => g.supplier.trim())
+  )];
+
+  for (const name of names) {
+    const existing = _suppliers.find(s => s.name.trim().toLowerCase() === name.toLowerCase());
+    if (existing) {
+      await updateDoc(doc(db, "suppliers", existing.id), { lastUsed: now });
+    } else {
+      await addDoc(collection(db, "suppliers"), { shopId: _drShopId, name, lastUsed: now });
+    }
+  }
+  await loadSuppliers();
+}
+
+// ── Прехвърляне към главната система (records) ────────
 async function createMainRecordsFromDr(report) {
-  const { store, date, totalCash, totalPos, totalGoods, otherExpenses } = report;
-  const ids  = [];
-  const note = `Дневен отчет М${store}`;
+  const store = report.shopId === "store1" ? "1" : "2";
+  const note  = `Дневен отчет М${store}`;
+  const ids   = [];
 
-  if (totalCash > 0) {
+  if (report.totalCashIncome > 0) {
     const ref = await addDoc(collection(db, "records"), {
-      date, type: "Приход", method: "Кеш", amount: totalCash,
-      store, category: "Оборот", note, imageUrl: ""
+      date: report.date, type: "Приход", method: "Кеш",
+      amount: report.totalCashIncome, store, category: "Оборот", note, imageUrl: ""
     });
     ids.push(ref.id);
   }
 
-  if (totalPos > 0) {
+  if (report.totalPosIncome > 0) {
     const ref = await addDoc(collection(db, "records"), {
-      date, type: "Приход", method: "Карта", amount: totalPos,
-      store, category: "Оборот", note, imageUrl: ""
+      date: report.date, type: "Приход", method: "Карта",
+      amount: report.totalPosIncome, store, category: "Оборот", note, imageUrl: ""
     });
     ids.push(ref.id);
   }
 
-  if (totalGoods > 0) {
-    const suppliers = (report.goodsExpenses || [])
+  if (report.totalGoodsExpense > 0) {
+    const suppNames = (report.expensesGoods || [])
       .filter(g => g.amount > 0 && g.supplier)
       .map(g => g.supplier).join(", ") || note;
     const ref = await addDoc(collection(db, "records"), {
-      date, type: "Разход", method: "Кеш", amount: totalGoods,
-      store, category: "Стока", note: suppliers, imageUrl: ""
+      date: report.date, type: "Разход", method: "Кеш",
+      amount: report.totalGoodsExpense, store, category: "Стока", note: suppNames, imageUrl: ""
     });
     ids.push(ref.id);
   }
 
-  for (const o of (otherExpenses || [])) {
+  for (const o of (report.expensesOther || [])) {
     if (!o.amount || o.amount <= 0) continue;
     const ref = await addDoc(collection(db, "records"), {
-      date, type: "Разход", method: "Кеш", amount: o.amount,
-      store, category: "Друго", note: o.desc || note, imageUrl: ""
+      date: report.date, type: "Разход", method: "Кеш",
+      amount: o.amount, store, category: "Друго", note: o.description || note, imageUrl: ""
     });
     ids.push(ref.id);
   }
 
-  await updateDoc(doc(db, "dailyReports", drReportId(store, date)), { linkedRecordIds: ids });
-  if (_drData) _drData.linkedRecordIds = ids;
+  if (_drDocId && ids.length) {
+    await updateDoc(doc(db, "daily_reports", _drDocId), { linkedTransactionIds: ids });
+    if (_drData) _drData.linkedTransactionIds = ids;
+  }
 }
 
 // ── Статус UI ────────────────────────────────────────
 function updateDrStatusUI() {
-  const closed  = _drStatus === "closed";
-  const inputs  = document.querySelectorAll("#storeScreenReport .dr-input, #drStartingCash");
-  inputs.forEach(el => { el.disabled = closed; });
+  const closed = _drStatus === "closed";
 
-  const dateEl  = document.getElementById("drDate");
+  document.querySelectorAll("#storeApp .dr-input, #drStartCash").forEach(el => {
+    el.disabled = closed;
+  });
+  const dateEl = document.getElementById("drDate");
   if (dateEl) dateEl.disabled = closed;
 
-  const saveBtn = document.getElementById("drSaveBtn");
+  const saveBtn  = document.getElementById("drSaveBtn");
   const closeBtn = document.getElementById("drCloseBtn");
-  if (saveBtn)  saveBtn.disabled  = closed;
+  if (saveBtn)  saveBtn.disabled = closed;
   if (closeBtn) closeBtn.disabled = closed;
 
+  const badge = document.getElementById("drStatusBadge");
+  if (badge) {
+    badge.textContent = closed ? "Затворен" : "Чернова";
+    badge.className   = "dr-status-badge " + (closed ? "dr-badge-closed" : "dr-badge-draft");
+  }
+
   if (closed) {
-    const t = _drData?.closedAt?.slice(0, 16)?.replace("T", " ") || "—";
-    showDrBanner(`🔒 Денят е затворен (${t}) — само за четене`, "closed");
+    const t = (_drData?.closedAt || "").slice(0, 16).replace("T", " ") || "—";
+    showDrBanner(`🔒 Затворен (${t}) — само за четене`, "closed");
   } else {
     hideDrBanner();
   }
@@ -2346,44 +2488,33 @@ function hideDrBanner() {
   document.getElementById("drStatusBanner")?.classList.add("hidden");
 }
 
-// ── Табове ───────────────────────────────────────────
-window.showStoreTab = function(tab) {
-  document.getElementById("storeScreenReport")?.classList.toggle("hidden", tab !== "report");
-  document.getElementById("storeScreenHistory")?.classList.toggle("hidden", tab !== "history");
-  document.getElementById("storeTabReport")?.classList.toggle("active", tab === "report");
-  document.getElementById("storeTabHistory")?.classList.toggle("active", tab === "history");
-  if (tab === "history") loadDrHistory();
-};
-
-// ── История ──────────────────────────────────────────
-async function loadDrHistory() {
-  const el = document.getElementById("drHistoryList");
-  if (!el) return;
-
+// ── Последни 5 отчета ────────────────────────────────
+async function loadRecentReports() {
+  const el = document.getElementById("drRecentList");
+  if (!el || !_drShopId) return;
   el.innerHTML = '<div class="tasks-empty">Зареждане...</div>';
 
-  const now   = new Date();
-  const ym    = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  const start = `${ym}-01`;
-  const end   = `${ym}-31`;
-
   try {
-    const snap = await getDocs(query(collection(db, "dailyReports"), where("store", "==", _drStore)));
-    const list = snap.docs
-      .map(d => ({ id: d.id, ...d.data() }))
-      .filter(r => r.date >= start && r.date <= end)
-      .sort((a, b) => b.date.localeCompare(a.date));
+    const q    = query(
+      collection(db, "daily_reports"),
+      where("shopId", "==", _drShopId),
+      orderBy("date", "desc"),
+      limit(5)
+    );
+    const snap = await getDocs(q);
 
-    if (!list.length) {
-      el.innerHTML = '<div class="tasks-empty">Няма отчети за месеца</div>';
+    if (snap.empty) {
+      el.innerHTML = '<div class="tasks-empty">Все още няма отчети</div>';
       return;
     }
 
     const fmt = n => (n || 0).toFixed(2) + " €";
-    el.innerHTML = list.map(r => {
+    el.innerHTML = snap.docs.map(d => {
+      const r      = { id: d.id, ...d.data() };
       const closed = r.status === "closed";
+      const active = r.id === _drDocId ? "dr-hist-active" : "";
       return `
-        <div class="dr-hist-item" onclick="openDrHistoryReport('${r.id}')">
+        <div class="dr-hist-item ${active}" onclick="openDrReport('${r.id}')">
           <div class="dr-hist-top">
             <strong>${r.date}</strong>
             <span class="dr-hist-badge ${closed ? "badge-closed" : "badge-draft"}">
@@ -2391,65 +2522,55 @@ async function loadDrHistory() {
             </span>
           </div>
           <div class="dr-hist-amounts">
-            <span>💰 Кеш: ${fmt(r.totalCash)}</span>
-            <span>💳 POS: ${fmt(r.totalPos)}</span>
-            <span class="${(r.endingCash || 0) >= 0 ? "pos" : "neg"}">
-              🏁 Крайна: ${fmt(r.endingCash)}
-            </span>
+            <span>💰 КЕШ: ${fmt(r.totalCashIncome)}</span>
+            <span>💳 POS: ${fmt(r.totalPosIncome)}</span>
+            <span class="${(r.endCash || 0) >= 0 ? "pos" : "neg"}">🏁 Крайна: ${fmt(r.endCash)}</span>
           </div>
         </div>`;
     }).join("");
   } catch (err) {
-    console.error("loadDrHistory:", err);
+    console.error("loadRecentReports:", err);
     el.innerHTML = '<div class="tasks-empty">Грешка при зареждане</div>';
   }
 }
 
-window.openDrHistoryReport = async function(reportId) {
+window.openDrReport = async function(docId) {
   try {
-    const snap = await getDoc(doc(db, "dailyReports", reportId));
+    const snap = await getDoc(doc(db, "daily_reports", docId));
     if (!snap.exists()) return;
+    _drDocId  = docId;
     _drData   = snap.data();
     _drStatus = _drData.status || "draft";
-
     const dateEl = document.getElementById("drDate");
     if (dateEl) dateEl.value = _drData.date || "";
-
     populateDrForm(_drData);
     updateDrStatusUI();
-    showStoreTab("report");
-
-    // Покажи лог ако има
-    await renderDrChangeLogs(reportId);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    await loadRecentReports();
   } catch (err) {
     alert("Грешка: " + err.message);
   }
 };
 
-async function renderDrChangeLogs(reportId) {
-  const el = document.getElementById("drChangeLogs");
+// ── Лог на промени ───────────────────────────────────
+function renderDrChangeLog(log) {
+  const el = document.getElementById("drChangeLog");
   if (!el) return;
+  if (!log?.length) { el.classList.add("hidden"); return; }
 
-  try {
-    const snap = await getDocs(
-      query(collection(db, "reportChangeLogs"), where("reportId", "==", reportId))
-    );
-    const logs = snap.docs
-      .map(d => d.data())
-      .sort((a, b) => b.timestamp.localeCompare(a.timestamp));
-
-    if (!logs.length) { el.classList.add("hidden"); return; }
-
-    el.classList.remove("hidden");
-    el.innerHTML = `
-      <div class="dr-section-title" style="margin-top:0">📋 Лог на промени</div>
-      ${logs.map(l => `
-        <div class="dr-log-row">
-          <span class="dr-log-action">${l.action}</span>
-          <span class="dr-log-user">${l.userEmail || "—"}</span>
-          <span class="dr-log-time">${(l.timestamp || "").slice(0, 16).replace("T", " ")}</span>
-        </div>`).join("")}`;
-  } catch (e) { console.warn("renderDrChangeLogs:", e); }
+  const labels = {
+    create: "📋 Създаден", save: "💾 Запазен",
+    close:  "🔒 Затворен", edit: "✏️ Редактиран"
+  };
+  el.classList.remove("hidden");
+  el.innerHTML = `
+    <div class="dr-section-title" style="margin-top:0;">📋 Лог на промени</div>
+    ${log.slice().reverse().map(l => `
+      <div class="dr-log-row">
+        <span class="dr-log-action">${labels[l.action] || l.action}</span>
+        <span class="dr-log-user">${escHtml(l.email || "—")}</span>
+        <span class="dr-log-time">${(l.timestamp || "").slice(0, 16).replace("T", " ")}</span>
+      </div>`).join("")}`;
 }
 
 // ════════════════════════════════════════════════
