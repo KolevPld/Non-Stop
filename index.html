@@ -869,123 +869,133 @@
   <!-- ── Форма ────────────────────────────────────── -->
   <div id="drFormContent">
 
-    <!-- Секция 1: Начална каса -->
-    <div class="card dr-card">
-      <div class="dr-section-title">💰 Начална каса</div>
-      <div id="drCarryoverHint" class="dr-hint" style="margin-bottom:8px;"></div>
-      <input type="number" id="drStartCash" class="dr-big-input" step="0.01" placeholder="0.00" oninput="drCalc()">
-    </div>
+    <!-- ЛЯВА КОЛОНА (desktop: 60%) -->
+    <div id="drLeft">
 
-    <!-- Секция 2: Смени (3 фиксирани) -->
-    <div class="card dr-card">
-      <div class="dr-section-title">👥 Смени</div>
-      <div class="table-responsive">
-        <table class="dr-table">
-          <thead>
-            <tr>
-              <th>Смяна</th><th>Час</th><th>Оператор</th>
-              <th>Оборот</th><th>КЕШ</th><th>POS</th><th>+</th><th>−</th>
-            </tr>
-          </thead>
-          <tbody id="drShiftsBody"></tbody>
-          <tfoot>
-            <tr class="dr-total-row">
-              <td colspan="3"><strong>Общо</strong></td>
-              <td id="drTotalRevenue" class="mono">0.00</td>
-              <td id="drTotalCash"    class="mono">0.00</td>
-              <td id="drTotalPos"     class="mono">0.00</td>
-              <td id="drTotalPlus"    class="mono">0.00</td>
-              <td id="drTotalMinus"   class="mono">0.00</td>
-            </tr>
-          </tfoot>
-        </table>
+      <!-- Секция 1: Начална каса -->
+      <div class="card dr-card">
+        <div class="dr-section-title">💰 Начална каса</div>
+        <div id="drCarryoverHint" class="dr-hint" style="margin-bottom:8px;"></div>
+        <input type="number" id="drStartCash" class="dr-big-input" step="0.01" placeholder="0.00" oninput="drCalc()">
       </div>
-    </div>
 
-    <!-- Секция 3: Разход Стоки -->
-    <div class="card dr-card">
-      <div class="dr-section-title">📦 Разход Стоки</div>
-      <div class="table-responsive">
-        <table class="dr-table dr-table-narrow">
-          <thead>
-            <tr><th>#</th><th>Фирма / Доставчик</th><th>Сума (€)</th></tr>
-          </thead>
-          <tbody id="drGoodsBody"></tbody>
-          <tfoot>
-            <tr class="dr-total-row">
-              <td colspan="2"><strong>Общо стоки</strong></td>
-              <td id="drTotalGoods" class="mono">0.00</td>
-            </tr>
-          </tfoot>
-        </table>
+      <!-- Секция 2: Смени (3 фиксирани) -->
+      <div class="card dr-card">
+        <div class="dr-section-title">👥 Смени</div>
+        <div class="table-responsive">
+          <table class="dr-table">
+            <thead>
+              <tr>
+                <th>Смяна</th><th>Час</th><th>Оператор</th>
+                <th>Оборот</th><th>КЕШ</th><th>POS</th><th>+</th><th>−</th>
+              </tr>
+            </thead>
+            <tbody id="drShiftsBody"></tbody>
+            <tfoot>
+              <tr class="dr-total-row">
+                <td colspan="3"><strong>Общо</strong></td>
+                <td id="drTotalRevenue" class="mono">0.00</td>
+                <td id="drTotalCash"    class="mono">0.00</td>
+                <td id="drTotalPos"     class="mono">0.00</td>
+                <td id="drTotalPlus"    class="mono">0.00</td>
+                <td id="drTotalMinus"   class="mono">0.00</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
       </div>
-    </div>
 
-    <!-- Секция 4: Разход Други -->
-    <div class="card dr-card">
-      <div class="dr-section-title">💸 Разход Други</div>
-      <div class="table-responsive">
-        <table class="dr-table dr-table-narrow">
-          <thead>
-            <tr><th>#</th><th>Описание</th><th>Сума (€)</th></tr>
-          </thead>
-          <tbody id="drOtherBody"></tbody>
-          <tfoot>
-            <tr class="dr-total-row">
-              <td colspan="2"><strong>Общо други</strong></td>
-              <td id="drTotalOther" class="mono">0.00</td>
-            </tr>
-          </tfoot>
-        </table>
+      <!-- Секция 3: Разход Стоки -->
+      <div class="card dr-card">
+        <div class="dr-section-title">📦 Разход Стоки</div>
+        <div class="table-responsive">
+          <table class="dr-table dr-table-narrow">
+            <thead>
+              <tr><th>#</th><th>Фирма / Доставчик</th><th>Сума (€)</th></tr>
+            </thead>
+            <tbody id="drGoodsBody"></tbody>
+            <tfoot>
+              <tr class="dr-total-row">
+                <td colspan="2"><strong>Общо стоки</strong></td>
+                <td id="drTotalGoods" class="mono">0.00</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
       </div>
-    </div>
 
-    <!-- Секция 5: Обобщение -->
-    <div class="card dr-card dr-summary-card">
-      <div class="dr-section-title">📊 Обобщение</div>
-      <div class="dr-sum-row">
-        <span>Начална каса</span>
-        <span id="drSumStarting" class="mono">0.00 €</span>
+      <!-- Секция 4: Разход Други -->
+      <div class="card dr-card">
+        <div class="dr-section-title">💸 Разход Други</div>
+        <div class="table-responsive">
+          <table class="dr-table dr-table-narrow">
+            <thead>
+              <tr><th>#</th><th>Описание</th><th>Сума (€)</th></tr>
+            </thead>
+            <tbody id="drOtherBody"></tbody>
+            <tfoot>
+              <tr class="dr-total-row">
+                <td colspan="2"><strong>Общо други</strong></td>
+                <td id="drTotalOther" class="mono">0.00</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
       </div>
-      <div class="dr-sum-row">
-        <span>+ Общо КЕШ приходи</span>
-        <span id="drSumCash" class="mono pos">0.00 €</span>
-      </div>
-      <div class="dr-sum-row">
-        <span>+ Общо POS приходи</span>
-        <span id="drSumPos" class="mono pos">0.00 €</span>
-      </div>
-      <div class="dr-sum-row">
-        <span>− Общо разходи</span>
-        <span id="drSumExpenses" class="mono neg">0.00 €</span>
-      </div>
-      <div class="dr-sum-divider"></div>
-      <div class="dr-sum-row dr-sum-final">
-        <span><strong>КРАЙНА КАСА</strong></span>
-        <span id="drSumEnding" class="dr-ending-value pos">0.00 €</span>
-      </div>
-    </div>
 
-    <!-- Бутони -->
-    <div class="dr-btn-row">
-      <button class="btn-amber" id="drSaveBtn" onclick="saveDailyReport()">
-        <i class="fa-solid fa-floppy-disk"></i> Запази черновата
-      </button>
-      <button class="btn-primary" id="drCloseBtn" onclick="confirmCloseDay()">
-        <i class="fa-solid fa-lock"></i> Затвори деня
-      </button>
-    </div>
+    </div><!-- /drLeft -->
 
-    <!-- Лог на промени -->
-    <div id="drChangeLog" class="card dr-card hidden"></div>
+    <!-- ДЯСНА КОЛОНА (desktop: 40%) -->
+    <div id="drRight">
 
-    <!-- Последни 5 отчета -->
-    <div class="card dr-card" id="drRecentSection" style="margin-bottom:40px;">
-      <div class="dr-section-title" style="margin-top:0;">📅 Последни отчети</div>
-      <div id="drRecentList">
-        <div class="tasks-empty">Зареждане...</div>
+      <!-- Секция 5: Обобщение -->
+      <div class="card dr-card dr-summary-card">
+        <div class="dr-section-title">📊 Обобщение</div>
+        <div class="dr-sum-row">
+          <span>Начална каса</span>
+          <span id="drSumStarting" class="mono">0.00 €</span>
+        </div>
+        <div class="dr-sum-row">
+          <span>+ Общо КЕШ приходи</span>
+          <span id="drSumCash" class="mono pos">0.00 €</span>
+        </div>
+        <div class="dr-sum-row">
+          <span>+ Общо POS приходи</span>
+          <span id="drSumPos" class="mono pos">0.00 €</span>
+        </div>
+        <div class="dr-sum-row">
+          <span>− Общо разходи</span>
+          <span id="drSumExpenses" class="mono neg">0.00 €</span>
+        </div>
+        <div class="dr-sum-divider"></div>
+        <div class="dr-sum-row dr-sum-final">
+          <span><strong>КРАЙНА КАСА</strong></span>
+          <span id="drSumEnding" class="dr-ending-value pos">0.00 €</span>
+        </div>
       </div>
-    </div>
+
+      <!-- Бутони -->
+      <div class="dr-btn-row">
+        <button class="btn-amber" id="drSaveBtn" onclick="saveDailyReport()">
+          <i class="fa-solid fa-floppy-disk"></i> Запази черновата
+        </button>
+        <button class="btn-primary" id="drCloseBtn" onclick="confirmCloseDay()">
+          <i class="fa-solid fa-lock"></i> Затвори деня
+        </button>
+      </div>
+
+      <!-- Лог на промени -->
+      <div id="drChangeLog" class="card dr-card hidden"></div>
+
+      <!-- Последни 5 отчета -->
+      <div class="card dr-card" id="drRecentSection">
+        <div class="dr-section-title" style="margin-top:0;">📅 Последни отчети</div>
+        <div id="drRecentList">
+          <div class="tasks-empty">Зареждане...</div>
+        </div>
+      </div>
+
+    </div><!-- /drRight -->
 
   </div><!-- /drFormContent -->
 
@@ -998,98 +1008,108 @@
   <div id="storeWhScreen" class="hidden">
     <div class="wh-content">
 
-      <!-- Служители (сгъваемо) -->
-      <div class="card dr-card">
-        <div class="wh-section-header" onclick="whToggleEmpSection()">
-          <span>👥 Служители</span>
-          <span id="whEmpArrow">▾</span>
-        </div>
-        <div id="whEmpBody">
-          <div id="whEmpList">
-            <div class="tasks-empty">Зареждане...</div>
-          </div>
+      <!-- ЛЯВ ПАНЕЛ (desktop: 280px sticky sidebar) -->
+      <div id="whSidebar">
 
-          <!-- Форма за добавяне/редакция -->
-          <div id="whEmpForm" class="hidden wh-emp-form">
-            <div id="whEmpFormTitle" class="wh-emp-form-title">Нов служител</div>
-            <label class="field-label">Три имена</label>
-            <input type="text" id="whEmpName" placeholder="Иван Иванов" autocomplete="off">
-            <label class="field-label" style="margin-top:10px;">Длъжност</label>
-            <select id="whEmpPosition">
-              <option>Касиер</option>
-              <option>Управител</option>
-              <option>Друго</option>
-            </select>
-            <div class="wh-toggle-row" style="margin-top:10px;">
-              <span class="field-label">Активен</span>
-              <label class="toggle-switch">
-                <input type="checkbox" id="whEmpActive" checked>
-                <span class="toggle-slider"></span>
-              </label>
+        <!-- Служители (сгъваемо) -->
+        <div class="card dr-card">
+          <div class="wh-section-header" onclick="whToggleEmpSection()">
+            <span>👥 Служители</span>
+            <span id="whEmpArrow">▾</span>
+          </div>
+          <div id="whEmpBody">
+            <div id="whEmpList">
+              <div class="tasks-empty">Зареждане...</div>
             </div>
-            <div class="wh-form-btns">
-              <button class="btn-primary" onclick="saveEmployee()">
-                <i class="fa-solid fa-floppy-disk"></i> Запази
-              </button>
-              <button class="btn-secondary" onclick="cancelEmpForm()">Откажи</button>
+
+            <!-- Форма за добавяне/редакция -->
+            <div id="whEmpForm" class="hidden wh-emp-form">
+              <div id="whEmpFormTitle" class="wh-emp-form-title">Нов служител</div>
+              <label class="field-label">Три имена</label>
+              <input type="text" id="whEmpName" placeholder="Иван Иванов" autocomplete="off">
+              <label class="field-label" style="margin-top:10px;">Длъжност</label>
+              <select id="whEmpPosition">
+                <option>Касиер</option>
+                <option>Управител</option>
+                <option>Друго</option>
+              </select>
+              <div class="wh-toggle-row" style="margin-top:10px;">
+                <span class="field-label">Активен</span>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="whEmpActive" checked>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              <div class="wh-form-btns">
+                <button class="btn-primary" onclick="saveEmployee()">
+                  <i class="fa-solid fa-floppy-disk"></i> Запази
+                </button>
+                <button class="btn-secondary" onclick="cancelEmpForm()">Откажи</button>
+              </div>
             </div>
+
+            <button class="btn-secondary wh-add-emp-btn" onclick="showAddEmpForm()">
+              <i class="fa-solid fa-plus"></i> Нов служител
+            </button>
+          </div>
+        </div>
+
+        <!-- Бърз вход панел (вляво на desktop, под таблица на mobile) -->
+        <div id="whQuickFillPanel" class="hidden card dr-card">
+          <div class="wh-section-header" style="cursor:default">
+            <span>⚡ Бърз вход — работни дни</span>
+          </div>
+          <label class="field-label">Служител</label>
+          <select id="whQuickEmp"></select>
+          <label class="field-label" style="margin-top:10px;">Часове на ден</label>
+          <input type="number" id="whQuickHours" value="8" min="1" max="24" step="0.5">
+          <div class="wh-form-btns">
+            <button class="btn-primary" onclick="whDoQuickFill()">
+              <i class="fa-solid fa-bolt"></i> Попълни
+            </button>
+            <button class="btn-secondary" onclick="closeWhQuickFill()">Откажи</button>
+          </div>
+        </div>
+
+      </div><!-- /whSidebar -->
+
+      <!-- ДЕСЕН ПАНЕЛ (desktop: остатъкът) -->
+      <div id="whMain">
+
+        <!-- Таблица с часове -->
+        <div class="card dr-card">
+          <!-- Навигация по месец -->
+          <div class="wh-month-bar">
+            <button class="wh-month-btn" onclick="whChangeMonth(-1)">&#8249;</button>
+            <span id="whMonthLabel" class="wh-month-label">—</span>
+            <button class="wh-month-btn" onclick="whChangeMonth(1)">&#8250;</button>
           </div>
 
-          <button class="btn-secondary wh-add-emp-btn" onclick="showAddEmpForm()">
-            <i class="fa-solid fa-plus"></i> Нов служител
-          </button>
-        </div>
-      </div>
-
-      <!-- Таблица с часове -->
-      <div class="card dr-card">
-        <!-- Навигация по месец -->
-        <div class="wh-month-bar">
-          <button class="wh-month-btn" onclick="whChangeMonth(-1)">&#8249;</button>
-          <span id="whMonthLabel" class="wh-month-label">—</span>
-          <button class="wh-month-btn" onclick="whChangeMonth(1)">&#8250;</button>
-        </div>
-
-        <!-- Toolbar -->
-        <div class="wh-toolbar">
-          <button class="btn-secondary wh-tool-btn" onclick="whQuickFillModal()">
-            <i class="fa-solid fa-bolt"></i> Бърз вход
-          </button>
-          <button class="btn-secondary wh-tool-btn" onclick="exportWhExcel()">
-            <i class="fa-solid fa-file-excel"></i> Excel
-          </button>
-        </div>
-
-        <!-- Desktop таблица -->
-        <div class="wh-table-scroll-wrap">
-          <div id="whTableWrap"></div>
-        </div>
-
-        <!-- Мобилен изглед -->
-        <div class="wh-mobile-wrap">
-          <div class="wh-mob-day-nav">
-            <input type="date" id="whMobileDay" onchange="whMobileDayChange(this.value)">
+          <!-- Toolbar -->
+          <div class="wh-toolbar">
+            <button class="btn-secondary wh-tool-btn" onclick="whQuickFillModal()">
+              <i class="fa-solid fa-bolt"></i> Бърз вход
+            </button>
+            <button class="btn-secondary wh-tool-btn" onclick="exportWhExcel()">
+              <i class="fa-solid fa-file-excel"></i> Excel
+            </button>
           </div>
-          <div id="whMobileView"></div>
-        </div>
-      </div>
 
-      <!-- Бърз вход панел -->
-      <div id="whQuickFillPanel" class="hidden card dr-card">
-        <div class="wh-section-header" style="cursor:default">
-          <span>⚡ Бърз вход — работни дни</span>
+          <!-- Desktop таблица -->
+          <div class="wh-table-scroll-wrap">
+            <div id="whTableWrap"></div>
+          </div>
+
+          <!-- Мобилен изглед -->
+          <div class="wh-mobile-wrap">
+            <div class="wh-mob-day-nav">
+              <input type="date" id="whMobileDay" onchange="whMobileDayChange(this.value)">
+            </div>
+            <div id="whMobileView"></div>
+          </div>
         </div>
-        <label class="field-label">Служител</label>
-        <select id="whQuickEmp"></select>
-        <label class="field-label" style="margin-top:10px;">Часове на ден</label>
-        <input type="number" id="whQuickHours" value="8" min="1" max="24" step="0.5">
-        <div class="wh-form-btns">
-          <button class="btn-primary" onclick="whDoQuickFill()">
-            <i class="fa-solid fa-bolt"></i> Попълни
-          </button>
-          <button class="btn-secondary" onclick="closeWhQuickFill()">Откажи</button>
-        </div>
-      </div>
+
+      </div><!-- /whMain -->
 
     </div><!-- /wh-content -->
   </div><!-- /storeWhScreen -->

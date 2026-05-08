@@ -2993,3 +2993,240 @@ body.light .sal-emp-hist-table th { background: #f0f2f5; }
 body.light .sal-chart-wrap       { background: #fff; border-color: #dde1e7; }
 body.light #screen-salaries      { background: #f6f8fa; }
 body.light .sal-log-entry        { background: #f0f2f5; }
+
+/* ════════════════════════════════════════════════════════════
+   DESKTOP LAYOUT — min-width: 1024px
+   (мобилният изглед под 1024px е непроменен)
+   ════════════════════════════════════════════════════════════ */
+
+@media (min-width: 1024px) {
+
+  /* ── Global: по-голям font за desktop ─────────────── */
+  body { font-size: 15px; }
+
+  /* ── Card hover lift ──────────────────────────────── */
+  .card {
+    transition: box-shadow .2s ease, transform .2s ease;
+  }
+  .card:hover {
+    box-shadow: 0 6px 24px rgba(0,0,0,.28);
+    transform: translateY(-2px);
+  }
+
+  /* ── Buttons hover lift ───────────────────────────── */
+  .btn-primary:hover,
+  .btn-secondary:hover,
+  .btn-amber:hover,
+  .btn-danger:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(0,0,0,.22);
+  }
+
+  /* ── Modals: max-width + backdrop blur ────────────── */
+  .dr-detail-panel      { max-width: 800px; }
+  .dr-detail-backdrop   { backdrop-filter: blur(5px); }
+  .sal-modal-panel      { max-width: 660px; border-radius: 14px; }
+  #salaryModal          { align-items: center; }
+  #salaryModal .dr-detail-backdrop { backdrop-filter: blur(5px); }
+
+  /* ── whCellModal panel on desktop ────────────────── */
+  .wh-cell-panel .dr-detail-panel { max-width: 480px; border-radius: 14px; }
+  .wh-cell-panel .dr-detail-backdrop { backdrop-filter: blur(5px); }
+
+  /* ════════════════════════════════════════════════════
+     ДНЕВЕН ОТЧЕТ — 2-column desktop layout
+     ════════════════════════════════════════════════════ */
+
+  .dr-top-bar {
+    padding: 10px 28px;
+    max-width: 1600px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  #drFormContent {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 20px 28px 60px;
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+  }
+
+  #drLeft  { flex: 3; min-width: 0; }
+  #drRight { flex: 2; min-width: 0; }
+
+  /* Обобщението вдясно — sticky, винаги видимо */
+  #drRight .dr-summary-card {
+    position: sticky;
+    top: 116px; /* 56 header + 44 tabs + 16 gap */
+  }
+
+  /* Бутони на desktop: вертикални, по-широки */
+  #drRight .dr-btn-row {
+    flex-direction: column;
+    gap: 10px;
+    margin: 14px 0;
+  }
+  #drRight .dr-btn-row button {
+    min-height: 50px;
+    font-size: .95rem;
+    letter-spacing: .01em;
+  }
+
+  /* Начална каса — по-голяма */
+  .dr-big-input {
+    font-size: 1.5rem;
+    padding: 16px 20px;
+  }
+
+  /* Смени таблица — по-широки inputs */
+  .dr-table .dr-input {
+    font-size: .9rem;
+    padding: 8px 6px;
+    min-height: 38px;
+  }
+
+  /* Крайна каса — по-голяма стойност */
+  .dr-ending-value { font-size: 1.5rem !important; }
+
+  /* Обобщение редове — по-разредени */
+  .dr-sum-row { padding: 7px 0; font-size: .95rem; }
+  .dr-sum-final { padding: 10px 0; }
+
+  /* Без margin-bottom от последната секция вдясно */
+  #drRight .dr-card:last-child { margin-bottom: 0; }
+
+  /* ════════════════════════════════════════════════════
+     РАБОТНИ ЧАСОВЕ — sidebar + main desktop layout
+     ════════════════════════════════════════════════════ */
+
+  .wh-content {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 16px 24px 60px;
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+  }
+
+  /* Ляв панел — sticky sidebar */
+  #whSidebar {
+    flex: 0 0 272px;
+    min-width: 272px;
+    position: sticky;
+    top: 110px;
+    max-height: calc(100vh - 130px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+  #whSidebar::-webkit-scrollbar { width: 4px; }
+  #whSidebar::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+
+  /* Ляв панел — без hover lift (работи като UI panel) */
+  #whSidebar .card:hover { transform: none; box-shadow: none; }
+
+  /* Десен панел — заема цялото останало пространство */
+  #whMain {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+  }
+  #whMain .card:hover { transform: none; box-shadow: none; }
+
+  /* Таблицата вдясно — по-компактни клетки за 31 дни без скрол */
+  #whMain .wh-table {
+    font-size: .75rem;
+    width: 100%;
+  }
+  #whMain .wh-day-th {
+    min-width: 24px;
+    max-width: 24px;
+    padding: 5px 2px;
+  }
+  #whMain .wh-table td {
+    padding: 4px 2px;
+    font-size: .75rem;
+  }
+  #whMain .wh-emp-cell,
+  #whMain .wh-emp-th {
+    min-width: 120px;
+    max-width: 140px;
+    font-size: .8rem;
+  }
+  #whMain .wh-total-cell,
+  #whMain .wh-total-th { min-width: 38px; }
+
+  /* Sticky "ОБЩО" колона вдясно */
+  #whMain .wh-total-cell {
+    position: sticky;
+    right: 0;
+    z-index: 2;
+    background: var(--bg2);
+    box-shadow: -3px 0 8px rgba(0,0,0,.18);
+  }
+  #whMain .wh-total-th {
+    position: sticky;
+    right: 0;
+    z-index: 4;
+    background: var(--bg2) !important;
+    box-shadow: -3px 0 8px rgba(0,0,0,.18);
+  }
+
+  /* Row hover highlight */
+  #whMain .wh-table tbody tr:hover td {
+    background: rgba(99,179,237,.08) !important;
+  }
+  #whMain .wh-table tbody tr:hover .wh-emp-cell,
+  #whMain .wh-table tbody tr:hover .wh-total-cell {
+    background: rgba(99,179,237,.14) !important;
+  }
+
+  /* Cell hover: slightly brighter */
+  #whMain .wh-cell:hover {
+    background: rgba(99,179,237,.22) !important;
+    outline: 2px solid rgba(99,179,237,.5);
+    outline-offset: -1px;
+    z-index: 1;
+    position: relative;
+  }
+
+  /* Month bar на desktop: по-голям */
+  #whMain .wh-month-bar {
+    gap: 20px;
+    padding: 10px 0 8px;
+  }
+  #whMain .wh-month-label { font-size: 1.05rem; }
+
+  /* Toolbar на desktop */
+  #whMain .wh-toolbar { padding: 6px 0 12px; }
+  .wh-tool-btn { min-height: 38px; font-size: .85rem; padding: 0 16px; }
+
+  /* ════════════════════════════════════════════════════
+     LIGHT THEME overrides за desktop layout
+     ════════════════════════════════════════════════════ */
+
+  body.light .card:hover {
+    box-shadow: 0 6px 24px rgba(0,0,0,.10);
+  }
+  body.light #whMain .wh-total-cell,
+  body.light #whMain .wh-total-th {
+    background: #f0f2f5 !important;
+    box-shadow: -3px 0 8px rgba(0,0,0,.08);
+  }
+  body.light #whMain .wh-table tbody tr:hover td {
+    background: rgba(9,105,218,.06) !important;
+  }
+
+} /* end @media (min-width: 1024px) */
+
+/* ════════════════════════════════════════════════════════════
+   TABLET — 768px–1023px: малки оптимизации
+   ════════════════════════════════════════════════════════════ */
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  #drFormContent { max-width: 760px; margin: 0 auto; padding: 12px 18px 40px; }
+  .wh-content    { max-width: 760px; margin: 0 auto; padding: 12px 18px 40px; }
+  .dr-top-bar    { padding: 10px 18px; }
+  .dr-big-input  { font-size: 1.15rem; }
+}

@@ -4734,3 +4734,48 @@ async function loadSalHistAnalysis() {
     }
   } catch (e) { el.innerHTML = `<div class="tasks-empty">Грешка</div>`; }
 }
+
+// ════════════════════════════════════════════════════════════
+// ⌨️  DESKTOP KEYBOARD NAVIGATION (1024px+)
+// ════════════════════════════════════════════════════════════
+
+document.addEventListener("keydown", e => {
+  // Esc — затваря всички модали (работи на всички устройства)
+  if (e.key === "Escape") {
+    const cellModal = document.getElementById("whCellModal");
+    if (cellModal && !cellModal.classList.contains("hidden")) {
+      cellModal.classList.add("hidden");
+      return;
+    }
+    const salModal = document.getElementById("salaryModal");
+    if (salModal && !salModal.classList.contains("hidden")) {
+      if (typeof closeSalaryModal === "function") closeSalaryModal();
+      return;
+    }
+    const drModal = document.getElementById("drDetailModal");
+    if (drModal && !drModal.classList.contains("hidden")) {
+      drModal.classList.add("hidden");
+      return;
+    }
+    return;
+  }
+
+  // Само desktop (≥1024px) за останалите shortcuts
+  if (window.innerWidth < 1024) return;
+
+  // Enter в DR input → следващ ред, същата колона
+  if (e.key === "Enter" && e.target.classList.contains("dr-input")) {
+    e.preventDefault();
+    const td    = e.target.closest("td");
+    const tr    = e.target.closest("tr");
+    const tbody = e.target.closest("tbody");
+    if (!td || !tr || !tbody) return;
+    const colIdx  = Array.from(tr.children).indexOf(td);
+    const rows    = Array.from(tbody.rows);
+    const nextRow = rows[rows.indexOf(tr) + 1];
+    if (nextRow) {
+      const next = nextRow.children[colIdx]?.querySelector("input,select,textarea");
+      if (next) { next.focus(); if (next.select) next.select(); }
+    }
+  }
+});
