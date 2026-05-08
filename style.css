@@ -104,6 +104,11 @@ body {
 
 ::selection { background: var(--green); color: #fff; }
 
+/* ── Global utility classes ──────────────────── */
+.pos  { color: var(--green); }
+.neg  { color: var(--red);   }
+.mono { font-family: var(--mono, monospace); }
+
 /* ── Typography ──────────────────────────────── */
 h2 {
   font-size: 1.25rem;

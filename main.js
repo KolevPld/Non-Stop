@@ -2024,17 +2024,18 @@ function initDailyReport(storeRole) {
 async function checkManagerNotifications() {
   if (!_drShopId) return;
   try {
-    const q = query(
+    const snap = await getDocs(query(
       collection(db, "notifications"),
-      where("forShopId", "==", _drShopId),
-      where("type", "==", "edit_allowed"),
-      where("read", "==", false)
-    );
-    const snap = await getDocs(q);
-    if (snap.empty) return;
+      where("forShopId", "==", _drShopId)
+    ));
+    const unread = snap.docs.filter(d => {
+      const n = d.data();
+      return n.type === "edit_allowed" && n.read === false;
+    });
+    if (!unread.length) return;
 
     const banner = document.getElementById("drStatusBanner");
-    snap.forEach(d => {
+    unread.forEach(d => {
       const n = d.data();
       if (banner) {
         banner.textContent = `📝 ${n.message}`;
@@ -2646,13 +2647,11 @@ async function loadRecentReports() {
   el.innerHTML = '<div class="tasks-empty">Зареждане...</div>';
 
   try {
-    const q    = query(
+    const raw  = await getDocs(query(
       collection(db, "daily_reports"),
-      where("shopId", "==", _drShopId),
-      orderBy("date", "desc"),
-      limit(5)
-    );
-    const snap = await getDocs(q);
+      where("shopId", "==", _drShopId)
+    ));
+    const snap = { docs: raw.docs.sort((a, b) => b.data().date.localeCompare(a.data().date)).slice(0, 5) };
 
     if (snap.empty) {
       el.innerHTML = '<div class="tasks-empty">Все още няма отчети</div>';
@@ -2816,18 +2815,18 @@ async function loadOwnerNotifications() {
   if (!el) return;
 
   try {
-    const q    = query(
+    const snap = await getDocs(query(
       collection(db, "notifications"),
-      where("forOwner", "==", true),
-      where("read",     "==", false),
-      orderBy("timestamp", "desc"),
-      limit(10)
-    );
-    const snap = await getDocs(q);
+      where("forOwner", "==", true)
+    ));
+    const docs = snap.docs
+      .filter(d => !d.data().read)
+      .sort((a, b) => (b.data().timestamp || "").localeCompare(a.data().timestamp || ""))
+      .slice(0, 10);
 
-    if (snap.empty) { el.innerHTML = ""; return; }
+    if (!docs.length) { el.innerHTML = ""; return; }
 
-    el.innerHTML = snap.docs.map(d => {
+    el.innerHTML = docs.map(d => {
       const n = { id: d.id, ...d.data() };
       return `
         <div class="dr-notif-item">
@@ -3282,14 +3281,15 @@ window.storeShowTab = function(tab) {
 async function loadEmployees() {
   if (!_whShopId) return;
   try {
-    const q    = query(
+    const snap = await getDocs(query(
       collection(db, "employees"),
-      where("shopId", "==", _whShopId),
-      orderBy("active", "desc"),
-      orderBy("name",   "asc")
-    );
-    const snap = await getDocs(q);
+      where("shopId", "==", _whShopId)
+    ));
     _whEmployees = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    _whEmployees.sort((a, b) => {
+      if (!!b.active !== !!a.active) return b.active ? 1 : -1;
+      return (a.name || "").localeCompare(b.name || "", "bg");
+    });
     renderEmployeeList();
     await loadWhData();
   } catch (e) { console.error("loadEmployees:", e); }
@@ -3400,15 +3400,12 @@ async function loadWhData() {
   const lbl = document.getElementById("whMonthLabel");
   if (lbl) lbl.textContent = formatMonth(_whMonth);
   try {
-    const q    = query(
+    const snap = await getDocs(query(
       collection(db, "work_hours"),
-      where("shopId", "==", _whShopId),
-      where("date",   ">=", _whMonth + "-01"),
-      where("date",   "<=", _whMonth + "-31")
-    );
-    const snap = await getDocs(q);
+      where("shopId", "==", _whShopId)
+    ));
     _whData = {};
-    snap.docs.forEach(d => {
+    snap.docs.filter(d => d.data().date?.startsWith(_whMonth)).forEach(d => {
       const r = d.data();
       if (!_whData[r.employeeId]) _whData[r.employeeId] = {};
       _whData[r.employeeId][r.date] = {
@@ -3710,23 +3707,25 @@ async function loadWageData() {
   try {
     // Employees from both stores
     const [snap1, snap2] = await Promise.all([
-      getDocs(query(collection(db,"employees"), where("shopId","==","store1"), orderBy("active","desc"), orderBy("name","asc"))),
-      getDocs(query(collection(db,"employees"), where("shopId","==","store2"), orderBy("active","desc"), orderBy("name","asc")))
+      getDocs(query(collection(db,"employees"), where("shopId","==","store1"))),
+      getDocs(query(collection(db,"employees"), where("shopId","==","store2")))
     ]);
     _wageEmployeesAll = [
       ...snap1.docs.map(d => ({ id: d.id, ...d.data() })),
       ...snap2.docs.map(d => ({ id: d.id, ...d.data() }))
     ];
+    _wageEmployeesAll.sort((a, b) => {
+      if (!!b.active !== !!a.active) return b.active ? 1 : -1;
+      return (a.name || "").localeCompare(b.name || "", "bg");
+    });
 
-    // Hours for month (two separate indexed queries)
-    const start = _wageMonth + "-01";
-    const end   = _wageMonth + "-31";
+    // Hours for month
     const [wh1, wh2] = await Promise.all([
-      getDocs(query(collection(db,"work_hours"), where("shopId","==","store1"), where("date",">=",start), where("date","<=",end))),
-      getDocs(query(collection(db,"work_hours"), where("shopId","==","store2"), where("date",">=",start), where("date","<=",end)))
+      getDocs(query(collection(db,"work_hours"), where("shopId","==","store1"))),
+      getDocs(query(collection(db,"work_hours"), where("shopId","==","store2")))
     ]);
     _wageHoursMap = {};
-    [...wh1.docs, ...wh2.docs].forEach(d => {
+    [...wh1.docs, ...wh2.docs].filter(d => d.data().date?.startsWith(_wageMonth)).forEach(d => {
       const r = d.data();
       _wageHoursMap[r.employeeId] = (_wageHoursMap[r.employeeId] || 0) + (r.hours || 0);
     });
@@ -3859,22 +3858,23 @@ async function loadWageHistory() {
       return d.toISOString().slice(0, 7);
     });
 
-    const rows = await Promise.all(months.map(async mo => {
-      const start = mo + "-01";
-      const end   = mo + "-31";
-      const [w1, w2] = await Promise.all([
-        getDocs(query(collection(db,"work_hours"), where("shopId","==","store1"), where("date",">=",start), where("date","<=",end))),
-        getDocs(query(collection(db,"work_hours"), where("shopId","==","store2"), where("date",">=",start), where("date","<=",end)))
-      ]);
-      const allDocs = [...w1.docs, ...w2.docs];
-      const totalH  = allDocs.reduce((s, d) => s + (d.data().hours || 0), 0);
-      const totalC  = allDocs.reduce((s, d) => {
+    // Fetch all work_hours once (no range index needed)
+    const [wh1, wh2] = await Promise.all([
+      getDocs(query(collection(db,"work_hours"), where("shopId","==","store1"))),
+      getDocs(query(collection(db,"work_hours"), where("shopId","==","store2")))
+    ]);
+    const allWh = [...wh1.docs, ...wh2.docs];
+
+    const rows = months.map(mo => {
+      const moDocs = allWh.filter(d => d.data().date?.startsWith(mo));
+      const totalH = moDocs.reduce((s, d) => s + (d.data().hours || 0), 0);
+      const totalC = moDocs.reduce((s, d) => {
         const emp  = _wageEmployeesAll.find(e => e.id === d.data().employeeId);
         const rate = getHistoricalRate(emp, mo);
         return s + (d.data().hours || 0) * rate;
       }, 0);
       return { mo, totalH, totalC };
-    }));
+    });
 
     el.innerHTML = `
       <table class="wh-hist-table">
@@ -4022,13 +4022,17 @@ async function loadSalaryData() {
   try {
     // Employees (both stores)
     const [e1, e2] = await Promise.all([
-      getDocs(query(collection(db,"employees"), where("shopId","==","store1"), orderBy("active","desc"), orderBy("name","asc"))),
-      getDocs(query(collection(db,"employees"), where("shopId","==","store2"), orderBy("active","desc"), orderBy("name","asc")))
+      getDocs(query(collection(db,"employees"), where("shopId","==","store1"))),
+      getDocs(query(collection(db,"employees"), where("shopId","==","store2")))
     ]);
     const allEmps = [
       ...e1.docs.map(d=>({id:d.id,...d.data()})),
       ...e2.docs.map(d=>({id:d.id,...d.data()}))
     ];
+    allEmps.sort((a, b) => {
+      if (!!b.active !== !!a.active) return b.active ? 1 : -1;
+      return (a.name || "").localeCompare(b.name || "", "bg");
+    });
 
     // Salaries for month
     const [s1, s2] = await Promise.all([
@@ -4042,14 +4046,12 @@ async function loadSalaryData() {
     });
 
     // Hours for month
-    const start = _salMonth + "-01";
-    const end   = _salMonth + "-31";
     const [wh1, wh2] = await Promise.all([
-      getDocs(query(collection(db,"work_hours"), where("shopId","==","store1"), where("date",">=",start), where("date","<=",end))),
-      getDocs(query(collection(db,"work_hours"), where("shopId","==","store2"), where("date",">=",start), where("date","<=",end)))
+      getDocs(query(collection(db,"work_hours"), where("shopId","==","store1"))),
+      getDocs(query(collection(db,"work_hours"), where("shopId","==","store2")))
     ]);
     const hoursMap = {};
-    [...wh1.docs, ...wh2.docs].forEach(d => {
+    [...wh1.docs, ...wh2.docs].filter(d => d.data().date?.startsWith(_salMonth)).forEach(d => {
       const r = d.data();
       hoursMap[r.employeeId] = (hoursMap[r.employeeId] || 0) + (r.hours || 0);
     });
@@ -4340,9 +4342,13 @@ window.saveSalary = async function() {
       const ref  = await addDoc(collection(db,"salaries"), data);
       _salEditId = ref.id;
     }
-    // Update employee hourlyRate if changed
+    // Update employee hourlyRate + history if changed
     if (rate !== (rec.emp.hourlyRate || 0)) {
-      await updateDoc(doc(db,"employees",empId), { hourlyRate: rate });
+      const hist = rec.emp.hourlyRateHistory ? [...rec.emp.hourlyRateHistory] : [];
+      const idx  = hist.findIndex(h => h.month === _salMonth);
+      if (idx >= 0) hist[idx].rate = rate;
+      else          hist.push({ month: _salMonth, rate });
+      await updateDoc(doc(db,"employees",empId), { hourlyRate: rate, hourlyRateHistory: hist });
     }
     showStatusMsg("✅ Запазено като чернова");
     closeSalaryModal();
@@ -4538,10 +4544,11 @@ async function loadSalaryHistoryScreen() {
   const sel = document.getElementById("salHistEmpSel");
   if (sel && sel.options.length <= 1) {
     const [e1, e2] = await Promise.all([
-      getDocs(query(collection(db,"employees"), where("shopId","==","store1"), orderBy("name","asc"))),
-      getDocs(query(collection(db,"employees"), where("shopId","==","store2"), orderBy("name","asc")))
+      getDocs(query(collection(db,"employees"), where("shopId","==","store1"))),
+      getDocs(query(collection(db,"employees"), where("shopId","==","store2")))
     ]);
     const all = [...e1.docs.map(d=>({id:d.id,...d.data()})), ...e2.docs.map(d=>({id:d.id,...d.data()}))];
+    all.sort((a, b) => (a.name||"").localeCompare(b.name||"","bg"));
     sel.innerHTML = `<option value="">— Избери служител —</option>` +
       all.map(e=>`<option value="${e.id}">${escHtml(e.name)} (${e.shopId==="store1"?"М1":"М2"})</option>`).join("");
   }
@@ -4566,8 +4573,8 @@ async function loadSalHistByMonth() {
   el.innerHTML = `<div class="tasks-empty">Зареждане...</div>`;
   try {
     const [s1, s2] = await Promise.all([
-      getDocs(query(collection(db,"salaries"), where("shopId","==","store1"), orderBy("month","desc"))),
-      getDocs(query(collection(db,"salaries"), where("shopId","==","store2"), orderBy("month","desc")))
+      getDocs(query(collection(db,"salaries"), where("shopId","==","store1"))),
+      getDocs(query(collection(db,"salaries"), where("shopId","==","store2")))
     ]);
     const byMonth = {};
     [...s1.docs, ...s2.docs].forEach(d => {
@@ -4596,10 +4603,12 @@ async function loadSalHistByMonth() {
             <td class="mono">${d.m1>0?d.m1.toFixed(2)+" лв.":"—"}</td>
             <td class="mono">${d.m2>0?d.m2.toFixed(2)+" лв.":"—"}</td>
             <td class="mono pos">${tot>0?tot.toFixed(2)+" лв.":"—"}</td>
-            <td><div class="sal-progress-wrap">
-              <div class="sal-progress-bar" style="width:${pct}%"></div>
-              <span>${pct}% платени</span>
-            </div></td>
+            <td>
+              <div class="sal-progress-wrap">
+                <div class="sal-progress-bar" style="width:${pct}%"></div>
+              </div>
+              <div class="sal-progress-labels"><span>${pct}% платени</span></div>
+            </td>
             <td><button class="sal-hist-view-btn" onclick="viewPayrollMonth('${mo}')">Виж ведомост</button></td>
           </tr>`;
         }).join("")}</tbody>
@@ -4627,9 +4636,9 @@ async function loadSalHistByEmployee(empId) {
   if (!el) return;
   el.innerHTML = `<div class="tasks-empty">Зареждане...</div>`;
   try {
-    const q    = query(collection(db,"salaries"), where("employeeId","==",empId), orderBy("month","desc"));
-    const snap = await getDocs(q);
+    const snap = await getDocs(query(collection(db,"salaries"), where("employeeId","==",empId)));
     if (snap.empty) { el.innerHTML = `<div class="tasks-empty">Няма записи</div>`; return; }
+    const salDocs = snap.docs.slice().sort((a,b) => b.data().month.localeCompare(a.data().month));
     el.innerHTML = `
       <div class="table-responsive" style="margin-top:12px">
       <table class="wh-wage-table">
@@ -4637,7 +4646,7 @@ async function loadSalHistByEmployee(empId) {
           <th>Месец</th><th>Часове</th><th>База</th>
           <th>Бонуси</th><th>Удръжки</th><th>Бруто</th><th>Статус</th>
         </tr></thead>
-        <tbody>${snap.docs.map(d => {
+        <tbody>${salDocs.map(d => {
           const r   = d.data();
           const bon = (r.bonuses||[]).reduce((s,b)=>s+(b.amount||0),0);
           const ded = (r.deductions||[]).reduce((s,dd)=>s+(dd.amount||0),0);
@@ -4661,8 +4670,8 @@ async function loadSalHistAnalysis() {
   el.innerHTML = `<div class="tasks-empty">Зареждане...</div>`;
   try {
     const [s1, s2] = await Promise.all([
-      getDocs(query(collection(db,"salaries"), where("shopId","==","store1"), orderBy("month","asc"))),
-      getDocs(query(collection(db,"salaries"), where("shopId","==","store2"), orderBy("month","asc")))
+      getDocs(query(collection(db,"salaries"), where("shopId","==","store1"))),
+      getDocs(query(collection(db,"salaries"), where("shopId","==","store2")))
     ]);
     const byMonth = {};
     const push = (docs, key) => docs.forEach(d => {
