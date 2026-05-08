@@ -3595,10 +3595,30 @@ function renderWhTable() {
     return;
   }
 
+  const DOW_BG   = ["Нд", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayDay = todayStr.startsWith(_whMonth) ? parseInt(todayStr.slice(8)) : -1;
+
+  // Ред с дните на седмицата (Пн/Вт/Ср...)
+  const dowHeaders = days.map(d => {
+    const dow   = new Date(y, m - 1, d).getDay();
+    const isWkd = (dow === 0 || dow === 6);
+    const isTod = (d === todayDay);
+    const cls   = ["wh-day-th wh-dow-th",
+                   isWkd ? "wh-day-weekend" : "",
+                   isTod ? "wh-day-today"   : ""].filter(Boolean).join(" ");
+    return `<th class="${cls}" data-col="${d}">${DOW_BG[dow]}</th>`;
+  }).join("");
+
+  // Ред с числата (1/2/3...)
   const dayHeaders = days.map(d => {
-    const dow = new Date(y, m - 1, d).getDay();
-    const cls = (dow === 0 || dow === 6) ? "wh-day-weekend" : "";
-    return `<th class="wh-day-th ${cls}">${d}</th>`;
+    const dow   = new Date(y, m - 1, d).getDay();
+    const isWkd = (dow === 0 || dow === 6);
+    const isTod = (d === todayDay);
+    const cls   = ["wh-day-th",
+                   isWkd ? "wh-day-weekend" : "",
+                   isTod ? "wh-day-today"   : ""].filter(Boolean).join(" ");
+    return `<th class="${cls}" data-col="${d}">${d}</th>`;
   }).join("");
 
   const rows = all.map(emp => {
@@ -3608,10 +3628,12 @@ function renderWhTable() {
       const cell    = _whData[emp.id]?.[dateStr];
       const h       = cell?.hours;
       if (h) total += h;
-      const cls = h ? whCellClass(h) : "";
-      const dow = new Date(y, m - 1, d).getDay();
-      const wkd = (dow === 0 || dow === 6) ? "wh-cell-weekend" : "";
-      return `<td class="wh-cell ${cls} ${wkd} ${emp.active ? "" : "wh-cell-inactive"}"
+      const dow   = new Date(y, m - 1, d).getDay();
+      const hCls  = h ? whCellClass(h) : "";
+      const wkd   = (dow === 0 || dow === 6) ? "wh-cell-weekend" : "";
+      const todCl = (d === todayDay) ? "wh-cell-today-col" : "";
+      const inact = emp.active ? "" : "wh-cell-inactive";
+      return `<td class="wh-cell ${hCls} ${wkd} ${todCl} ${inact}" data-col="${d}"
                   onclick="openWhCell('${emp.id}','${dateStr}')">${h || ""}</td>`;
     }).join("");
     return `<tr class="${emp.active ? "" : "wh-row-inactive"}">
@@ -3624,7 +3646,10 @@ function renderWhTable() {
   const totals = days.map(d => {
     const dateStr  = `${_whMonth}-${String(d).padStart(2, "0")}`;
     const dayTotal = all.reduce((s, e) => s + ((_whData[e.id]?.[dateStr]?.hours) || 0), 0);
-    return `<td class="wh-total-cell">${dayTotal || ""}</td>`;
+    const dow   = new Date(y, m - 1, d).getDay();
+    const wkd   = (dow === 0 || dow === 6) ? "wh-cell-weekend" : "";
+    const todCl = (d === todayDay) ? "wh-cell-today-col" : "";
+    return `<td class="wh-total-cell ${wkd} ${todCl}" data-col="${d}">${dayTotal || ""}</td>`;
   }).join("");
 
   const grand = all.reduce((s, e) =>
@@ -3635,10 +3660,12 @@ function renderWhTable() {
     <div class="wh-table-scroll">
       <table class="wh-table">
         <thead>
-          <tr>
-            <th class="wh-emp-th">Служител</th>${dayHeaders}
-            <th class="wh-total-th">Общо</th>
+          <tr class="wh-dow-row">
+            <th class="wh-emp-th" rowspan="2">Служител</th>
+            ${dowHeaders}
+            <th class="wh-total-th" rowspan="2">Общо</th>
           </tr>
+          <tr class="wh-num-row">${dayHeaders}</tr>
         </thead>
         <tbody>${rows}</tbody>
         <tfoot>
@@ -3650,6 +3677,21 @@ function renderWhTable() {
         </tfoot>
       </table>
     </div>`;
+
+  // Hover по колона (ден) — подсветва всички редове за дадения ден
+  const tbl = wrap.querySelector(".wh-table");
+  if (tbl) {
+    tbl.addEventListener("mouseenter", e => {
+      const col = e.target.dataset?.col;
+      if (col) tbl.querySelectorAll(`[data-col="${col}"]`)
+                   .forEach(el => el.classList.add("wh-col-hover"));
+    }, true);
+    tbl.addEventListener("mouseleave", e => {
+      const col = e.target.dataset?.col;
+      if (col) tbl.querySelectorAll(`[data-col="${col}"]`)
+                   .forEach(el => el.classList.remove("wh-col-hover"));
+    }, true);
+  }
 }
 
 // ── Mobile day view ────────────────────────────────────────
