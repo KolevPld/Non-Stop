@@ -85,6 +85,30 @@
         { "fieldPath": "read",      "order": "ASCENDING" },
         { "fieldPath": "timestamp", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "salaries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "shopId", "order": "ASCENDING" },
+        { "fieldPath": "month",  "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "salaries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "shopId", "order": "ASCENDING" },
+        { "fieldPath": "month",  "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "salaries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "employeeId", "order": "ASCENDING" },
+        { "fieldPath": "month",      "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

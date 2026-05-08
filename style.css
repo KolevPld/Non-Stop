@@ -2684,3 +2684,307 @@ body.light .wh-totals-row td     { background: #f0f2f5 !important; }
 body.light .wh-sum-card          { background: #fff; }
 body.light .wh-wage-table th     { background: #f0f2f5; }
 body.light .wage-rate-input      { background: #fff; }
+
+/* ════════════════════════════════════════════════════════
+   MODULE 5 — ВЕДОМОСТ И ЗАПЛАТИ
+   ════════════════════════════════════════════════════════ */
+
+/* ── Payroll table (inside wage tab) ─────────────────── */
+.sal-payroll-table {
+  width: 100%; border-collapse: collapse; font-size: .85rem;
+}
+.sal-payroll-table th {
+  background: var(--bg3); color: var(--text2); padding: 9px 10px;
+  font-size: .73rem; text-transform: uppercase; letter-spacing: .04em;
+  border-bottom: 1px solid var(--border2); text-align: left; white-space: nowrap;
+}
+.sal-payroll-table td {
+  padding: 9px 10px; border-bottom: 1px solid var(--border);
+  color: var(--text); vertical-align: middle;
+}
+.sal-payroll-table tr:last-child td { border-bottom: none; }
+.sal-payroll-table tr:hover td     { background: var(--bg3); }
+.sal-payroll-table .text-right     { text-align: right; }
+
+/* ── Status badges ───────────────────────────────────── */
+.sal-status-badge {
+  display: inline-block; padding: 3px 9px; border-radius: 12px;
+  font-size: .75rem; font-weight: 600; white-space: nowrap;
+}
+.sal-draft { background: #2a3a4a; color: #7ec8e3; border: 1px solid #3a5060; }
+.sal-paid  { background: #1a3a2a; color: #6ee0a0; border: 1px solid #2a5040; }
+.sal-none  { background: var(--bg3); color: var(--text3); border: 1px solid var(--border); }
+
+/* ── Edit button in payroll table ────────────────────── */
+.sal-edit-btn {
+  background: transparent; border: 1px solid var(--accent);
+  color: var(--accent); padding: 4px 10px; border-radius: 6px;
+  font-size: .78rem; cursor: pointer; white-space: nowrap;
+  transition: background .15s;
+}
+.sal-edit-btn:hover { background: var(--accent); color: #fff; }
+
+/* ── Salary modal panel ──────────────────────────────── */
+#salaryModal {
+  position: fixed; inset: 0; z-index: 1100;
+  display: flex; align-items: flex-end; justify-content: center;
+}
+#salaryModal.hidden { display: none; }
+
+.sal-modal-panel {
+  position: relative; width: 100%; max-width: 520px;
+  max-height: 90dvh; overflow: hidden;
+  background: var(--bg2); border-radius: 18px 18px 0 0;
+  display: flex; flex-direction: column;
+  box-shadow: 0 -4px 32px rgba(0,0,0,.45);
+  z-index: 1101;
+}
+@media (min-width: 560px) {
+  .sal-modal-panel {
+    border-radius: 14px; max-height: 88dvh;
+    margin: auto; align-self: center;
+  }
+  #salaryModal { align-items: center; }
+}
+
+.sal-modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px 10px; border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.sal-modal-title {
+  font-size: 1rem; font-weight: 700; color: var(--text);
+}
+.sal-modal-subtitle {
+  font-size: .78rem; color: var(--text3); margin-top: 1px;
+}
+.sal-modal-close {
+  background: var(--bg3); border: none; color: var(--text2);
+  width: 30px; height: 30px; border-radius: 50%;
+  font-size: 1rem; cursor: pointer; display: flex;
+  align-items: center; justify-content: center;
+}
+.sal-modal-close:hover { background: var(--border2); }
+
+.sal-modal-body {
+  overflow-y: auto; flex: 1; padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+
+/* ── Modal section blocks ────────────────────────────── */
+.sal-section {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px 14px;
+}
+.sal-section-title {
+  font-size: .78rem; font-weight: 700; color: var(--text2);
+  text-transform: uppercase; letter-spacing: .05em;
+  margin-bottom: 10px;
+}
+
+/* ── Base salary grid ────────────────────────────────── */
+.sal-base-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px;
+}
+.sal-base-row {
+  display: flex; flex-direction: column; gap: 3px;
+}
+.sal-base-row.full { grid-column: 1 / -1; }
+.sal-base-label {
+  font-size: .73rem; color: var(--text3);
+}
+.sal-base-val {
+  font-size: .95rem; font-weight: 600; color: var(--text);
+}
+.sal-base-calc {
+  font-size: .85rem; color: var(--accent); font-weight: 700;
+}
+.sal-rate-input {
+  width: 100%; background: var(--bg2); border: 1px solid var(--border2);
+  color: var(--text); border-radius: 7px; padding: 6px 10px;
+  font-size: .9rem; font-family: inherit;
+}
+.sal-rate-input:focus {
+  outline: none; border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(99,179,237,.18);
+}
+
+/* ── Bonus / Deduction list ──────────────────────────── */
+.sal-item-list { display: flex; flex-direction: column; gap: 6px; }
+
+.sal-item-row {
+  display: grid; grid-template-columns: 1fr 80px 80px 28px;
+  gap: 6px; align-items: center;
+}
+.sal-item-row select,
+.sal-item-row input {
+  background: var(--bg2); border: 1px solid var(--border2);
+  color: var(--text); border-radius: 6px; padding: 5px 8px;
+  font-size: .82rem; font-family: inherit; width: 100%;
+}
+.sal-item-row select:focus,
+.sal-item-row input:focus {
+  outline: none; border-color: var(--accent);
+}
+.sal-item-note { grid-column: 1 / -1; }
+.sal-item-note input {
+  font-size: .78rem; color: var(--text3);
+}
+.sal-item-del {
+  background: transparent; border: none; color: #e87; cursor: pointer;
+  font-size: 1rem; padding: 2px 4px; border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+}
+.sal-item-del:hover { background: rgba(220,80,80,.15); }
+
+.sal-add-btn {
+  margin-top: 6px; background: transparent; border: 1px dashed var(--border2);
+  color: var(--text3); padding: 6px 12px; border-radius: 7px;
+  font-size: .8rem; cursor: pointer; width: 100%; text-align: center;
+  transition: border-color .15s, color .15s;
+}
+.sal-add-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── Summary section ─────────────────────────────────── */
+.sal-summary-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 5px 0; font-size: .88rem; color: var(--text2);
+}
+.sal-summary-divider {
+  height: 1px; background: var(--border); margin: 6px 0;
+}
+.sal-summary-final {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 6px 0; font-size: 1.05rem; font-weight: 700; color: var(--text);
+}
+.sal-summary-final span:last-child { color: var(--accent); font-size: 1.15rem; }
+
+.sal-warn {
+  font-size: .78rem; color: #e87; margin-top: 6px; display: none;
+}
+
+/* ── Change log ──────────────────────────────────────── */
+.sal-log-toggle {
+  background: transparent; border: none; color: var(--text3);
+  font-size: .78rem; cursor: pointer; padding: 0; text-align: left;
+  text-decoration: underline;
+}
+.sal-log-toggle:hover { color: var(--text2); }
+.sal-log-list { margin-top: 8px; display: flex; flex-direction: column; gap: 5px; }
+.sal-log-entry {
+  font-size: .75rem; color: var(--text3); line-height: 1.4;
+  padding: 5px 8px; background: var(--bg3); border-radius: 6px;
+}
+
+/* ── Modal footer ────────────────────────────────────── */
+.sal-modal-footer {
+  padding: 12px 16px; border-top: 1px solid var(--border);
+  display: flex; gap: 8px; justify-content: flex-end; flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+/* ── Salary history screen ───────────────────────────── */
+#screen-salaries {
+  padding-bottom: 80px;
+}
+.sal-hist-tabs {
+  display: flex; gap: 6px; overflow-x: auto; padding: 12px 14px 0;
+  border-bottom: 1px solid var(--border); background: var(--bg2);
+  position: sticky; top: 56px; z-index: 90;
+}
+.sal-hist-tab {
+  background: transparent; border: none; color: var(--text3);
+  padding: 8px 14px; font-size: .85rem; cursor: pointer; white-space: nowrap;
+  border-bottom: 2px solid transparent; transition: color .15s;
+}
+.sal-hist-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.sal-hist-tab:hover:not(.active) { color: var(--text2); }
+
+.sal-hist-content { padding: 14px; }
+
+/* ── Month progress bars ─────────────────────────────── */
+.sal-month-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px 14px; margin-bottom: 10px;
+}
+.sal-month-card-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 8px;
+}
+.sal-month-card-title {
+  font-size: .9rem; font-weight: 700; color: var(--text);
+}
+.sal-month-card-total {
+  font-size: .9rem; font-weight: 700; color: var(--accent);
+}
+.sal-progress-wrap {
+  background: var(--bg3); border-radius: 6px; height: 8px;
+  overflow: hidden; margin-bottom: 4px;
+}
+.sal-progress-bar {
+  height: 100%; border-radius: 6px; transition: width .4s ease;
+}
+.sal-progress-m1 { background: #63b3ed; }
+.sal-progress-m2 { background: #68d391; }
+
+.sal-progress-labels {
+  display: flex; justify-content: space-between;
+  font-size: .72rem; color: var(--text3); margin-top: 2px;
+}
+
+.sal-hist-view-btn {
+  background: transparent; border: 1px solid var(--border2);
+  color: var(--text3); padding: 4px 10px; border-radius: 6px;
+  font-size: .75rem; cursor: pointer; margin-top: 8px;
+  transition: border-color .15s, color .15s;
+}
+.sal-hist-view-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── Employee selector ───────────────────────────────── */
+.sal-emp-sel {
+  width: 100%; background: var(--bg2); border: 1px solid var(--border2);
+  color: var(--text); border-radius: 8px; padding: 8px 12px;
+  font-size: .9rem; font-family: inherit; margin-bottom: 12px;
+}
+.sal-emp-sel:focus { outline: none; border-color: var(--accent); }
+
+/* ── Employee salary history table ───────────────────── */
+.sal-emp-hist-table {
+  width: 100%; border-collapse: collapse; font-size: .85rem;
+}
+.sal-emp-hist-table th {
+  background: var(--bg3); color: var(--text2); padding: 8px 10px;
+  font-size: .73rem; text-transform: uppercase; letter-spacing: .04em;
+  border-bottom: 1px solid var(--border2); text-align: left;
+}
+.sal-emp-hist-table td {
+  padding: 9px 10px; border-bottom: 1px solid var(--border); color: var(--text);
+}
+.sal-emp-hist-table tr:last-child td { border-bottom: none; }
+
+/* ── Chart wrapper ───────────────────────────────────── */
+.sal-chart-wrap {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 14px; margin-bottom: 14px;
+}
+.sal-chart-title {
+  font-size: .85rem; font-weight: 700; color: var(--text2);
+  margin-bottom: 12px;
+}
+
+/* ── Light theme overrides ───────────────────────────── */
+body.light .sal-modal-panel      { background: #fff; }
+body.light .sal-section          { background: #f6f8fa; border-color: #dde1e7; }
+body.light .sal-rate-input,
+body.light .sal-item-row select,
+body.light .sal-item-row input   { background: #fff; border-color: #ccd3db; }
+body.light .sal-draft            { background: #deedf7; color: #1a6fa0; border-color: #aacde8; }
+body.light .sal-paid             { background: #d6f0e2; color: #1a6a44; border-color: #a0d8bc; }
+body.light .sal-payroll-table th { background: #f0f2f5; }
+body.light .sal-month-card       { background: #fff; border-color: #dde1e7; }
+body.light .sal-progress-wrap    { background: #e4e8ee; }
+body.light .sal-emp-sel          { background: #fff; border-color: #ccd3db; }
+body.light .sal-emp-hist-table th { background: #f0f2f5; }
+body.light .sal-chart-wrap       { background: #fff; border-color: #dde1e7; }
+body.light #screen-salaries      { background: #f6f8fa; }
+body.light .sal-log-entry        { background: #f0f2f5; }

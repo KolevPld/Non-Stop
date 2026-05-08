@@ -1179,6 +1179,7 @@ window.showScreen = function(screen) {
   accountsScreen?.classList.add("hidden");
   drScreen?.classList.add("hidden");
   whScreen?.classList.add("hidden");
+  document.getElementById("screen-salaries")?.classList.add("hidden");
 
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
 
@@ -1219,6 +1220,13 @@ window.showScreen = function(screen) {
     whScreen?.classList.remove("hidden");
     document.getElementById('navWorkHours')?.classList.add('active');
     loadWageScreen();
+
+  } else if (screen === "salaries") {
+    if (!isAdmin) { alert("Нямаш достъп до този екран."); return; }
+    const salScreen = document.getElementById("screen-salaries");
+    salScreen?.classList.remove("hidden");
+    document.getElementById('navSalaries')?.classList.add('active');
+    loadSalaryHistoryScreen();
 
   } else {
     addScreen?.classList.remove("hidden");
@@ -3828,7 +3836,7 @@ function renderWageSummaryDetail() {
 
 window.wageSetTab = function(tab) {
   _wageTab = tab;
-  ["month","summary","history"].forEach(t => {
+  ["month","payroll","summary","history"].forEach(t => {
     const id = "wageTab" + t.charAt(0).toUpperCase() + t.slice(1);
     document.getElementById(id)?.classList.toggle("hidden", t !== tab);
     document.querySelector(`.wage-tab[data-tab="${t}"]`)
@@ -3836,6 +3844,7 @@ window.wageSetTab = function(tab) {
   });
   if (tab === "summary") renderWageSummaryDetail();
   if (tab === "history") loadWageHistory();
+  if (tab === "payroll") loadPayrollTab();
 };
 
 async function loadWageHistory() {
@@ -3977,3 +3986,742 @@ window.exportWagePdf = function() {
   win.focus();
   setTimeout(() => win.print(), 400);
 };
+
+// ════════════════════════════════════════════════════════════
+// 💰 МОДУЛ 5 — ВЕДОМОСТ И ИЗЧИСЛЕНИЕ НА ЗАПЛАТИ
+// ════════════════════════════════════════════════════════════
+
+// ── Константи ─────────────────────────────────────────────
+const SAL_BONUS_TYPES     = ["Бонус постижения","Извънреден труд","Нощни смени","Празнични дни","Друго"];
+const SAL_DEDUCTION_TYPES = ["Аванс","Удръжка липса","Удръжка грешка","Друго"];
+
+// ── Стейт ─────────────────────────────────────────────────
+let _salMonth      = "";
+let _salRecords    = [];   // [{emp, hours, salary}]
+let _salEditId     = null; // salaryId being edited in modal
+let _salEditEmpId  = null;
+let _salBonuses    = [];
+let _salDeductions = [];
+let _salHistTab    = "month";
+let _salHistEmpId  = null;
+let _salHistChart  = null;
+
+// ── Payroll tab entry ──────────────────────────────────────
+async function loadPayrollTab() {
+  if (!_salMonth) _salMonth = _wageMonth || new Date().toISOString().slice(0, 7);
+  const inp = document.getElementById("salMonthPicker");
+  if (inp) inp.value = _salMonth;
+  const lbl = document.getElementById("salMonthLabel");
+  if (lbl) lbl.textContent = formatMonth(_salMonth);
+  await loadSalaryData();
+}
+
+async function loadSalaryData() {
+  const tbody = document.getElementById("payrollTableBody");
+  if (tbody) tbody.innerHTML = `<tr><td colspan="10" class="tasks-empty">Зареждане...</td></tr>`;
+  try {
+    // Employees (both stores)
+    const [e1, e2] = await Promise.all([
+      getDocs(query(collection(db,"employees"), where("shopId","==","store1"), orderBy("active","desc"), orderBy("name","asc"))),
+      getDocs(query(collection(db,"employees"), where("shopId","==","store2"), orderBy("active","desc"), orderBy("name","asc")))
+    ]);
+    const allEmps = [
+      ...e1.docs.map(d=>({id:d.id,...d.data()})),
+      ...e2.docs.map(d=>({id:d.id,...d.data()}))
+    ];
+
+    // Salaries for month
+    const [s1, s2] = await Promise.all([
+      getDocs(query(collection(db,"salaries"), where("shopId","==","store1"), where("month","==",_salMonth))),
+      getDocs(query(collection(db,"salaries"), where("shopId","==","store2"), where("month","==",_salMonth)))
+    ]);
+    const salByEmp = {};
+    [...s1.docs, ...s2.docs].forEach(d => {
+      const r = d.data();
+      salByEmp[r.employeeId] = { id: d.id, ...r };
+    });
+
+    // Hours for month
+    const start = _salMonth + "-01";
+    const end   = _salMonth + "-31";
+    const [wh1, wh2] = await Promise.all([
+      getDocs(query(collection(db,"work_hours"), where("shopId","==","store1"), where("date",">=",start), where("date","<=",end))),
+      getDocs(query(collection(db,"work_hours"), where("shopId","==","store2"), where("date",">=",start), where("date","<=",end)))
+    ]);
+    const hoursMap = {};
+    [...wh1.docs, ...wh2.docs].forEach(d => {
+      const r = d.data();
+      hoursMap[r.employeeId] = (hoursMap[r.employeeId] || 0) + (r.hours || 0);
+    });
+
+    _salRecords = allEmps.map(emp => ({
+      emp,
+      hours:  hoursMap[emp.id] || 0,
+      salary: salByEmp[emp.id] || null
+    }));
+    renderPayrollTable();
+  } catch (e) { console.error("loadSalaryData:", e); }
+}
+
+function renderPayrollTable() {
+  const tbody = document.getElementById("payrollTableBody");
+  if (!tbody) return;
+  const active   = _salRecords.filter(r => r.emp.active);
+  const inactive = _salRecords.filter(r => !r.emp.active);
+  if (!active.length && !inactive.length) {
+    tbody.innerHTML = `<tr><td colspan="10" class="tasks-empty">Добави служители в "Работни часове".</td></tr>`;
+    return;
+  }
+  let grandGross = 0;
+  const rowHtml = [...active, ...inactive].map(r => {
+    const { emp, hours, salary } = r;
+    const rate    = salary?.baseRate ?? (emp.hourlyRate || 0);
+    const base    = hours * rate;
+    const bonTot  = (salary?.bonuses    || []).reduce((s,b) => s+(b.amount||0), 0);
+    const dedTot  = (salary?.deductions || []).reduce((s,d) => s+(d.amount||0), 0);
+    const gross   = salary ? (salary.totalGross ?? (base+bonTot-dedTot)) : base;
+    const status  = salary?.status || "none";
+    const store   = emp.shopId==="store1" ? "М1" : "М2";
+    const scls    = emp.shopId==="store1" ? "store1" : "store2";
+    if (emp.active) grandGross += Math.max(0, gross);
+    return `<tr class="${emp.active?"":"wh-row-inactive"}">
+      <td>${escHtml(emp.name)}</td>
+      <td><span class="dr-owner-store-badge ${scls}">${store}</span></td>
+      <td class="mono">${hours}</td>
+      <td class="mono">${rate.toFixed(2)}</td>
+      <td class="mono">${base.toFixed(2)}</td>
+      <td class="mono ${bonTot>0?"pos":""}">${bonTot>0?"+"+bonTot.toFixed(2):"—"}</td>
+      <td class="mono ${dedTot>0?"neg":""}">${dedTot>0?"−"+dedTot.toFixed(2):"—"}</td>
+      <td class="mono ${gross<0?"neg":"pos"}">${gross.toFixed(2)}</td>
+      <td><span class="sal-status-badge sal-${status}">${salStatusLabel(status)}</span></td>
+      <td><button class="sal-edit-btn" onclick="openSalaryModal('${emp.id}')">
+        <i class="fa-solid fa-pen-to-square"></i> Ред.
+      </button></td>
+    </tr>`;
+  }).join("");
+
+  tbody.innerHTML = rowHtml + `
+    <tr class="dr-owner-totals-row">
+      <td colspan="7"><strong>Общо бруто (активни)</strong></td>
+      <td class="mono pos"><strong>${grandGross.toFixed(2)}</strong></td>
+      <td colspan="2"></td>
+    </tr>`;
+}
+
+function salStatusLabel(st) {
+  if (st === "draft") return "📝 Чернова";
+  if (st === "paid")  return "✅ Платена";
+  return "— Не е генерирана";
+}
+
+// ── Generate payroll ───────────────────────────────────────
+window.generatePayroll = async function() {
+  if (!confirm(`Генерирай ведомост за ${formatMonth(_salMonth)}?\n\nЩе се създадат записи за активни служители без съществуващи.`)) return;
+  const btn = document.getElementById("genPayrollBtn");
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Генерира...'; }
+  try {
+    let created = 0;
+    for (const r of _salRecords) {
+      if (!r.emp.active || r.salary) continue;
+      const rate = r.emp.hourlyRate || 0;
+      const base = r.hours * rate;
+      const now  = new Date().toISOString();
+      await addDoc(collection(db,"salaries"), {
+        shopId:     r.emp.shopId,
+        employeeId: r.emp.id,
+        month:      _salMonth,
+        baseHours:  r.hours,
+        baseRate:   rate,
+        baseAmount: base,
+        bonuses:    [],
+        deductions: [],
+        totalGross: base,
+        status:     "draft",
+        changeLog:  [{ by: currentUserId, at: now, action: `Генерирана ведомост — ${r.hours}ч × ${rate} лв. = ${base.toFixed(2)} лв.` }],
+        createdAt:  now,
+        updatedAt:  now
+      });
+      created++;
+    }
+    showStatusMsg(`✅ Генерирани ${created} нови записа`);
+    await loadSalaryData();
+  } catch (e) { alert("Грешка: " + e.message); }
+  finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-bolt"></i> Генерирай ведомост'; }
+  }
+};
+
+// ── Month navigation for payroll tab ──────────────────────
+window.salChangeMonth = function(delta) {
+  const [y, m] = _salMonth.split("-").map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  _salMonth = d.toISOString().slice(0, 7);
+  const inp = document.getElementById("salMonthPicker");
+  if (inp) inp.value = _salMonth;
+  const lbl = document.getElementById("salMonthLabel");
+  if (lbl) lbl.textContent = formatMonth(_salMonth);
+  loadSalaryData();
+};
+
+window.salMonthInput = function() {
+  const val = document.getElementById("salMonthPicker")?.value;
+  if (val) {
+    _salMonth = val;
+    const lbl = document.getElementById("salMonthLabel");
+    if (lbl) lbl.textContent = formatMonth(_salMonth);
+    loadSalaryData();
+  }
+};
+
+// ── Salary edit modal ──────────────────────────────────────
+window.openSalaryModal = async function(empId) {
+  const rec = _salRecords.find(r => r.emp.id === empId);
+  if (!rec) return;
+  const { emp, hours, salary } = rec;
+  _salEditId    = salary?.id || null;
+  _salEditEmpId = empId;
+  _salBonuses    = salary?.bonuses    ? JSON.parse(JSON.stringify(salary.bonuses))    : [];
+  _salDeductions = salary?.deductions ? JSON.parse(JSON.stringify(salary.deductions)) : [];
+
+  const rate = salary?.baseRate ?? (emp.hourlyRate || 0);
+  const paid = salary?.status === "paid";
+
+  document.getElementById("salModalTitle").textContent = `${emp.name} — ${formatMonth(_salMonth)}`;
+  document.getElementById("salBaseHours").textContent  = hours || 0;
+  document.getElementById("salaryModal").dataset.empId = empId;
+
+  const rateEl = document.getElementById("salBaseRate");
+  if (rateEl) { rateEl.value = rate; rateEl.disabled = paid; }
+
+  renderBonusList(paid);
+  renderDeductionList(paid);
+  calcSalaryTotal();
+
+  // Button states
+  const payBtn  = document.getElementById("salMarkPaidBtn");
+  const reBtn   = document.getElementById("salReopenBtn");
+  const saveBtn = document.getElementById("salSaveBtn");
+  const addBon  = document.getElementById("salAddBonusBtn");
+  const addDed  = document.getElementById("salAddDedBtn");
+  if (payBtn)  payBtn.style.display  = paid ? "none" : "";
+  if (reBtn)   reBtn.style.display   = paid ? ""     : "none";
+  if (saveBtn) saveBtn.disabled      = paid;
+  if (addBon)  addBon.disabled       = paid;
+  if (addDed)  addDed.disabled       = paid;
+
+  // Change log
+  const logEl = document.getElementById("salChangeLog");
+  if (logEl) {
+    const log = salary?.changeLog || [];
+    logEl.innerHTML = log.length
+      ? log.slice().reverse().map(l =>
+          `<div class="dr-detail-log-item">
+             <span class="dr-detail-log-time">${(l.at||"").slice(0,16).replace("T"," ")}</span>
+             <span class="dr-detail-log-action">${escHtml(l.action||"")}</span>
+           </div>`).join("")
+      : `<div class="tasks-empty" style="padding:6px 0">Няма история</div>`;
+  }
+
+  document.getElementById("salaryModal").classList.remove("hidden");
+};
+
+window.closeSalaryModal = function() {
+  document.getElementById("salaryModal")?.classList.add("hidden");
+  _salEditId = null; _salEditEmpId = null;
+  _salBonuses = []; _salDeductions = [];
+};
+
+// ── Dynamic lists ──────────────────────────────────────────
+function renderBonusList(readonly) {
+  const el = document.getElementById("salBonusList");
+  if (!el) return;
+  el.innerHTML = _salBonuses.map((b, i) => `
+    <div class="sal-item-row">
+      <select class="sal-item-type" ${readonly?"disabled":""} onchange="_salBonuses[${i}].type=this.value">
+        ${SAL_BONUS_TYPES.map(t=>`<option ${t===b.type?"selected":""}>${t}</option>`).join("")}
+      </select>
+      <input type="number" class="sal-item-amount" value="${b.amount||""}" min="0" step="0.01"
+             placeholder="Сума" ${readonly?"disabled":""}
+             onchange="_salBonuses[${i}].amount=parseFloat(this.value)||0;calcSalaryTotal()">
+      <input type="text" class="sal-item-note" value="${escHtml(b.note||"")}"
+             placeholder="Бележка" ${readonly?"disabled":""}
+             oninput="_salBonuses[${i}].note=this.value">
+      ${readonly?"": `<button class="sal-item-del" onclick="removeBonus(${i})">✕</button>`}
+    </div>`).join("");
+}
+
+function renderDeductionList(readonly) {
+  const el = document.getElementById("salDeductionList");
+  if (!el) return;
+  el.innerHTML = _salDeductions.map((d, i) => `
+    <div class="sal-item-row">
+      <select class="sal-item-type" ${readonly?"disabled":""} onchange="_salDeductions[${i}].type=this.value">
+        ${SAL_DEDUCTION_TYPES.map(t=>`<option ${t===d.type?"selected":""}>${t}</option>`).join("")}
+      </select>
+      <input type="number" class="sal-item-amount" value="${d.amount||""}" min="0" step="0.01"
+             placeholder="Сума" ${readonly?"disabled":""}
+             onchange="_salDeductions[${i}].amount=parseFloat(this.value)||0;calcSalaryTotal()">
+      <input type="text" class="sal-item-note" value="${escHtml(d.note||"")}"
+             placeholder="Бележка" ${readonly?"disabled":""}
+             oninput="_salDeductions[${i}].note=this.value">
+      ${readonly?"": `<button class="sal-item-del" onclick="removeDeduction(${i})">✕</button>`}
+    </div>`).join("");
+}
+
+window.addBonus = function() {
+  _salBonuses.push({ type: SAL_BONUS_TYPES[0], amount: 0, note: "" });
+  renderBonusList(false); calcSalaryTotal();
+};
+window.removeBonus = function(i) {
+  _salBonuses.splice(i, 1); renderBonusList(false); calcSalaryTotal();
+};
+window.addDeduction = function() {
+  _salDeductions.push({ type: SAL_DEDUCTION_TYPES[0], amount: 0, note: "" });
+  renderDeductionList(false); calcSalaryTotal();
+};
+window.removeDeduction = function(i) {
+  _salDeductions.splice(i, 1); renderDeductionList(false); calcSalaryTotal();
+};
+
+function calcSalaryTotal() {
+  const hours  = parseFloat(document.getElementById("salBaseHours")?.textContent || 0);
+  const rate   = parseFloat(document.getElementById("salBaseRate")?.value || 0);
+  const base   = hours * rate;
+  const bonTot = _salBonuses.reduce((s, b)   => s + (b.amount || 0), 0);
+  const dedTot = _salDeductions.reduce((s, d) => s + (d.amount || 0), 0);
+  const gross  = base + bonTot - dedTot;
+
+  const set = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
+  set("salCalcBase",        base.toFixed(2)   + " лв.");
+  set("salCalcBaseInline",  base.toFixed(2)   + " лв.");
+  set("salCalcBonuses",    "+" + bonTot.toFixed(2)  + " лв.");
+  set("salCalcDeductions", "−" + dedTot.toFixed(2)  + " лв.");
+  set("salCalcGross",       gross.toFixed(2)  + " лв.");
+
+  const grossEl = document.getElementById("salCalcGross");
+  if (grossEl) grossEl.style.color = gross < 0 ? "var(--red)" : "var(--green)";
+  document.getElementById("salNegativeWarn")?.classList.toggle("hidden", gross >= 0);
+  return { base, bonTot, dedTot, gross };
+}
+
+// ── Save salary (draft) ────────────────────────────────────
+window.saveSalary = async function() {
+  const { base, bonTot, dedTot, gross } = calcSalaryTotal();
+  if (gross < 0 && !confirm(`⚠️ Брутната заплата е отрицателна (${gross.toFixed(2)} лв.).\nСигурен ли си?`)) return;
+
+  const empId = document.getElementById("salaryModal")?.dataset?.empId;
+  const rec   = _salRecords.find(r => r.emp.id === empId);
+  if (!rec) return;
+
+  const rate = parseFloat(document.getElementById("salBaseRate")?.value || 0);
+  const now  = new Date().toISOString();
+  const data = {
+    shopId:     rec.emp.shopId,
+    employeeId: empId,
+    month:      _salMonth,
+    baseHours:  rec.hours,
+    baseRate:   rate,
+    baseAmount: base,
+    bonuses:    _salBonuses,
+    deductions: _salDeductions,
+    totalGross: gross,
+    status:     "draft",
+    updatedAt:  now
+  };
+  const logEntry = { by: currentUserId, at: now, action: `Редакция: бруто ${gross.toFixed(2)} лв. (бонуси +${bonTot.toFixed(2)}, удръжки −${dedTot.toFixed(2)})` };
+  try {
+    if (_salEditId) {
+      const snap = await getDoc(doc(db,"salaries",_salEditId));
+      const log  = snap.data()?.changeLog || [];
+      await updateDoc(doc(db,"salaries",_salEditId), { ...data, changeLog: [...log, logEntry] });
+    } else {
+      data.changeLog = [{ by: currentUserId, at: now, action: `Ръчно създадена — бруто ${gross.toFixed(2)} лв.` }, logEntry];
+      data.createdAt = now;
+      const ref  = await addDoc(collection(db,"salaries"), data);
+      _salEditId = ref.id;
+    }
+    // Update employee hourlyRate if changed
+    if (rate !== (rec.emp.hourlyRate || 0)) {
+      await updateDoc(doc(db,"employees",empId), { hourlyRate: rate });
+    }
+    showStatusMsg("✅ Запазено като чернова");
+    closeSalaryModal();
+    await loadSalaryData();
+  } catch (e) { alert("Грешка: " + e.message); }
+};
+
+// ── Mark salary as paid ────────────────────────────────────
+window.markSalaryPaid = async function() {
+  const { base, bonTot, dedTot, gross } = calcSalaryTotal();
+  if (gross < 0) { alert("❌ Не може да маркираш отрицателна заплата като платена."); return; }
+
+  const empId = document.getElementById("salaryModal")?.dataset?.empId;
+  const rec   = _salRecords.find(r => r.emp.id === empId);
+  if (!rec) return;
+
+  const method = prompt("💳 Метод на плащане:", "Кеш");
+  if (method === null) return;
+  const payMethod = ["Кеш","Банка","Карта"].includes(method.trim()) ? method.trim() : "Кеш";
+
+  if (!confirm(`✅ Маркирай заплатата на ${rec.emp.name} (${gross.toFixed(2)} лв.) като ПЛАТЕНА?\nМетод: ${payMethod}`)) return;
+
+  const rate = parseFloat(document.getElementById("salBaseRate")?.value || 0);
+  const now  = new Date().toISOString();
+  const storeNum = rec.emp.shopId === "store1" ? "1" : "2";
+
+  try {
+    // Create transaction in records
+    const txRef = await addDoc(collection(db,"records"), {
+      type:       "Разход",
+      store:      storeNum,
+      category:   "Заплати",
+      method:     payMethod,
+      amount:     gross,
+      date:       now.slice(0, 10),
+      note:       `Заплата ${rec.emp.name} за ${formatMonth(_salMonth)}`,
+      fromSalary: true,
+      salaryId:   _salEditId || "pending",
+      createdAt:  now
+    });
+
+    const salData = {
+      shopId:              rec.emp.shopId,
+      employeeId:          empId,
+      month:               _salMonth,
+      baseHours:           rec.hours,
+      baseRate:            rate,
+      baseAmount:          base,
+      bonuses:             _salBonuses,
+      deductions:          _salDeductions,
+      totalGross:          gross,
+      status:              "paid",
+      paidAt:              now,
+      paidBy:              currentUserId,
+      payMethod,
+      linkedTransactionId: txRef.id,
+      updatedAt:           now
+    };
+    const logEntry = { by: currentUserId, at: now, action: `Маркирана като платена. Метод: ${payMethod}. Бруто: ${gross.toFixed(2)} лв.` };
+
+    if (_salEditId) {
+      const snap = await getDoc(doc(db,"salaries",_salEditId));
+      const log  = snap.data()?.changeLog || [];
+      await updateDoc(doc(db,"salaries",_salEditId), { ...salData, changeLog: [...log, logEntry] });
+      await updateDoc(doc(db,"records",txRef.id), { salaryId: _salEditId });
+    } else {
+      salData.changeLog = [logEntry];
+      salData.createdAt = now;
+      const sRef = await addDoc(collection(db,"salaries"), salData);
+      await updateDoc(doc(db,"records",txRef.id), { salaryId: sRef.id });
+    }
+
+    showStatusMsg(`✅ Заплатата е платена — създадена транзакция в Отчети`);
+    closeSalaryModal();
+    await loadSalaryData();
+    if (typeof loadRecords === "function") loadRecords();
+  } catch (e) { alert("Грешка: " + e.message); }
+};
+
+// ── Reopen paid salary for editing ────────────────────────
+window.reopenSalaryForEdit = async function() {
+  if (!_salEditId) { closeSalaryModal(); return; }
+  if (!confirm("⚠️ Отвори платената заплата за редакция?\n\nСвързаната транзакция ще бъде изтрита и ще трябва да маркираш отново като платена.")) return;
+  try {
+    const snap = await getDoc(doc(db,"salaries",_salEditId));
+    const sal  = snap.data();
+    if (sal?.linkedTransactionId) {
+      await deleteDoc(doc(db,"records",sal.linkedTransactionId)).catch(()=>{});
+    }
+    const now = new Date().toISOString();
+    const log = sal?.changeLog || [];
+    await updateDoc(doc(db,"salaries",_salEditId), {
+      status: "draft", paidAt: null, paidBy: null, payMethod: null,
+      linkedTransactionId: null, updatedAt: now,
+      changeLog: [...log, { by: currentUserId, at: now, action: "Отворена за редакция (транзакцията е изтрита)" }]
+    });
+    closeSalaryModal();
+    await loadSalaryData();
+    // Re-open the modal with fresh data
+    const empId = _salEditEmpId;
+    if (empId) setTimeout(() => openSalaryModal(empId), 200);
+  } catch (e) { alert("Грешка: " + e.message); }
+};
+
+// ── Export payroll PDF ─────────────────────────────────────
+window.exportPayrollPdf = function() {
+  const month = formatMonth(_salMonth);
+  let rows = "", no = 1, grand = 0;
+  _salRecords.filter(r => r.emp.active).forEach(r => {
+    const { emp, hours, salary } = r;
+    const rate   = salary?.baseRate ?? (emp.hourlyRate || 0);
+    const base   = hours * rate;
+    const bonTot = (salary?.bonuses    || []).reduce((s,b) => s+(b.amount||0), 0);
+    const dedTot = (salary?.deductions || []).reduce((s,d) => s+(d.amount||0), 0);
+    const gross  = salary ? (salary.totalGross ?? (base+bonTot-dedTot)) : base;
+    const store  = emp.shopId==="store1" ? "М1" : "М2";
+    grand += Math.max(0, gross);
+    rows += `<tr>
+      <td style="text-align:center">${no++}</td>
+      <td>${emp.name}</td><td>${store}</td>
+      <td style="text-align:right">${hours}</td>
+      <td style="text-align:right">${rate.toFixed(2)}</td>
+      <td style="text-align:right">${base.toFixed(2)}</td>
+      <td style="text-align:right">${bonTot>0?"+"+bonTot.toFixed(2):"—"}</td>
+      <td style="text-align:right">${dedTot>0?"−"+dedTot.toFixed(2):"—"}</td>
+      <td style="text-align:right;font-weight:bold">${gross.toFixed(2)}</td>
+      <td></td></tr>`;
+  });
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <style>
+    body{font-family:Arial,sans-serif;font-size:12px;padding:20px;color:#000}
+    h1{font-size:16px;margin-bottom:2px}h2{font-size:12px;color:#555;font-weight:normal;margin-bottom:14px}
+    table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:5px 8px}
+    th{background:#f0f0f0;font-size:11px}.tot{font-weight:bold;background:#f5f5f5}
+    .sig{margin-top:36px;display:flex;gap:50px}
+    .sl{border-top:1px solid #000;width:150px;padding-top:3px;font-size:11px;margin-top:30px}
+    .note{margin-top:16px;font-size:10px;color:#999;font-style:italic}
+    @media print{body{padding:0}}
+  </style></head><body>
+  <h1>Ведомост за заплати — ${month}</h1><h2>Нон Стоп ООД | Дата: ${new Date().toLocaleDateString("bg-BG")}</h2>
+  <table><thead><tr>
+    <th>№</th><th>Служител</th><th>Маг.</th><th>Часове</th><th>Ставка</th>
+    <th>База</th><th>Бонуси</th><th>Удръжки</th><th>Бруто</th><th>Подпис</th>
+  </tr></thead><tbody>${rows}</tbody>
+  <tfoot><tr class="tot"><td colspan="8"><strong>ОБЩО</strong></td>
+    <td><strong>${grand.toFixed(2)} лв.</strong></td><td></td></tr></tfoot></table>
+  <p class="note">Заплатите са изчислени от часовете × ставка ± бонуси/удръжки. Осигуровките и данъците се изчисляват отделно.</p>
+  <div class="sig">
+    <div><div class="sl">Изготвил: ___________</div></div>
+    <div><div class="sl">Собственик: ___________</div></div>
+  </div></body></html>`;
+  const win = window.open("","_blank");
+  if (!win) { alert("Разреши изскачащи прозорци."); return; }
+  win.document.write(html); win.document.close(); win.focus();
+  setTimeout(() => win.print(), 400);
+};
+
+// ── Export payroll Excel ───────────────────────────────────
+window.exportPayrollExcel = function() {
+  if (!window.XLSX) { alert("XLSX не е зареден."); return; }
+  const header = ["№","Служител","Магазин","Часове","Ставка лв/ч","База","Бонуси","Удръжки","Бруто","Статус"];
+  let no = 1;
+  const rows = _salRecords.filter(r => r.emp.active).map(r => {
+    const { emp, hours, salary } = r;
+    const rate   = salary?.baseRate ?? (emp.hourlyRate || 0);
+    const base   = hours * rate;
+    const bonTot = (salary?.bonuses    || []).reduce((s,b)=>s+(b.amount||0),0);
+    const dedTot = (salary?.deductions || []).reduce((s,d)=>s+(d.amount||0),0);
+    const gross  = salary ? (salary.totalGross ?? (base+bonTot-dedTot)) : base;
+    return [no++, emp.name, emp.shopId==="store1"?"М1":"М2", hours, rate, base, bonTot||0, dedTot||0, gross, salStatusLabel(salary?.status||"none")];
+  });
+  const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Ведомост");
+  XLSX.writeFile(wb, `ведомост-${_salMonth}.xlsx`);
+};
+
+// ════════════════════════════════════════════════════════════
+// 💰 ЗАПЛАТИ — ИСТОРИЯ (screen-salaries)
+// ════════════════════════════════════════════════════════════
+
+async function loadSalaryHistoryScreen() {
+  _salHistTab = "month";
+  ["month","employee","analysis"].forEach(t => {
+    document.getElementById(`salHist${t.charAt(0).toUpperCase()+t.slice(1)}Content`)
+      ?.classList.toggle("hidden", t !== "month");
+    document.querySelector(`.sal-hist-tab[data-tab="${t}"]`)
+      ?.classList.toggle("active", t === "month");
+  });
+  await loadSalHistByMonth();
+
+  // Populate employee selector once
+  const sel = document.getElementById("salHistEmpSel");
+  if (sel && sel.options.length <= 1) {
+    const [e1, e2] = await Promise.all([
+      getDocs(query(collection(db,"employees"), where("shopId","==","store1"), orderBy("name","asc"))),
+      getDocs(query(collection(db,"employees"), where("shopId","==","store2"), orderBy("name","asc")))
+    ]);
+    const all = [...e1.docs.map(d=>({id:d.id,...d.data()})), ...e2.docs.map(d=>({id:d.id,...d.data()}))];
+    sel.innerHTML = `<option value="">— Избери служител —</option>` +
+      all.map(e=>`<option value="${e.id}">${escHtml(e.name)} (${e.shopId==="store1"?"М1":"М2"})</option>`).join("");
+  }
+}
+
+window.salSetHistTab = function(tab) {
+  _salHistTab = tab;
+  ["month","employee","analysis"].forEach(t => {
+    document.getElementById(`salHist${t.charAt(0).toUpperCase()+t.slice(1)}Content`)
+      ?.classList.toggle("hidden", t !== tab);
+    document.querySelector(`.sal-hist-tab[data-tab="${t}"]`)
+      ?.classList.toggle("active", t === tab);
+  });
+  if (tab === "month")    loadSalHistByMonth();
+  if (tab === "employee" && _salHistEmpId) loadSalHistByEmployee(_salHistEmpId);
+  if (tab === "analysis") loadSalHistAnalysis();
+};
+
+async function loadSalHistByMonth() {
+  const el = document.getElementById("salHistMonthContent");
+  if (!el) return;
+  el.innerHTML = `<div class="tasks-empty">Зареждане...</div>`;
+  try {
+    const [s1, s2] = await Promise.all([
+      getDocs(query(collection(db,"salaries"), where("shopId","==","store1"), orderBy("month","desc"))),
+      getDocs(query(collection(db,"salaries"), where("shopId","==","store2"), orderBy("month","desc")))
+    ]);
+    const byMonth = {};
+    [...s1.docs, ...s2.docs].forEach(d => {
+      const r = d.data();
+      if (!byMonth[r.month]) byMonth[r.month] = { m1:0, m2:0, count:0, paid:0 };
+      byMonth[r.month].count++;
+      if (r.status==="paid") byMonth[r.month].paid++;
+      if (r.shopId==="store1") byMonth[r.month].m1 += (r.totalGross||0);
+      else                     byMonth[r.month].m2 += (r.totalGross||0);
+    });
+    const months = Object.keys(byMonth).sort().reverse();
+    if (!months.length) { el.innerHTML = `<div class="tasks-empty">Няма записи</div>`; return; }
+    el.innerHTML = `
+      <div class="table-responsive">
+      <table class="wh-wage-table">
+        <thead><tr>
+          <th>Месец</th><th>М1 заплати</th><th>М2 заплати</th>
+          <th>Общо</th><th>Платени</th><th>—</th>
+        </tr></thead>
+        <tbody>${months.map(mo => {
+          const d   = byMonth[mo];
+          const tot = d.m1 + d.m2;
+          const pct = d.count ? Math.round(d.paid/d.count*100) : 0;
+          return `<tr>
+            <td><strong>${formatMonth(mo)}</strong></td>
+            <td class="mono">${d.m1>0?d.m1.toFixed(2)+" лв.":"—"}</td>
+            <td class="mono">${d.m2>0?d.m2.toFixed(2)+" лв.":"—"}</td>
+            <td class="mono pos">${tot>0?tot.toFixed(2)+" лв.":"—"}</td>
+            <td><div class="sal-progress-wrap">
+              <div class="sal-progress-bar" style="width:${pct}%"></div>
+              <span>${pct}% платени</span>
+            </div></td>
+            <td><button class="sal-hist-view-btn" onclick="viewPayrollMonth('${mo}')">Виж ведомост</button></td>
+          </tr>`;
+        }).join("")}</tbody>
+      </table></div>`;
+  } catch (e) { el.innerHTML = `<div class="tasks-empty">Грешка при зареждане</div>`; }
+}
+
+window.viewPayrollMonth = function(month) {
+  _salMonth = month;
+  showScreen("workhours");
+  wageSetTab("payroll");
+  const inp = document.getElementById("salMonthPicker");
+  if (inp) inp.value = month;
+  const lbl = document.getElementById("salMonthLabel");
+  if (lbl) lbl.textContent = formatMonth(month);
+};
+
+window.salHistEmpChange = async function(empId) {
+  _salHistEmpId = empId;
+  if (empId) await loadSalHistByEmployee(empId);
+};
+
+async function loadSalHistByEmployee(empId) {
+  const el = document.getElementById("salHistEmployeeData");
+  if (!el) return;
+  el.innerHTML = `<div class="tasks-empty">Зареждане...</div>`;
+  try {
+    const q    = query(collection(db,"salaries"), where("employeeId","==",empId), orderBy("month","desc"));
+    const snap = await getDocs(q);
+    if (snap.empty) { el.innerHTML = `<div class="tasks-empty">Няма записи</div>`; return; }
+    el.innerHTML = `
+      <div class="table-responsive" style="margin-top:12px">
+      <table class="wh-wage-table">
+        <thead><tr>
+          <th>Месец</th><th>Часове</th><th>База</th>
+          <th>Бонуси</th><th>Удръжки</th><th>Бруто</th><th>Статус</th>
+        </tr></thead>
+        <tbody>${snap.docs.map(d => {
+          const r   = d.data();
+          const bon = (r.bonuses||[]).reduce((s,b)=>s+(b.amount||0),0);
+          const ded = (r.deductions||[]).reduce((s,dd)=>s+(dd.amount||0),0);
+          return `<tr>
+            <td>${formatMonth(r.month)}</td>
+            <td class="mono">${r.baseHours||0}</td>
+            <td class="mono">${(r.baseAmount||0).toFixed(2)}</td>
+            <td class="mono ${bon>0?"pos":""}">${bon>0?"+"+bon.toFixed(2):"—"}</td>
+            <td class="mono ${ded>0?"neg":""}">${ded>0?"−"+ded.toFixed(2):"—"}</td>
+            <td class="mono pos">${(r.totalGross||0).toFixed(2)} лв.</td>
+            <td><span class="sal-status-badge sal-${r.status}">${salStatusLabel(r.status)}</span></td>
+          </tr>`;
+        }).join("")}</tbody>
+      </table></div>`;
+  } catch (e) { el.innerHTML = `<div class="tasks-empty">Грешка</div>`; }
+}
+
+async function loadSalHistAnalysis() {
+  const el = document.getElementById("salHistAnalysisContent");
+  if (!el) return;
+  el.innerHTML = `<div class="tasks-empty">Зареждане...</div>`;
+  try {
+    const [s1, s2] = await Promise.all([
+      getDocs(query(collection(db,"salaries"), where("shopId","==","store1"), orderBy("month","asc"))),
+      getDocs(query(collection(db,"salaries"), where("shopId","==","store2"), orderBy("month","asc")))
+    ]);
+    const byMonth = {};
+    const push = (docs, key) => docs.forEach(d => {
+      const r = d.data();
+      if (!byMonth[r.month]) byMonth[r.month] = { s1:0, s2:0 };
+      byMonth[r.month][key] += (r.totalGross||0);
+    });
+    push(s1.docs,"s1"); push(s2.docs,"s2");
+
+    const months = Object.keys(byMonth).sort().slice(-12);
+    if (!months.length) { el.innerHTML = `<div class="tasks-empty">Няма данни</div>`; return; }
+
+    const s1Data  = months.map(m => +(byMonth[m]?.s1||0).toFixed(2));
+    const s2Data  = months.map(m => +(byMonth[m]?.s2||0).toFixed(2));
+    const labels  = months.map(m => { const [y,mo]=m.split("-"); return ["Яну","Фев","Мар","Апр","Май","Юни","Юли","Авг","Сеп","Окт","Ное","Дек"][Number(mo)-1]+" "+y; });
+    const totS1   = s1Data.reduce((a,b)=>a+b,0);
+    const totS2   = s2Data.reduce((a,b)=>a+b,0);
+    const avgMon  = months.length ? ((totS1+totS2)/months.length).toFixed(2) : 0;
+
+    el.innerHTML = `
+      <div class="wh-sum-cards" style="margin-bottom:16px">
+        <div class="wh-sum-card">
+          <div class="wh-sum-label">М1 — Общо заплати</div>
+          <div class="wh-sum-value">${totS1.toFixed(0)} лв.</div>
+        </div>
+        <div class="wh-sum-card">
+          <div class="wh-sum-label">М2 — Общо заплати</div>
+          <div class="wh-sum-value">${totS2.toFixed(0)} лв.</div>
+        </div>
+        <div class="wh-sum-card wh-sum-card-total">
+          <div class="wh-sum-label">Средно/месец</div>
+          <div class="wh-sum-value">${avgMon} лв.</div>
+        </div>
+      </div>
+      <div class="sal-chart-wrap card dr-card">
+        <canvas id="salAnalysisChart"></canvas>
+      </div>`;
+
+    if (_salHistChart) { _salHistChart.destroy(); _salHistChart = null; }
+    const ctx = document.getElementById("salAnalysisChart")?.getContext("2d");
+    if (ctx && window.Chart) {
+      _salHistChart = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [
+            { label: "Магазин 1", data: s1Data, backgroundColor: "rgba(63,185,80,.55)", borderColor: "#3fb950", borderWidth: 1 },
+            { label: "Магазин 2", data: s2Data, backgroundColor: "rgba(88,166,255,.55)", borderColor: "#58a6ff", borderWidth: 1 }
+          ]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { labels: { color: "#8b949e" } } },
+          scales: {
+            x: { ticks: { color:"#8b949e" }, grid: { color:"rgba(255,255,255,.05)" } },
+            y: { ticks: { color:"#8b949e" }, grid: { color:"rgba(255,255,255,.05)" } }
+          }
+        }
+      });
+    }
+  } catch (e) { el.innerHTML = `<div class="tasks-empty">Грешка</div>`; }
+}

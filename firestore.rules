@@ -100,6 +100,11 @@ service cloud.firestore {
         || (isStore2() && resource.data.shopId == 'store2');
     }
 
+    // salaries — само owner има достъп (заплатите са поверителни)
+    match /salaries/{salaryId} {
+      allow read, write: if isOwner();
+    }
+
     // notifications — owner вижда всичко; manager-и четат/изтриват само своите (по forShopId)
     match /notifications/{notifId} {
       allow read, write: if isOwner();
