@@ -3068,125 +3068,121 @@ body.light .sal-log-entry        { background: #f0f2f5; }
   #drFormContent {
     max-width: 1600px;
     margin: 0 auto;
-    padding: 20px 28px 60px;
+    padding: 20px 24px 60px;
     display: flex;
-    gap: 24px;
+    gap: 28px;
     align-items: flex-start;
   }
 
   #drLeft  { flex: 3; min-width: 0; }
   #drRight { flex: 2; min-width: 0; }
 
-  /* Обобщението вдясно — sticky, винаги видимо */
-  #drRight .dr-summary-card {
-    position: sticky;
-    top: 116px; /* 56 header + 44 tabs + 16 gap */
-  }
-
-  /* Бутони на desktop: вертикални, по-широки */
-  #drRight .dr-btn-row {
-    flex-direction: column;
-    gap: 10px;
-    margin: 14px 0;
-  }
-  #drRight .dr-btn-row button {
-    min-height: 50px;
-    font-size: .95rem;
-    letter-spacing: .01em;
-  }
-
-  /* Начална каса — по-голяма */
-  .dr-big-input {
-    font-size: 1.5rem;
-    padding: 16px 20px;
-  }
-
-  /* Смени таблица — по-широки inputs */
-  .dr-table .dr-input {
-    font-size: .9rem;
-    padding: 8px 6px;
-    min-height: 38px;
-  }
-
-  /* Крайна каса — по-голяма стойност */
-  .dr-ending-value { font-size: 1.5rem !important; }
-
-  /* Обобщение редове — по-разредени */
-  .dr-sum-row { padding: 7px 0; font-size: .95rem; }
-  .dr-sum-final { padding: 10px 0; }
-
-  /* Без margin-bottom от последната секция вдясно */
-  #drRight .dr-card:last-child { margin-bottom: 0; }
-
-  /* ── DR таблици — по-широки, по-голям текст ─────── */
-
-  /* Разход Стоки — 2 колони */
-  #drGoodsGrid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
-    margin-bottom: 0;
+  /* Заглавия на картите — по-видими */
+  #storeApp .dr-section-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin-bottom: 12px;
   }
 
   /* Разстояние между картите вляво */
   #drLeft .dr-card { margin-bottom: 28px; }
 
-  /* ── Column widths за narrow таблици (Стоки / Други) ── */
-  #drLeft .dr-table-narrow th:nth-child(1),
-  #drLeft .dr-table-narrow td:nth-child(1) { width: 36px; }
-  #drLeft .dr-table-narrow th:nth-child(3),
-  #drLeft .dr-table-narrow td:nth-child(3) { width: 120px; text-align: right; }
-  #drLeft .dr-table-narrow .dr-input[type="number"] { text-align: right; }
+  /* Обобщението вдясно — sticky */
+  #drRight .dr-summary-card { position: sticky; top: 116px; }
+  #drRight .dr-card:last-child { margin-bottom: 0; }
 
-  /* ── Column widths за Странични приходи (4 колони) ─── */
-  #drLeft .dr-table-side th:nth-child(1),
-  #drLeft .dr-table-side td:nth-child(1) { width: 36px; }
-  #drLeft .dr-table-side th:nth-child(3),
-  #drLeft .dr-table-side td:nth-child(3) { width: 88px; }
-  #drLeft .dr-table-side th:nth-child(4),
-  #drLeft .dr-table-side td:nth-child(4) { width: 120px; text-align: right; }
-  #drLeft .dr-table-side .dr-input[type="number"] { text-align: right; }
+  /* ── Бутони — по-големи ─────────────────────────── */
+  #drRight .dr-btn-row { flex-direction: column; gap: 12px; margin: 16px 0; }
+  #drRight .dr-btn-row button {
+    min-height: 58px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    padding: 16px 24px;
+    letter-spacing: .01em;
+  }
 
-  /* ── Column widths за Аванси (4 колони) ────────────── */
-  #drLeft .dr-table-advances th:nth-child(1),
-  #drLeft .dr-table-advances td:nth-child(1) { width: 36px; }
-  #drLeft .dr-table-advances th:nth-child(3),
-  #drLeft .dr-table-advances td:nth-child(3) { width: 110px; }
-  #drLeft .dr-table-advances th:nth-child(4),
-  #drLeft .dr-table-advances td:nth-child(4) { width: 28%; }
+  /* Начална каса */
+  .dr-big-input { font-size: 1.5rem; padding: 16px 20px; }
 
-  /* Всички таблици в drLeft — по-голям текст и по-широки редове */
+  /* ── Всички таблици в drLeft ────────────────────── */
   #drLeft .dr-table {
     width: 100%;
     table-layout: fixed;
-    font-size: .9rem;
+    font-size: 1rem;
   }
   #drLeft .dr-table th {
-    padding: 9px 12px;
-    font-size: .75rem;
+    padding: 11px 12px;
+    font-size: .9rem;
+    font-weight: 700;
   }
-  #drLeft .dr-table tbody tr { height: 52px; }
-  #drLeft .dr-table td { padding: 4px 8px; }
-  #drLeft .dr-table .dr-num { width: 32px; padding: 4px 4px; }
-  #drLeft .dr-table .dr-total-row td { padding: 9px 12px; }
+  #drLeft .dr-table tbody tr { height: 60px; }
+  #drLeft .dr-table td       { padding: 6px 10px; font-size: 1rem; }
+  #drLeft .dr-table .dr-num  { width: 34px; padding: 6px 4px; font-size: .85rem; }
+  #drLeft .dr-table .dr-total-row td {
+    padding: 12px 14px;
+    font-size: 1.1rem;
+    font-weight: 700;
+  }
 
-  /* Inputs — по-широки и по-четими */
+  /* Inputs — 50px, 16px шрифт */
   #drLeft .dr-table .dr-input {
     width: 100%;
-    font-size: 14px;
-    padding: 8px 10px;
-    min-height: 40px;
+    font-size: 1rem;
+    padding: 12px 12px;
+    min-height: 50px;
   }
-  #drLeft .dr-table .dr-input.mono { font-size: 15px; }
-
-  /* Числова колона — задаваме разумна ширина */
+  #drLeft .dr-table .dr-input.mono {
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
   #drLeft .dr-table .dr-input[type="number"] { min-width: 0; }
 
-  /* Общо стоки div — по-голям на desktop */
-  .dr-goods-total {
-    padding: 10px 14px;
-    font-size: .9rem;
-  }
+  /* ── Таблица "Смени" — column widths ────────────── */
+  #drLeft .dr-table-shifts th:nth-child(1),
+  #drLeft .dr-table-shifts td:nth-child(1) { width: 76px; }   /* Смяна */
+  #drLeft .dr-table-shifts th:nth-child(2),
+  #drLeft .dr-table-shifts td:nth-child(2) { width: 88px; }   /* Час */
+  #drLeft .dr-table-shifts th:nth-child(3),
+  #drLeft .dr-table-shifts td:nth-child(3) { width: 200px; }  /* Оператор */
+  #drLeft .dr-table-shifts th:nth-child(4),
+  #drLeft .dr-table-shifts td:nth-child(4) { width: 110px; }  /* Оборот */
+  /* КЕШ, POS, +, - — равно разпределени от table-layout:fixed */
+
+  /* ── Narrow таблици (Стоки / Други) ────────────── */
+  #drLeft .dr-table-narrow th:nth-child(1),
+  #drLeft .dr-table-narrow td:nth-child(1) { width: 38px; }
+  #drLeft .dr-table-narrow th:nth-child(3),
+  #drLeft .dr-table-narrow td:nth-child(3) { width: 140px; text-align: right; }
+  #drLeft .dr-table-narrow .dr-input[type="number"] { text-align: right; }
+
+  /* ── Странични приходи (4 колони) ───────────────── */
+  #drLeft .dr-table-side th:nth-child(1),
+  #drLeft .dr-table-side td:nth-child(1) { width: 38px; }
+  #drLeft .dr-table-side th:nth-child(3),
+  #drLeft .dr-table-side td:nth-child(3) { width: 110px; }
+  #drLeft .dr-table-side th:nth-child(4),
+  #drLeft .dr-table-side td:nth-child(4) { width: 140px; text-align: right; }
+  #drLeft .dr-table-side .dr-input[type="number"] { text-align: right; }
+
+  /* ── Аванси (4 колони) ──────────────────────────── */
+  #drLeft .dr-table-advances th:nth-child(1),
+  #drLeft .dr-table-advances td:nth-child(1) { width: 38px; }
+  #drLeft .dr-table-advances th:nth-child(3),
+  #drLeft .dr-table-advances td:nth-child(3) { width: 130px; }
+  #drLeft .dr-table-advances th:nth-child(4),
+  #drLeft .dr-table-advances td:nth-child(4) { width: 28%; }
+
+  /* ── Стоки — 2 колони на desktop ───────────────── */
+  #drGoodsGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 0; }
+
+  /* Общо стоки */
+  .dr-goods-total { padding: 12px 14px; font-size: 1.05rem; font-weight: 700; }
+
+  /* ── Обобщение вдясно ───────────────────────────── */
+  .dr-sum-row         { padding: 10px 0; font-size: 1rem; }
+  .dr-sum-row .mono   { font-size: 1.1rem; font-weight: 700; }
+  .dr-sum-final       { padding: 14px 0; }
+  .dr-ending-value    { font-size: 1.7rem !important; }
 
   /* ════════════════════════════════════════════════════
      РАБОТНИ ЧАСОВЕ — sidebar + main desktop layout
