@@ -2081,14 +2081,20 @@ function renderDrShiftsTable() {
 }
 
 function renderDrGoodsTable() {
-  const tbody = document.getElementById("drGoodsBody");
+  const tbody      = document.getElementById("drGoodsBody");
+  const tbodyRight = document.getElementById("drGoodsBodyRight");
   if (!tbody) return;
-  tbody.innerHTML = Array.from({ length: DR_GOODS }, (_, i) => `
+  const split = Math.ceil(DR_GOODS / 2); // 8 ред вляво, 7 вдясно
+  const row = i => `
     <tr>
       <td class="dr-num">${i + 1}</td>
       <td><input type="text"   class="dr-input"      placeholder="Доставчик" list="drSuppliersList" data-goods="${i}" data-field="supplier"></td>
       <td><input type="number" class="dr-input mono" step="0.01" placeholder="0.00" data-goods="${i}" data-field="amount" oninput="drCalc()"></td>
-    </tr>`).join("");
+    </tr>`;
+  tbody.innerHTML = Array.from({ length: split }, (_, i) => row(i)).join("");
+  if (tbodyRight) {
+    tbodyRight.innerHTML = Array.from({ length: DR_GOODS - split }, (_, i) => row(split + i)).join("");
+  }
 }
 
 function renderDrOtherTable() {

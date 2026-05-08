@@ -908,19 +908,27 @@
       <!-- Секция 3: Разход Стоки -->
       <div class="card dr-card">
         <div class="dr-section-title">📦 Разход Стоки</div>
-        <div class="table-responsive">
-          <table class="dr-table dr-table-narrow">
-            <thead>
-              <tr><th>#</th><th>Фирма / Доставчик</th><th>Сума (€)</th></tr>
-            </thead>
-            <tbody id="drGoodsBody"></tbody>
-            <tfoot>
-              <tr class="dr-total-row">
-                <td colspan="2"><strong>Общо стоки</strong></td>
-                <td id="drTotalGoods" class="mono">0.00</td>
-              </tr>
-            </tfoot>
-          </table>
+        <div id="drGoodsGrid">
+          <div class="table-responsive">
+            <table class="dr-table dr-table-narrow">
+              <thead>
+                <tr><th>#</th><th>Фирма / Доставчик</th><th>Сума (€)</th></tr>
+              </thead>
+              <tbody id="drGoodsBody"></tbody>
+            </table>
+          </div>
+          <div class="table-responsive">
+            <table class="dr-table dr-table-narrow">
+              <thead>
+                <tr><th>#</th><th>Фирма / Доставчик</th><th>Сума (€)</th></tr>
+              </thead>
+              <tbody id="drGoodsBodyRight"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="dr-goods-total">
+          <strong>Общо стоки</strong>
+          <span id="drTotalGoods" class="mono">0.00</span>
         </div>
       </div>
 

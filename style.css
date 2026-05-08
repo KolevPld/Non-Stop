@@ -1877,6 +1877,17 @@ body.admin .table-responsive.admin-only { display: block; }
 }
 .dr-total-row td { padding: 7px 4px; }
 
+/* Общо стоки — standalone div под 2-колонната мрежа */
+.dr-goods-total {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 7px 8px;
+  background: var(--bg3); font-weight: 700;
+  font-family: var(--mono); font-size: .8rem;
+  border-top: 2px solid var(--border2); color: var(--text);
+  margin-top: 2px;
+}
+body.light .dr-goods-total { background: #f0f2f5; }
+
 /* ── Summary Card ───────────────────────────────── */
 .dr-summary-card { background: var(--bg2); }
 
@@ -3096,6 +3107,52 @@ body.light .sal-log-entry        { background: #f0f2f5; }
 
   /* Без margin-bottom от последната секция вдясно */
   #drRight .dr-card:last-child { margin-bottom: 0; }
+
+  /* ── DR таблици — по-широки, по-голям текст ─────── */
+
+  /* Разход Стоки — 2 колони */
+  #drGoodsGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 0;
+  }
+
+  /* Разстояние между картите вляво */
+  #drLeft .dr-card { margin-bottom: 28px; }
+
+  /* Всички таблици в drLeft — по-голям текст и по-широки редове */
+  #drLeft .dr-table {
+    width: 100%;
+    table-layout: fixed;
+    font-size: .9rem;
+  }
+  #drLeft .dr-table th {
+    padding: 9px 12px;
+    font-size: .75rem;
+  }
+  #drLeft .dr-table tbody tr { height: 52px; }
+  #drLeft .dr-table td { padding: 4px 8px; }
+  #drLeft .dr-table .dr-num { width: 32px; padding: 4px 4px; }
+  #drLeft .dr-table .dr-total-row td { padding: 9px 12px; }
+
+  /* Inputs — по-широки и по-четими */
+  #drLeft .dr-table .dr-input {
+    width: 100%;
+    font-size: 14px;
+    padding: 8px 10px;
+    min-height: 40px;
+  }
+  #drLeft .dr-table .dr-input.mono { font-size: 15px; }
+
+  /* Числова колона — задаваме разумна ширина */
+  #drLeft .dr-table .dr-input[type="number"] { min-width: 0; }
+
+  /* Общо стоки div — по-голям на desktop */
+  .dr-goods-total {
+    padding: 10px 14px;
+    font-size: .9rem;
+  }
 
   /* ════════════════════════════════════════════════════
      РАБОТНИ ЧАСОВЕ — sidebar + main desktop layout
