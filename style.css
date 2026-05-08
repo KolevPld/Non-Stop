@@ -3192,17 +3192,18 @@ body.light .sal-log-entry        { background: #f0f2f5; }
      РАБОТНИ ЧАСОВЕ — sidebar + main desktop layout
      ════════════════════════════════════════════════════ */
 
+  /* Пълна ширина — без централно ограничение */
   .wh-content {
-    max-width: 1900px;
-    width: calc(100% - 20px);
-    margin: 0 auto;
-    padding: 16px 10px 60px;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 12px 0 60px;
     display: flex;
-    gap: 16px;
+    gap: 0;
     align-items: flex-start;
   }
 
-  /* ── Ляв панел — 350px sticky sidebar ─────────────── */
+  /* ── Ляв панел — 350px, залепен вляво ──────────── */
   #whSidebar {
     flex: 0 0 350px;
     min-width: 350px;
@@ -3212,18 +3213,14 @@ body.light .sal-log-entry        { background: #f0f2f5; }
     max-height: calc(100vh - 130px);
     overflow-y: auto;
     scrollbar-width: thin;
+    padding-left: 6px;
   }
   #whSidebar::-webkit-scrollbar { width: 4px; }
   #whSidebar::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
   #whSidebar .card:hover { transform: none; box-shadow: none; }
 
-  /* Employee rows — просторни, hover ефект */
-  #whSidebar .wh-emp-row {
-    padding: 10px 6px;
-    border-radius: 6px;
-    transition: background .15s;
-    border-bottom: 1px solid var(--border);
-  }
+  /* Employee rows */
+  #whSidebar .wh-emp-row { padding: 10px 6px; border-radius: 6px; transition: background .15s; border-bottom: 1px solid var(--border); }
   #whSidebar .wh-emp-row:hover { background: rgba(99,179,237,.07); }
   #whSidebar .wh-emp-row:last-of-type { border-bottom: none; }
   #whSidebar .wh-emp-avatar { width: 42px; height: 42px; font-size: .92rem; }
@@ -3242,108 +3239,139 @@ body.light .sal-log-entry        { background: #f0f2f5; }
   #whSidebar .wh-emp-form .wh-form-btns button { flex: 1; min-height: 46px; font-size: .95rem; }
   #whSidebar .wh-add-emp-btn { min-height: 44px; font-size: .95rem; }
 
-  /* ── Десен панел — заема останалото пространство ─── */
-  #whMain { flex: 1; min-width: 0; overflow: hidden; }
+  /* ── Десен панел — залепен вдясно ───────────────── */
+  #whMain { flex: 1; min-width: 0; padding-right: 6px; }
   #whMain .card:hover { transform: none; box-shadow: none; }
 
-  /* Таблицата — пълна ширина, без хоризонтален скрол */
-  #whMain .wh-table-scroll-wrap { overflow-x: hidden; }
+  /* ── Таблица — пълна ширина, scroll само при нужда ─ */
+  #whMain .wh-table-scroll-wrap { overflow-x: auto; }
   #whMain .wh-table-scroll { min-width: 0; }
   #whMain .wh-table {
     width: 100%;
     table-layout: fixed;
-    font-size: .72rem;
+    font-size: 1rem;
+    border-collapse: collapse;
   }
 
-  /* Колона "Служител" — фиксирана ширина */
+  /* Дебели разделителни линии */
+  #whMain .wh-table th { border: 2px solid var(--border2); }
+  #whMain .wh-table td { border: 1.5px solid var(--border2); }
+
+  /* ── Колона "Служител" — 210px ─────────────────── */
   #whMain .wh-emp-th,
   #whMain .wh-emp-cell {
-    width: 180px;
-    min-width: 180px;
-    max-width: 180px;
-    font-size: .78rem;
+    width: 210px;
+    min-width: 210px;
+    max-width: 210px;
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 12px 10px;
   }
 
-  /* Колони с дни — компактни (table-layout:fixed ги разпределя равно) */
+  /* ── Колони с дни — равно разпределени ─────────── */
   #whMain .wh-day-th {
     min-width: unset;
     max-width: unset;
-    padding: 3px 1px;
+    padding: 8px 2px;
   }
-  #whMain .wh-table td { padding: 4px 1px; font-size: .72rem; }
 
-  /* Колона "ОБЩО" — фиксирана, sticky дясно */
+  /* ── Клетки с часове — голям bold шрифт ─────────── */
+  #whMain .wh-table td {
+    padding: 0;
+    height: 64px;
+    font-size: 1.1rem;
+    font-weight: 700;
+  }
+  #whMain .wh-emp-cell { height: auto; padding: 12px 10px; font-weight: 600; font-size: 1rem; }
+
+  /* ── Колона "ОБЩО" — sticky дясно ───────────────── */
   #whMain .wh-total-th,
-  #whMain .wh-total-cell { width: 48px; min-width: 48px; }
+  #whMain .wh-total-cell {
+    width: 62px;
+    min-width: 62px;
+    font-size: 1.1rem;
+    font-weight: 700;
+  }
   #whMain .wh-total-cell {
     position: sticky; right: 0; z-index: 2;
     background: var(--bg2);
-    box-shadow: -3px 0 8px rgba(0,0,0,.18);
+    box-shadow: -4px 0 10px rgba(0,0,0,.22);
+    padding: 0;
+    height: 64px;
   }
   #whMain .wh-total-th {
     position: sticky; right: 0; z-index: 4;
     background: var(--bg2) !important;
-    box-shadow: -3px 0 8px rgba(0,0,0,.18);
+    box-shadow: -4px 0 10px rgba(0,0,0,.22);
+    font-size: 1.1rem; font-weight: 700;
   }
+  /* "Общо" ред — bold фон */
+  #whMain .wh-totals-row .wh-total-cell { height: auto; padding: 14px 6px; }
+  #whMain .wh-totals-row .wh-emp-cell   { font-size: 1rem; font-weight: 700; }
+  #whMain .wh-totals-row td             { font-size: 1.1rem; font-weight: 700; }
 
-  /* ── Ред с дните на седмицата ────────────────────── */
+  /* ── Ред с дните на седмицата (Пн, Вт...) ──────── */
   #whMain .wh-dow-th {
-    font-size: .6rem;
-    font-weight: 500;
+    font-size: .875rem;
+    font-weight: 600;
     color: var(--text3);
-    padding: 3px 1px;
-    border-bottom: none;
+    padding: 6px 2px;
+    border-bottom: 1px solid var(--border);
   }
-  #whMain .wh-num-row th { border-top: none; }
 
-  /* ── Текущ ден — зелен акцент в хедъра ─────────── */
+  /* ── Ред с числата на дните ─────────────────────── */
+  #whMain .wh-num-row th {
+    font-size: 1.1rem;
+    font-weight: 700;
+    padding: 8px 2px;
+    border-top: none;
+  }
+
+  /* ── Текущ ден — зелен акцент ───────────────────── */
   #whMain .wh-day-today {
     color: var(--green) !important;
-    background: rgba(63,185,80,.18) !important;
+    background: rgba(63,185,80,.22) !important;
     font-weight: 700;
   }
+  #whMain .wh-cell-today-col                         { background: rgba(63,185,80,.07)  !important; }
+  #whMain .wh-cell-today-col.wh-cell-normal           { background: rgba(63,185,80,.30)  !important; }
+  #whMain .wh-cell-today-col.wh-cell-long             { background: rgba(227,179,65,.28) !important; }
+  #whMain .wh-cell-today-col.wh-cell-extra            { background: rgba(249,120,58,.30) !important; }
+  #whMain .wh-cell-today-col.wh-cell-double           { background: rgba(248,81,73,.28)  !important; }
 
-  /* Клетките на текущия ден — много лек зелен оттенък */
-  #whMain .wh-cell-today-col {
-    background: rgba(63,185,80,.05) !important;
-  }
-  #whMain .wh-cell-today-col.wh-cell-normal  { background: rgba(63,185,80,.25) !important; }
-  #whMain .wh-cell-today-col.wh-cell-long    { background: rgba(227,179,65,.25) !important; }
-  #whMain .wh-cell-today-col.wh-cell-extra   { background: rgba(249,120,58,.28) !important; }
-  #whMain .wh-cell-today-col.wh-cell-double  { background: rgba(248,81,73,.25)  !important; }
+  /* ── Уикенди — по-ярки ──────────────────────────── */
+  #whMain .wh-day-weekend { color: var(--amber) !important; font-weight: 700; }
+  #whMain .wh-cell-weekend                            { background: rgba(0,0,0,.09)       !important; }
+  #whMain .wh-cell-weekend.wh-cell-normal             { background: rgba(63,185,80,.16)   !important; }
+  #whMain .wh-cell-weekend.wh-cell-long               { background: rgba(227,179,65,.16)  !important; }
+  #whMain .wh-cell-weekend.wh-cell-extra              { background: rgba(249,120,58,.18)  !important; }
+  #whMain .wh-cell-weekend.wh-cell-double             { background: rgba(248,81,73,.16)   !important; }
 
-  /* ── Уикенд колони — малко по-тъмни ─────────────── */
-  #whMain .wh-cell-weekend { background: rgba(0,0,0,.06) !important; }
-  #whMain .wh-cell-weekend.wh-cell-normal  { background: rgba(63,185,80,.14)  !important; }
-  #whMain .wh-cell-weekend.wh-cell-long    { background: rgba(227,179,65,.14) !important; }
-  #whMain .wh-cell-weekend.wh-cell-extra   { background: rgba(249,120,58,.16) !important; }
-  #whMain .wh-cell-weekend.wh-cell-double  { background: rgba(248,81,73,.14)  !important; }
-  #whMain .wh-day-weekend { color: var(--text3); }
-
-  /* ── Hover ред (служител) ────────────────────────── */
-  #whMain .wh-table tbody tr:hover td { background: rgba(99,179,237,.08) !important; }
+  /* ── Hover ред ───────────────────────────────────── */
+  #whMain .wh-table tbody tr:hover td                { background: rgba(99,179,237,.09)  !important; }
   #whMain .wh-table tbody tr:hover .wh-emp-cell,
-  #whMain .wh-table tbody tr:hover .wh-total-cell { background: rgba(99,179,237,.14) !important; }
+  #whMain .wh-table tbody tr:hover .wh-total-cell    { background: rgba(99,179,237,.16)  !important; }
 
-  /* ── Hover колона (ден) — js добавя wh-col-hover ── */
-  #whMain .wh-col-hover { background: rgba(99,179,237,.12) !important; }
-  #whMain .wh-cell.wh-col-hover { background: rgba(99,179,237,.18) !important; }
+  /* ── Hover колона (JS wh-col-hover) ─────────────── */
+  #whMain .wh-col-hover      { background: rgba(99,179,237,.13) !important; }
+  #whMain .wh-cell.wh-col-hover { background: rgba(99,179,237,.20) !important; }
 
-  /* ── Hover върху отделна клетка ──────────────────── */
+  /* ── Hover клетка ────────────────────────────────── */
   #whMain .wh-cell:hover {
-    background: rgba(99,179,237,.28) !important;
-    outline: 2px solid rgba(99,179,237,.6);
+    background: rgba(99,179,237,.32) !important;
+    outline: 2px solid rgba(99,179,237,.65);
     outline-offset: -1px;
     z-index: 3; position: relative;
   }
 
-  /* ── Month bar ───────────────────────────────────── */
-  #whMain .wh-month-bar { gap: 20px; padding: 10px 0 8px; }
-  #whMain .wh-month-label { font-size: 1.05rem; }
+  /* ── Навигация месец — 22px заглавие ────────────── */
+  #whMain .wh-month-bar { gap: 24px; padding: 14px 0 10px; }
+  #whMain .wh-month-label { font-size: 1.4rem; font-weight: 700; letter-spacing: .01em; }
+  #whMain .wh-month-btn   { width: 44px; height: 44px; font-size: 1.5rem; }
 
-  /* Toolbar на desktop */
-  #whMain .wh-toolbar { padding: 6px 0 12px; }
-  .wh-tool-btn { min-height: 38px; font-size: .85rem; padding: 0 16px; }
+  /* ── Toolbar бутони — по-голям ───────────────────── */
+  #whMain .wh-toolbar { padding: 6px 0 14px; gap: 12px; }
+  #whMain .wh-tool-btn { padding: 12px 24px; font-size: .95rem; min-height: 46px; }
 
   /* ════════════════════════════════════════════════════
      LIGHT THEME overrides за desktop layout
