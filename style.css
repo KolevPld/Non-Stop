@@ -2394,6 +2394,16 @@ body.light .dr-owner-totals-row td { background: #f0f2f5 !important; }
   user-select: none;
 }
 
+/* ── Employee avatar circle ──────────────────────── */
+.wh-emp-avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: var(--accent); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: .8rem; flex-shrink: 0;
+  letter-spacing: .02em; user-select: none;
+}
+.wh-emp-inactive .wh-emp-avatar { opacity: .55; }
+
 /* ── Employee list ────────────────────────────────── */
 .wh-emp-row {
   display: flex; align-items: center; justify-content: space-between;
@@ -3191,10 +3201,11 @@ body.light .sal-log-entry        { background: #f0f2f5; }
     align-items: flex-start;
   }
 
-  /* Ляв панел — sticky sidebar */
+  /* Ляв панел — sticky sidebar, 30% */
   #whSidebar {
-    flex: 0 0 272px;
-    min-width: 272px;
+    flex: 0 0 30%;
+    min-width: 300px;
+    max-width: 460px;
     position: sticky;
     top: 110px;
     max-height: calc(100vh - 130px);
@@ -3204,8 +3215,66 @@ body.light .sal-log-entry        { background: #f0f2f5; }
   #whSidebar::-webkit-scrollbar { width: 4px; }
   #whSidebar::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
 
-  /* Ляв панел — без hover lift (работи като UI panel) */
+  /* Ляв панел — без hover lift */
   #whSidebar .card:hover { transform: none; box-shadow: none; }
+
+  /* Employee rows — по-просторни, hover ефект */
+  #whSidebar .wh-emp-row {
+    padding: 10px 6px;
+    border-radius: 6px;
+    transition: background .15s;
+    border-bottom: 1px solid var(--border);
+  }
+  #whSidebar .wh-emp-row:hover { background: rgba(99,179,237,.07); }
+  #whSidebar .wh-emp-row:last-of-type { border-bottom: none; }
+
+  /* Avatar по-голям */
+  #whSidebar .wh-emp-avatar {
+    width: 42px; height: 42px; font-size: .92rem;
+  }
+
+  /* Пълно показване на имена без съкращения */
+  #whSidebar .wh-emp-name {
+    font-size: 1rem;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
+  #whSidebar .wh-emp-pos { font-size: .82rem; margin-top: 4px; }
+
+  /* Бутони за действие — по-удобни */
+  #whSidebar .wh-emp-actions { gap: 8px; }
+  #whSidebar .wh-emp-actions .btn-icon {
+    font-size: 1rem;
+    padding: 5px 9px;
+    min-width: 36px;
+    min-height: 36px;
+  }
+
+  /* Форма за нов/редакция — по-голяма на desktop */
+  #whSidebar .wh-emp-form { padding: 18px 16px; }
+  #whSidebar .wh-emp-form-title { font-size: 1rem; margin-bottom: 14px; }
+  #whSidebar .wh-emp-form input[type="text"],
+  #whSidebar .wh-emp-form input[type="number"],
+  #whSidebar .wh-emp-form select {
+    padding: 11px 14px;
+    font-size: 1rem;
+  }
+  #whSidebar .wh-emp-form .wh-form-btns {
+    gap: 10px;
+    margin-top: 16px;
+  }
+  #whSidebar .wh-emp-form .wh-form-btns button {
+    flex: 1;
+    min-height: 46px;
+    font-size: .95rem;
+  }
+
+  /* Бутон "+ Нов служител" — по-голям */
+  #whSidebar .wh-add-emp-btn {
+    min-height: 44px;
+    font-size: .95rem;
+  }
 
   /* Десен панел — заема цялото останало пространство */
   #whMain {

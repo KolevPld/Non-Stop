@@ -3440,6 +3440,13 @@ async function loadEmployees() {
   } catch (e) { console.error("loadEmployees:", e); }
 }
 
+function empInitials(name) {
+  const parts = (name || "?").trim().split(/\s+/);
+  return parts.length >= 2
+    ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    : parts[0][0].toUpperCase();
+}
+
 function renderEmployeeList() {
   const el = document.getElementById("whEmpList");
   if (!el) return;
@@ -3449,6 +3456,7 @@ function renderEmployeeList() {
   }
   el.innerHTML = _whEmployees.map(emp => `
     <div class="wh-emp-row ${emp.active ? "" : "wh-emp-inactive"}">
+      <div class="wh-emp-avatar">${empInitials(emp.name)}</div>
       <div class="wh-emp-info">
         <div class="wh-emp-name">${escHtml(emp.name)}</div>
         <div class="wh-emp-pos">${escHtml(emp.position || "—")}</div>
@@ -3468,6 +3476,8 @@ window.showAddEmpForm = function() {
   document.getElementById("whEmpFormTitle").textContent = "Нов служител";
   document.getElementById("whEmpName").value     = "";
   document.getElementById("whEmpPosition").value = "Касиер";
+  const rateEl = document.getElementById("whEmpRate");
+  if (rateEl) rateEl.value = "";
   document.getElementById("whEmpActive").checked = true;
   document.getElementById("whEmpForm").classList.remove("hidden");
   document.getElementById("whEmpName").focus();
@@ -3480,6 +3490,8 @@ window.editEmployee = function(id) {
   document.getElementById("whEmpFormTitle").textContent = "Редакция";
   document.getElementById("whEmpName").value     = emp.name || "";
   document.getElementById("whEmpPosition").value = emp.position || "Касиер";
+  const rateEl = document.getElementById("whEmpRate");
+  if (rateEl) rateEl.value = emp.hourlyRate > 0 ? emp.hourlyRate : "";
   document.getElementById("whEmpActive").checked = !!emp.active;
   document.getElementById("whEmpForm").classList.remove("hidden");
   document.getElementById("whEmpName").focus();
@@ -3494,16 +3506,19 @@ window.saveEmployee = async function() {
   const name     = document.getElementById("whEmpName").value.trim();
   const position = document.getElementById("whEmpPosition").value;
   const active   = document.getElementById("whEmpActive").checked;
+  const rateRaw  = document.getElementById("whEmpRate")?.value;
+  const rate     = rateRaw !== "" && rateRaw != null ? (parseFloat(rateRaw) || 0) : null;
   if (!name) { alert("Въведи три имена."); return; }
 
   const data = { shopId: _whShopId, name, position, active };
+  if (rate !== null) data.hourlyRate = rate;
   try {
     if (_whEditEmpId) {
       await updateDoc(doc(db, "employees", _whEditEmpId), data);
     } else {
-      data.createdAt          = new Date().toISOString();
-      data.hourlyRate         = 0;
-      data.hourlyRateHistory  = [];
+      data.createdAt         = new Date().toISOString();
+      data.hourlyRate        = rate ?? 0;
+      data.hourlyRateHistory = [];
       await addDoc(collection(db, "employees"), data);
     }
     document.getElementById("whEmpForm").classList.add("hidden");
