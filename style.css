@@ -3059,29 +3059,30 @@ body.light .sal-log-entry        { background: #f0f2f5; }
      ════════════════════════════════════════════════════ */
 
   .dr-top-bar {
-    padding: 10px 28px;
-    max-width: 1600px;
-    margin-left: auto;
-    margin-right: auto;
+    padding: 10px 20px;
+    width: 100%;
+    max-width: none;
+    margin: 0;
   }
 
   #drFormContent {
-    max-width: 1600px;
-    margin: 0 auto;
-    padding: 20px 24px 60px;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 20px 0 60px;
     display: flex;
-    gap: 28px;
+    gap: 25px;
     align-items: flex-start;
   }
 
-  #drLeft  { flex: 3; min-width: 0; }
-  #drRight { flex: 2; min-width: 0; }
+  #drLeft  { flex: 7; min-width: 0; }
+  #drRight { flex: 3; min-width: 0; }
 
-  /* Заглавия на картите — по-видими */
+  /* Заглавия на картите */
   #storeApp .dr-section-title {
-    font-size: 1.05rem;
+    font-size: 1.15rem;
     font-weight: 700;
-    margin-bottom: 12px;
+    margin-bottom: 14px;
   }
 
   /* Разстояние между картите вляво */
@@ -3091,13 +3092,13 @@ body.light .sal-log-entry        { background: #f0f2f5; }
   #drRight .dr-summary-card { position: sticky; top: 116px; }
   #drRight .dr-card:last-child { margin-bottom: 0; }
 
-  /* ── Бутони — по-големи ─────────────────────────── */
-  #drRight .dr-btn-row { flex-direction: column; gap: 12px; margin: 16px 0; }
+  /* ── Бутони ─────────────────────────────────────── */
+  #drRight .dr-btn-row { flex-direction: column; gap: 14px; margin: 18px 0; }
   #drRight .dr-btn-row button {
-    min-height: 58px;
-    font-size: 1.05rem;
+    min-height: 64px;
+    font-size: 1.2rem;
     font-weight: 700;
-    padding: 16px 24px;
+    padding: 18px 30px;
     letter-spacing: .01em;
   }
 
@@ -3108,67 +3109,66 @@ body.light .sal-log-entry        { background: #f0f2f5; }
   #drLeft .dr-table {
     width: 100%;
     table-layout: fixed;
-    font-size: 1rem;
+    font-size: 1.1rem;
   }
   #drLeft .dr-table th {
-    padding: 11px 12px;
-    font-size: .9rem;
+    padding: 13px 14px;
+    font-size: 1rem;
     font-weight: 700;
   }
-  #drLeft .dr-table tbody tr { height: 60px; }
-  #drLeft .dr-table td       { padding: 6px 10px; font-size: 1rem; }
-  #drLeft .dr-table .dr-num  { width: 34px; padding: 6px 4px; font-size: .85rem; }
+  #drLeft .dr-table tbody tr { height: 68px; }
+  #drLeft .dr-table td       { padding: 8px 12px; font-size: 1.1rem; }
+  #drLeft .dr-table .dr-num  { width: 36px; padding: 6px 4px; font-size: .9rem; }
   #drLeft .dr-table .dr-total-row td {
-    padding: 12px 14px;
-    font-size: 1.1rem;
+    padding: 14px 16px;
+    font-size: 1.25rem;
     font-weight: 700;
   }
 
-  /* Inputs — 50px, 16px шрифт */
+  /* Inputs — 58px, 18px шрифт */
   #drLeft .dr-table .dr-input {
     width: 100%;
-    font-size: 1rem;
-    padding: 12px 12px;
-    min-height: 50px;
+    font-size: 1.125rem;
+    padding: 15px 14px;
+    min-height: 58px;
   }
   #drLeft .dr-table .dr-input.mono {
-    font-size: 1.05rem;
+    font-size: 1.2rem;
     font-weight: 700;
   }
   #drLeft .dr-table .dr-input[type="number"] { min-width: 0; }
 
   /* ── Таблица "Смени" — column widths ────────────── */
   #drLeft .dr-table-shifts th:nth-child(1),
-  #drLeft .dr-table-shifts td:nth-child(1) { width: 76px; }   /* Смяна */
+  #drLeft .dr-table-shifts td:nth-child(1) { width: 80px; }   /* Смяна */
   #drLeft .dr-table-shifts th:nth-child(2),
-  #drLeft .dr-table-shifts td:nth-child(2) { width: 88px; }   /* Час */
+  #drLeft .dr-table-shifts td:nth-child(2) { width: 96px; }   /* Час */
   #drLeft .dr-table-shifts th:nth-child(3),
-  #drLeft .dr-table-shifts td:nth-child(3) { width: 200px; }  /* Оператор */
+  #drLeft .dr-table-shifts td:nth-child(3) { width: 220px; }  /* Оператор */
   #drLeft .dr-table-shifts th:nth-child(4),
-  #drLeft .dr-table-shifts td:nth-child(4) { width: 110px; }  /* Оборот */
-  /* КЕШ, POS, +, - — равно разпределени от table-layout:fixed */
+  #drLeft .dr-table-shifts td:nth-child(4) { width: 120px; }  /* Оборот */
 
   /* ── Narrow таблици (Стоки / Други) ────────────── */
   #drLeft .dr-table-narrow th:nth-child(1),
-  #drLeft .dr-table-narrow td:nth-child(1) { width: 38px; }
+  #drLeft .dr-table-narrow td:nth-child(1) { width: 40px; }
   #drLeft .dr-table-narrow th:nth-child(3),
-  #drLeft .dr-table-narrow td:nth-child(3) { width: 140px; text-align: right; }
+  #drLeft .dr-table-narrow td:nth-child(3) { width: 160px; text-align: right; }
   #drLeft .dr-table-narrow .dr-input[type="number"] { text-align: right; }
 
   /* ── Странични приходи (4 колони) ───────────────── */
   #drLeft .dr-table-side th:nth-child(1),
-  #drLeft .dr-table-side td:nth-child(1) { width: 38px; }
+  #drLeft .dr-table-side td:nth-child(1) { width: 40px; }
   #drLeft .dr-table-side th:nth-child(3),
-  #drLeft .dr-table-side td:nth-child(3) { width: 110px; }
+  #drLeft .dr-table-side td:nth-child(3) { width: 120px; }
   #drLeft .dr-table-side th:nth-child(4),
-  #drLeft .dr-table-side td:nth-child(4) { width: 140px; text-align: right; }
+  #drLeft .dr-table-side td:nth-child(4) { width: 160px; text-align: right; }
   #drLeft .dr-table-side .dr-input[type="number"] { text-align: right; }
 
   /* ── Аванси (4 колони) ──────────────────────────── */
   #drLeft .dr-table-advances th:nth-child(1),
-  #drLeft .dr-table-advances td:nth-child(1) { width: 38px; }
+  #drLeft .dr-table-advances td:nth-child(1) { width: 40px; }
   #drLeft .dr-table-advances th:nth-child(3),
-  #drLeft .dr-table-advances td:nth-child(3) { width: 130px; }
+  #drLeft .dr-table-advances td:nth-child(3) { width: 140px; }
   #drLeft .dr-table-advances th:nth-child(4),
   #drLeft .dr-table-advances td:nth-child(4) { width: 28%; }
 
@@ -3176,13 +3176,15 @@ body.light .sal-log-entry        { background: #f0f2f5; }
   #drGoodsGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 0; }
 
   /* Общо стоки */
-  .dr-goods-total { padding: 12px 14px; font-size: 1.05rem; font-weight: 700; }
+  .dr-goods-total { padding: 14px 16px; font-size: 1.2rem; font-weight: 700; }
 
   /* ── Обобщение вдясно ───────────────────────────── */
-  .dr-sum-row         { padding: 10px 0; font-size: 1rem; }
-  .dr-sum-row .mono   { font-size: 1.1rem; font-weight: 700; }
-  .dr-sum-final       { padding: 14px 0; }
-  .dr-ending-value    { font-size: 1.7rem !important; }
+  .dr-summary-card .card-title { font-size: 1.25rem; font-weight: 700; }
+  .dr-sum-row         { padding: 11px 0; font-size: 1.1rem; }
+  .dr-sum-row .mono   { font-size: 1.25rem; font-weight: 700; }
+  .dr-sum-final       { padding: 16px 0; }
+  .dr-sum-final .dr-sum-label { font-size: 1.125rem; font-weight: 700; }
+  .dr-ending-value    { font-size: 1.9rem !important; font-weight: 700; }
 
   /* ════════════════════════════════════════════════════
      РАБОТНИ ЧАСОВЕ — sidebar + main desktop layout
