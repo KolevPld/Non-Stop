@@ -1990,13 +1990,16 @@ const DR_SHIFTS_DEF = [
   { name: "Следобедна", from: "15:00", to: "23:00" },
   { name: "Нощна",      from: "23:00", to: "07:00" }
 ];
-const DR_GOODS = 15;
-const DR_OTHER = 5;
+const DR_GOODS        = 15;
+const DR_OTHER        = 5;
+const DR_SIDE_INCOMES = 3;
+const DR_ADVANCES     = 3;
 
-let _drShopId  = null;   // "store1" | "store2"
-let _drStatus  = "draft";
-let _drDocId   = null;   // Firestore document ID
-let _drData    = null;
+let _drShopId    = null;   // "store1" | "store2"
+let _drStatus    = "draft";
+let _drDocId     = null;   // Firestore document ID
+let _drData      = null;
+let _drEmployees = [];
 let _suppliers = [];
 
 // ── Инициализация ────────────────────────────────────
@@ -2009,6 +2012,8 @@ function initDailyReport(storeRole) {
   renderDrShiftsTable();
   renderDrGoodsTable();
   renderDrOtherTable();
+  renderDrSideIncomeTable();
+  loadDrEmployees(); // async — renders advance rows after employees are fetched
 
   const today  = new Date().toISOString().slice(0, 10);
   const dateEl = document.getElementById("drDate");
@@ -2108,6 +2113,59 @@ function renderDrOtherTable() {
     </tr>`).join("");
 }
 
+function renderDrSideIncomeTable() {
+  const tbody = document.getElementById("drSideIncomeBody");
+  if (!tbody) return;
+  tbody.innerHTML = Array.from({ length: DR_SIDE_INCOMES }, (_, i) => `
+    <tr>
+      <td class="dr-num">${i + 1}</td>
+      <td><input type="text" class="dr-input" placeholder="Описание" data-side="${i}" data-field="desc"></td>
+      <td>
+        <select class="dr-input" data-side="${i}" data-field="method">
+          <option value="">—</option>
+          <option value="Кеш">Кеш</option>
+          <option value="Карта">Карта</option>
+        </select>
+      </td>
+      <td><input type="number" class="dr-input mono" step="0.01" placeholder="0.00" data-side="${i}" data-field="amount" oninput="drCalc()"></td>
+    </tr>`).join("");
+}
+
+async function loadDrEmployees() {
+  if (!_drShopId) return;
+  try {
+    const snap = await getDocs(query(
+      collection(db, "employees"),
+      where("shopId", "==", _drShopId)
+    ));
+    _drEmployees = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(e => e.active !== false)
+      .sort((a, b) => (a.name || "").localeCompare(b.name || "", "bg"));
+    renderDrAdvancesTable();
+  } catch (e) { console.error("loadDrEmployees:", e); }
+}
+
+function renderDrAdvancesTable() {
+  const tbody = document.getElementById("drAdvancesBody");
+  if (!tbody) return;
+  const empOpts = _drEmployees
+    .map(e => `<option value="${escHtml(e.id)}">${escHtml(e.name)}</option>`)
+    .join("");
+  tbody.innerHTML = Array.from({ length: DR_ADVANCES }, (_, i) => `
+    <tr>
+      <td class="dr-num">${i + 1}</td>
+      <td>
+        <select class="dr-input" data-adv="${i}" data-field="empId">
+          <option value="">— Служител —</option>
+          ${empOpts}
+        </select>
+      </td>
+      <td><input type="number" class="dr-input mono" step="0.01" placeholder="0.00" data-adv="${i}" data-field="amount" oninput="drCalc()"></td>
+      <td><input type="text"   class="dr-input"      placeholder="Бележка" data-adv="${i}" data-field="note"></td>
+    </tr>`).join("");
+}
+
 // ── Събиране на данни от формата ─────────────────────
 function collectDrData() {
   const date      = document.getElementById("drDate")?.value || "";
@@ -2135,17 +2193,38 @@ function collectDrData() {
     amount:      parseFloat(drField("other", i, "amount")) || 0
   })).filter(o => o.description || o.amount > 0);
 
-  const totalCashIncome   = r2(shifts.reduce((s, sh) => s + sh.cash, 0));
-  const totalPosIncome    = r2(shifts.reduce((s, sh) => s + sh.pos, 0));
-  const totalGoodsExpense = r2(expensesGoods.reduce((s, g) => s + g.amount, 0));
-  const totalOtherExpense = r2(expensesOther.reduce((s, o) => s + o.amount, 0));
-  const endCash = r2(startCash + totalCashIncome - totalGoodsExpense - totalOtherExpense);
+  const sideIncomes = Array.from({ length: DR_SIDE_INCOMES }, (_, i) => ({
+    description: drField("side", i, "desc")   || "",
+    method:      drField("side", i, "method") || "",
+    amount:      parseFloat(drField("side", i, "amount")) || 0
+  })).filter(s => s.description || s.amount > 0);
+
+  const advances = Array.from({ length: DR_ADVANCES }, (_, i) => {
+    const empId = drField("adv", i, "empId") || "";
+    const emp   = _drEmployees.find(e => e.id === empId);
+    return {
+      employeeId:   empId,
+      employeeName: emp?.name || "",
+      amount:       parseFloat(drField("adv", i, "amount")) || 0,
+      note:         drField("adv", i, "note") || ""
+    };
+  }).filter(a => a.employeeId || a.amount > 0);
+
+  const totalCashIncome      = r2(shifts.reduce((s, sh) => s + sh.cash, 0));
+  const totalPosIncome       = r2(shifts.reduce((s, sh) => s + sh.pos, 0));
+  const totalGoodsExpense    = r2(expensesGoods.reduce((s, g) => s + g.amount, 0));
+  const totalOtherExpense    = r2(expensesOther.reduce((s, o) => s + o.amount, 0));
+  const totalSideIncomes     = r2(sideIncomes.reduce((s, si) => s + si.amount, 0));
+  const totalSideIncomesCash = r2(sideIncomes.filter(si => si.method === "Кеш").reduce((s, si) => s + si.amount, 0));
+  const totalAdvances        = r2(advances.reduce((s, a) => s + a.amount, 0));
+  const endCash = r2(startCash + totalCashIncome + totalSideIncomesCash - totalGoodsExpense - totalOtherExpense - totalAdvances);
 
   return {
     shopId: _drShopId, date, startCash, shifts,
-    expensesGoods, expensesOther,
+    expensesGoods, expensesOther, sideIncomes, advances,
     totalCashIncome, totalPosIncome,
-    totalGoodsExpense, totalOtherExpense, endCash
+    totalGoodsExpense, totalOtherExpense,
+    totalSideIncomes, totalSideIncomesCash, totalAdvances, endCash
   };
 }
 
@@ -2180,13 +2259,17 @@ window.drCalc = function() {
   setText("drTotalPos",     d.totalPosIncome.toFixed(2));
   setText("drTotalPlus",    totalPlus.toFixed(2));
   setText("drTotalMinus",   totalMinus.toFixed(2));
-  setText("drTotalGoods",   d.totalGoodsExpense.toFixed(2));
-  setText("drTotalOther",   d.totalOtherExpense.toFixed(2));
+  setText("drTotalGoods",       d.totalGoodsExpense.toFixed(2));
+  setText("drTotalOther",       d.totalOtherExpense.toFixed(2));
+  setText("drTotalSideIncome",  (d.totalSideIncomes || 0).toFixed(2));
+  setText("drTotalAdvances",    (d.totalAdvances    || 0).toFixed(2));
 
-  setText("drSumStarting",  d.startCash.toFixed(2) + " €");
-  setText("drSumCash",      d.totalCashIncome.toFixed(2) + " €");
-  setText("drSumPos",       d.totalPosIncome.toFixed(2) + " €");
-  setText("drSumExpenses",  r2(d.totalGoodsExpense + d.totalOtherExpense).toFixed(2) + " €");
+  setText("drSumStarting",   d.startCash.toFixed(2) + " €");
+  setText("drSumCash",       d.totalCashIncome.toFixed(2) + " €");
+  setText("drSumPos",        d.totalPosIncome.toFixed(2) + " €");
+  setText("drSumSideIncome", (d.totalSideIncomes || 0).toFixed(2) + " €");
+  setText("drSumExpenses",   r2(d.totalGoodsExpense + d.totalOtherExpense).toFixed(2) + " €");
+  setText("drSumAdvances",   (d.totalAdvances    || 0).toFixed(2) + " €");
 
   const endEl = document.getElementById("drSumEnding");
   if (endEl) {
@@ -2292,6 +2375,22 @@ function populateDrForm(data) {
     setDrField("other", i, "amount", o.amount       || "");
   }
 
+  const sides = data.sideIncomes || [];
+  for (let i = 0; i < DR_SIDE_INCOMES; i++) {
+    const s = sides[i] || {};
+    setDrField("side", i, "desc",   s.description || "");
+    setDrField("side", i, "method", s.method      || "");
+    setDrField("side", i, "amount", s.amount > 0 ? s.amount : "");
+  }
+
+  const advs = data.advances || [];
+  for (let i = 0; i < DR_ADVANCES; i++) {
+    const a = advs[i] || {};
+    setDrField("adv", i, "empId",  a.employeeId || "");
+    setDrField("adv", i, "amount", a.amount > 0 ? a.amount : "");
+    setDrField("adv", i, "note",   a.note       || "");
+  }
+
   drCalc();
   renderDrChangeLog(data.changeLog);
 }
@@ -2348,10 +2447,12 @@ window.confirmCloseDay = async function() {
   // Preview на транзакциите
   const store = _drShopId === "store1" ? "М1" : "М2";
   let preview = `📋 ЗАТВОРИ ДЕН — ${d.date} (${store})\n\nЩе се създадат записи в системата:\n`;
-  if (d.totalCashIncome   > 0) preview += `\n  ✅ Приход КЕШ:    ${d.totalCashIncome.toFixed(2)} €`;
-  if (d.totalPosIncome    > 0) preview += `\n  ✅ Приход POS:    ${d.totalPosIncome.toFixed(2)} €`;
-  if (d.totalGoodsExpense > 0) preview += `\n  🔴 Разход Стоки:  ${d.totalGoodsExpense.toFixed(2)} €`;
-  if (d.totalOtherExpense > 0) preview += `\n  🔴 Разход Други:  ${d.totalOtherExpense.toFixed(2)} €`;
+  if (d.totalCashIncome   > 0) preview += `\n  ✅ Приход КЕШ:       ${d.totalCashIncome.toFixed(2)} €`;
+  if (d.totalPosIncome    > 0) preview += `\n  ✅ Приход POS:       ${d.totalPosIncome.toFixed(2)} €`;
+  if ((d.totalSideIncomes||0) > 0) preview += `\n  ✅ Странични приходи: ${d.totalSideIncomes.toFixed(2)} €`;
+  if (d.totalGoodsExpense > 0) preview += `\n  🔴 Разход Стоки:     ${d.totalGoodsExpense.toFixed(2)} €`;
+  if (d.totalOtherExpense > 0) preview += `\n  🔴 Разход Други:     ${d.totalOtherExpense.toFixed(2)} €`;
+  if ((d.totalAdvances||0) > 0)   preview += `\n  💰 Аванси:           ${d.totalAdvances.toFixed(2)} €`;
   preview += `\n\n📊 Крайна каса: ${d.endCash.toFixed(2)} €`;
   if (d.endCash < 0) preview += `\n⚠️  Внимание: Крайната каса е отрицателна!`;
   preview += `\n\nСлед затваряне не може да се редактира без разрешение от Собственика.\nПродължи?`;
@@ -2367,6 +2468,7 @@ window.confirmCloseDay = async function() {
     const report = await persistReport("closed");
     await updateSuppliersLastUsed(report.expensesGoods);
     await createMainRecordsFromDr(report);
+    await createAdvancesFromDr(report, _drDocId);
     await sendOwnerNotification(report);
     updateDrStatusUI();
     showDrBanner("✅ Денят е затворен! Данните са изпратени към Собственика.", "success");
@@ -2416,18 +2518,22 @@ async function persistReport(status) {
   }];
 
   const payload = {
-    shopId:             _drShopId,
-    date:               data.date,
+    shopId:              _drShopId,
+    date:                data.date,
     status,
-    startCash:          data.startCash,
-    shifts:             data.shifts,
-    expensesGoods:      data.expensesGoods,
-    expensesOther:      data.expensesOther,
-    totalCashIncome:    data.totalCashIncome,
-    totalPosIncome:     data.totalPosIncome,
-    totalGoodsExpense:  data.totalGoodsExpense,
-    totalOtherExpense:  data.totalOtherExpense,
-    endCash:            data.endCash,
+    startCash:           data.startCash,
+    shifts:              data.shifts,
+    expensesGoods:       data.expensesGoods,
+    expensesOther:       data.expensesOther,
+    sideIncomes:         data.sideIncomes,
+    advances:            data.advances,
+    totalCashIncome:     data.totalCashIncome,
+    totalPosIncome:      data.totalPosIncome,
+    totalGoodsExpense:   data.totalGoodsExpense,
+    totalOtherExpense:   data.totalOtherExpense,
+    totalSideIncomes:    data.totalSideIncomes,
+    totalAdvances:       data.totalAdvances,
+    endCash:             data.endCash,
     createdBy:    isNew ? currentUserId    : (_drData?.createdBy    || currentUserId),
     createdAt:    isNew ? now              : (_drData?.createdAt    || now),
     lastModifiedBy:    currentUserId,
@@ -2523,11 +2629,42 @@ async function createMainRecordsFromDr(report) {
     ids.push(ref.id);
   }
 
+  for (const si of (report.sideIncomes || [])) {
+    if (!si.amount) continue;
+    const siMethod = si.method === "Карта" ? "Карта" : "Кеш";
+    const ref = await addDoc(collection(db, "records"), {
+      date: report.date, type: "Приход", method: siMethod,
+      amount: si.amount, store, category: "Друг приход",
+      note: si.description || `Страничен приход М${store}`, imageUrl: "", ...drMeta
+    });
+    ids.push(ref.id);
+  }
+
   if (drDocId && ids.length) {
     await updateDoc(doc(db, "daily_reports", drDocId), { linkedTransactionIds: ids });
     if (_drData) _drData.linkedTransactionIds = ids;
   }
   return ids;
+}
+
+// ── Записване на аванси в колекция "advances" ──────────
+async function createAdvancesFromDr(report, reportId) {
+  const month = (report.date || "").slice(0, 7);
+  for (const adv of (report.advances || [])) {
+    if (!adv.amount) continue;
+    await addDoc(collection(db, "advances"), {
+      shopId:             report.shopId,
+      employeeId:         adv.employeeId   || "",
+      employeeName:       adv.employeeName || "",
+      amount:             adv.amount,
+      date:               report.date,
+      month,
+      note:               adv.note || "",
+      linkedReportId:     reportId || "",
+      status:             "pending",
+      deductedInSalaryId: ""
+    });
+  }
 }
 
 // ── Обновяване на свързаните транзакции (при редакция) ─
@@ -2570,8 +2707,10 @@ async function saveClosedReportEdits() {
     shopId: _drShopId, date: data.date, status: "closed",
     startCash: data.startCash, shifts: data.shifts,
     expensesGoods: data.expensesGoods, expensesOther: data.expensesOther,
+    sideIncomes: data.sideIncomes, advances: data.advances,
     totalCashIncome: data.totalCashIncome, totalPosIncome: data.totalPosIncome,
     totalGoodsExpense: data.totalGoodsExpense, totalOtherExpense: data.totalOtherExpense,
+    totalSideIncomes: data.totalSideIncomes, totalAdvances: data.totalAdvances,
     endCash: data.endCash,
     createdBy: _drData.createdBy, createdAt: _drData.createdAt,
     lastModifiedBy: currentUserId, lastModifiedAt: now,

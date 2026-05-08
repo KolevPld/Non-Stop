@@ -3121,6 +3121,30 @@ body.light .sal-log-entry        { background: #f0f2f5; }
   /* Разстояние между картите вляво */
   #drLeft .dr-card { margin-bottom: 28px; }
 
+  /* ── Column widths за narrow таблици (Стоки / Други) ── */
+  #drLeft .dr-table-narrow th:nth-child(1),
+  #drLeft .dr-table-narrow td:nth-child(1) { width: 36px; }
+  #drLeft .dr-table-narrow th:nth-child(3),
+  #drLeft .dr-table-narrow td:nth-child(3) { width: 120px; text-align: right; }
+  #drLeft .dr-table-narrow .dr-input[type="number"] { text-align: right; }
+
+  /* ── Column widths за Странични приходи (4 колони) ─── */
+  #drLeft .dr-table-side th:nth-child(1),
+  #drLeft .dr-table-side td:nth-child(1) { width: 36px; }
+  #drLeft .dr-table-side th:nth-child(3),
+  #drLeft .dr-table-side td:nth-child(3) { width: 88px; }
+  #drLeft .dr-table-side th:nth-child(4),
+  #drLeft .dr-table-side td:nth-child(4) { width: 120px; text-align: right; }
+  #drLeft .dr-table-side .dr-input[type="number"] { text-align: right; }
+
+  /* ── Column widths за Аванси (4 колони) ────────────── */
+  #drLeft .dr-table-advances th:nth-child(1),
+  #drLeft .dr-table-advances td:nth-child(1) { width: 36px; }
+  #drLeft .dr-table-advances th:nth-child(3),
+  #drLeft .dr-table-advances td:nth-child(3) { width: 110px; }
+  #drLeft .dr-table-advances th:nth-child(4),
+  #drLeft .dr-table-advances td:nth-child(4) { width: 28%; }
+
   /* Всички таблици в drLeft — по-голям текст и по-широки редове */
   #drLeft .dr-table {
     width: 100%;

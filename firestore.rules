@@ -100,6 +100,23 @@ service cloud.firestore {
         || (isStore2() && resource.data.shopId == 'store2');
     }
 
+    // advances — аванси на служители
+    match /advances/{advId} {
+      allow read, write: if isOwner();
+
+      allow read:
+        if (isStore1() && resource.data.shopId == 'store1')
+        || (isStore2() && resource.data.shopId == 'store2');
+
+      allow create:
+        if (isStore1() && request.resource.data.shopId == 'store1')
+        || (isStore2() && request.resource.data.shopId == 'store2');
+
+      allow update, delete:
+        if (isStore1() && resource.data.shopId == 'store1')
+        || (isStore2() && resource.data.shopId == 'store2');
+    }
+
     // salaries — само owner има достъп (заплатите са поверителни)
     match /salaries/{salaryId} {
       allow read, write: if isOwner();

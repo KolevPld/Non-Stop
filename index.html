@@ -905,6 +905,25 @@
         </div>
       </div>
 
+      <!-- Секция 2б: Странични приходи -->
+      <div class="card dr-card">
+        <div class="dr-section-title">📥 Странични приходи</div>
+        <div class="table-responsive">
+          <table class="dr-table dr-table-narrow dr-table-side">
+            <thead>
+              <tr><th>#</th><th>Описание</th><th>Метод</th><th>Сума (€)</th></tr>
+            </thead>
+            <tbody id="drSideIncomeBody"></tbody>
+            <tfoot>
+              <tr class="dr-total-row">
+                <td colspan="3"><strong>Общо странични</strong></td>
+                <td id="drTotalSideIncome" class="mono">0.00</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
       <!-- Секция 3: Разход Стоки -->
       <div class="card dr-card">
         <div class="dr-section-title">📦 Разход Стоки</div>
@@ -951,6 +970,26 @@
         </div>
       </div>
 
+      <!-- Секция 5: Аванси на служители -->
+      <div class="card dr-card">
+        <div class="dr-section-title">💰 Аванси на служители</div>
+        <div class="table-responsive">
+          <table class="dr-table dr-table-advances">
+            <thead>
+              <tr><th>#</th><th>Служител</th><th>Сума (€)</th><th>Бележка</th></tr>
+            </thead>
+            <tbody id="drAdvancesBody"></tbody>
+            <tfoot>
+              <tr class="dr-total-row">
+                <td colspan="2"><strong>Общо аванси</strong></td>
+                <td id="drTotalAdvances" class="mono">0.00</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
     </div><!-- /drLeft -->
 
     <!-- ДЯСНА КОЛОНА (desktop: 40%) -->
@@ -972,8 +1011,16 @@
           <span id="drSumPos" class="mono pos">0.00 €</span>
         </div>
         <div class="dr-sum-row">
+          <span>+ Странични приходи</span>
+          <span id="drSumSideIncome" class="mono pos">0.00 €</span>
+        </div>
+        <div class="dr-sum-row">
           <span>− Общо разходи</span>
           <span id="drSumExpenses" class="mono neg">0.00 €</span>
+        </div>
+        <div class="dr-sum-row">
+          <span>− Общо аванси</span>
+          <span id="drSumAdvances" class="mono neg">0.00 €</span>
         </div>
         <div class="dr-sum-divider"></div>
         <div class="dr-sum-row dr-sum-final">
