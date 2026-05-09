@@ -2381,57 +2381,81 @@ body.light .dr-owner-totals-row td { background: #f0f2f5 !important; }
 .suppl-cell { padding: 4px 8px !important; }
 .suppl-wrap { position: relative; width: 100%; }
 
+/* Панелът — flex колона: [скролируем списък] + [sticky бутон] */
 .suppl-drop {
   position: fixed;
   z-index: 9999;
   background: var(--bg2);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border2);
   border-radius: var(--radius);
-  box-shadow: 0 8px 28px rgba(0,0,0,.5);
-  max-height: 320px;
+  box-shadow: 0 10px 36px rgba(0,0,0,.6);
+  display: flex;
+  flex-direction: column;
+  max-height: 400px;
+  overflow: hidden; /* clip, не scroll — списъкът вътре скролира */
+}
+
+/* Скролируемата зона — само тя скролира */
+#supplDropList {
+  flex: 1 1 auto;
+  min-height: 0;           /* критично за flex + overflow */
   overflow-y: auto;
   overflow-x: hidden;
 }
 
+/* Custom scrollbar */
+#supplDropList::-webkit-scrollbar          { width: 7px; }
+#supplDropList::-webkit-scrollbar-track    { background: transparent; }
+#supplDropList::-webkit-scrollbar-thumb    { background: #404060; border-radius: 4px; }
+#supplDropList::-webkit-scrollbar-thumb:hover { background: #5858a0; }
+
+/* Sticky заглавия на секциите */
 .suppl-group-title {
-  padding: 7px 12px 3px;
-  font-size: .7rem;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg2);
+  padding: 7px 14px 5px;
+  font-size: .68rem;
   font-weight: 700;
   color: var(--text3);
   text-transform: uppercase;
-  letter-spacing: .07em;
+  letter-spacing: .08em;
+  border-bottom: 1px solid var(--border);
   user-select: none;
 }
 
+/* Опции */
 .suppl-opt {
-  padding: 9px 14px;
+  padding: 11px 14px;
   cursor: pointer;
   font-size: .9rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  transition: background .1s;
+  border-bottom: 1px solid rgba(255,255,255,.04);
+  transition: background .1s, color .1s;
 }
+.suppl-opt:hover { background: var(--bg3); color: var(--accent); }
 
-.suppl-opt:hover,
-.suppl-opt:focus { background: var(--bg3); color: var(--accent); }
-
+/* Разделител между "Честo" и "Всички" */
 .suppl-divider {
   height: 1px;
   background: var(--border);
-  margin: 4px 0;
+  margin: 2px 0;
 }
 
 .suppl-no-results {
-  padding: 12px 14px;
-  font-size: .85rem;
+  padding: 16px 14px;
+  font-size: .875rem;
   color: var(--text3);
   font-style: italic;
+  text-align: center;
 }
 
+/* Sticky бутон "Добави" — винаги долу, никога не скролира */
 .suppl-add-row {
-  position: sticky;
-  bottom: 0;
+  flex: 0 0 auto;
   background: var(--bg2);
   border-top: 1px solid var(--border);
   padding: 8px 10px;
@@ -2439,7 +2463,7 @@ body.light .dr-owner-totals-row td { background: #f0f2f5 !important; }
 
 .suppl-add-btn {
   width: 100%;
-  padding: 8px 12px;
+  padding: 9px 13px;
   background: transparent;
   border: 1px dashed var(--border);
   border-radius: var(--radius);
