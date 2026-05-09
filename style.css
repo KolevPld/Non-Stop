@@ -2398,27 +2398,30 @@ body.light .dr-owner-totals-row td { background: #f0f2f5 !important; }
 /* ── Секция "Честo използвани" — фиксирана, макс 5 реда ── */
 .suppl-section-recent {
   flex: 0 0 auto;
-  max-height: 218px;       /* ~5 реда по 38px + заглавие */
+  max-height: 218px;
   overflow-y: auto;
   overflow-x: hidden;
+  overscroll-behavior: contain;
   border-bottom: 2px solid var(--border2);
 }
-.suppl-section-recent::-webkit-scrollbar       { width: 7px; }
-.suppl-section-recent::-webkit-scrollbar-track { background: transparent; }
-.suppl-section-recent::-webkit-scrollbar-thumb { background: #404060; border-radius: 4px; }
-.suppl-section-recent::-webkit-scrollbar-thumb:hover { background: #5858a0; }
+.suppl-section-recent::-webkit-scrollbar       { width: 10px; }
+.suppl-section-recent::-webkit-scrollbar-track { background: #1a1a26; }
+.suppl-section-recent::-webkit-scrollbar-thumb { background: #606080; border-radius: 5px; }
+.suppl-section-recent::-webkit-scrollbar-thumb:hover { background: #7070a0; }
 
 /* ── Секция "Всички" — заема останалото, скролира ── */
 .suppl-section-all {
   flex: 1 1 auto;
-  min-height: 0;           /* критично за flex + overflow-y */
+  min-height: 250px;
+  max-height: 300px;
   overflow-y: auto;
   overflow-x: hidden;
+  overscroll-behavior: contain;
 }
-.suppl-section-all::-webkit-scrollbar       { width: 7px; }
-.suppl-section-all::-webkit-scrollbar-track { background: transparent; }
-.suppl-section-all::-webkit-scrollbar-thumb { background: #404060; border-radius: 4px; }
-.suppl-section-all::-webkit-scrollbar-thumb:hover { background: #5858a0; }
+.suppl-section-all::-webkit-scrollbar       { width: 10px; }
+.suppl-section-all::-webkit-scrollbar-track { background: #1a1a26; }
+.suppl-section-all::-webkit-scrollbar-thumb { background: #606080; border-radius: 5px; }
+.suppl-section-all::-webkit-scrollbar-thumb:hover { background: #7070a0; }
 
 /* ── Заглавия на секциите ────────────────────────── */
 .suppl-group-title {
@@ -2447,7 +2450,8 @@ body.light .dr-owner-totals-row td { background: #f0f2f5 !important; }
   border-bottom: 1px solid rgba(255,255,255,.04);
   transition: background .1s, color .1s;
 }
-.suppl-opt:hover { background: var(--bg3); color: var(--accent); }
+.suppl-opt:hover,
+.suppl-opt-active { background: var(--bg3); color: var(--accent); }
 
 .suppl-no-results {
   padding: 14px 14px;

@@ -2065,6 +2065,7 @@ async function loadSuppliers() {
 
 // ── Supplier picker ───────────────────────────────────
 let _supplActiveIdx  = -1;
+let _supplHighIdx    = -1;
 let _supplCloseTimer = null;
 
 function supplOpts(arr) {
@@ -2128,6 +2129,7 @@ function supplPosition(inputEl) {
 window.supplOpen = function (idx, inputEl) {
   clearTimeout(_supplCloseTimer);
   _supplActiveIdx = idx;
+  _supplHighIdx   = -1;
   const panel = document.getElementById("supplDropPanel");
   if (!panel) return;
   supplPosition(inputEl);
@@ -2138,12 +2140,59 @@ window.supplOpen = function (idx, inputEl) {
 window.supplFilter = function (idx, inputEl) {
   clearTimeout(_supplCloseTimer);
   _supplActiveIdx = idx;
+  _supplHighIdx   = -1;
   const panel = document.getElementById("supplDropPanel");
   if (!panel) return;
   supplPosition(inputEl);
   supplPopulate(inputEl.value);
   panel.style.display = "block";
 };
+
+// Keyboard навигация в dropdown-а
+window.supplKeyDown = function (idx, e) {
+  const panel = document.getElementById("supplDropPanel");
+
+  if (e.key === "Escape") {
+    supplClose();
+    _supplHighIdx = -1;
+    return;
+  }
+
+  if (!panel || panel.style.display === "none") {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      supplOpen(idx, e.target);
+    }
+    return;
+  }
+
+  const opts = Array.from(panel.querySelectorAll(".suppl-opt"));
+  if (!opts.length) return;
+
+  if (e.key === "ArrowDown") {
+    e.preventDefault();
+    _supplHighIdx = Math.min(_supplHighIdx + 1, opts.length - 1);
+    supplHighlight(opts);
+  } else if (e.key === "ArrowUp") {
+    e.preventDefault();
+    _supplHighIdx = Math.max(_supplHighIdx - 1, 0);
+    supplHighlight(opts);
+  } else if (e.key === "Enter") {
+    if (_supplHighIdx >= 0 && opts[_supplHighIdx]) {
+      e.preventDefault();
+      supplPick(opts[_supplHighIdx].dataset.name);
+      _supplHighIdx = -1;
+    }
+  }
+};
+
+function supplHighlight(opts) {
+  opts.forEach((opt, i) => {
+    const active = i === _supplHighIdx;
+    opt.classList.toggle("suppl-opt-active", active);
+    if (active) opt.scrollIntoView({ block: "nearest" });
+  });
+}
 
 window.supplBlur = function () {
   _supplCloseTimer = setTimeout(supplClose, 200);
@@ -2209,10 +2258,11 @@ document.addEventListener("mousedown", function (e) {
 // Затваряне при scroll
 window.addEventListener("scroll", supplClose, true);
 
-// Event delegation за опциите
+// Event delegation за опциите + блокиране на scroll chaining
 (function () {
   const panel = document.getElementById("supplDropPanel");
   if (!panel) return;
+
   panel.addEventListener("mousedown", function (e) {
     clearTimeout(_supplCloseTimer);
     const opt    = e.target.closest(".suppl-opt");
@@ -2224,6 +2274,12 @@ window.addEventListener("scroll", supplClose, true);
       e.preventDefault();
       supplAddNew();
     }
+  });
+
+  // Wheel върху скролируемите секции — не пропускай на страницата
+  ["supplRecentSection", "supplAllSection"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener("wheel", e => e.stopPropagation(), { passive: true });
   });
 }());
 
@@ -2260,7 +2316,7 @@ function renderDrGoodsTable() {
                  onfocus="supplOpen(${i}, this)"
                  oninput="supplFilter(${i}, this)"
                  onblur="supplBlur()"
-                 onkeydown="if(event.key==='Escape')supplBlur()">
+                 onkeydown="supplKeyDown(${i}, event)">
         </div>
       </td>
       <td><input type="number" class="dr-input mono" step="0.01" placeholder="0.00" data-goods="${i}" data-field="amount" oninput="drCalc()"></td>
