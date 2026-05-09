@@ -2068,53 +2068,48 @@ let _supplActiveIdx  = -1;
 let _supplHighIdx    = -1;
 let _supplCloseTimer = null;
 
+// ── Supplier picker helpers ───────────────────────────
 function supplOpts(arr) {
   return arr.map(s =>
     `<div class="suppl-opt" data-name="${escHtml(s.name)}">${escHtml(s.name)}</div>`
   ).join("");
 }
 
+// Единичен scroll контейнер — recent + all вътре
 function supplPopulate(filter) {
-  const q             = (filter || "").toLowerCase().trim();
-  const recentSection = document.getElementById("supplRecentSection");
-  const recentList    = document.getElementById("supplRecentList");
-  const allSection    = document.getElementById("supplAllSection");
-  const allTitle      = document.getElementById("supplAllTitle");
-  const allList       = document.getElementById("supplAllList");
-  if (!recentList || !allList) return;
+  const scroll = document.getElementById("supplDropScroll");
+  if (!scroll) return;
+  const q = (filter || "").toLowerCase().trim();
+  let html = "";
 
   if (q) {
-    // Режим търсене: скрий "Честo използвани", покажи само резултатите
-    if (recentSection) recentSection.style.display = "none";
-    if (allTitle) allTitle.textContent = "Резултати от търсенето";
-
     const filtered = [..._suppliers]
       .sort((a, b) => (a.name || "").localeCompare(b.name || "", "bg"))
       .filter(s => (s.name || "").toLowerCase().includes(q));
-
-    allList.innerHTML = filtered.length
+    html += `<div class="suppl-group-title">Резултати (${filtered.length})</div>`;
+    html += filtered.length
       ? supplOpts(filtered)
       : `<div class="suppl-no-results">Няма намерени доставчици</div>`;
   } else {
-    // Нормален режим: двете секции
-    if (recentSection) recentSection.style.display = "";
-    if (allTitle) allTitle.textContent = "Всички";
-
     const recent = [..._suppliers]
       .sort((a, b) => (b.lastUsed || "").localeCompare(a.lastUsed || ""))
       .slice(0, 5);
-
     const all = [..._suppliers]
       .sort((a, b) => (a.name || "").localeCompare(b.name || "", "bg"));
 
-    recentList.innerHTML = recent.length
+    html += `<div class="suppl-group-title">Честo използвани</div>`;
+    html += recent.length
       ? supplOpts(recent)
-      : `<div class="suppl-no-results" style="font-size:.8rem;">Няма данни</div>`;
-
-    allList.innerHTML = all.length
+      : `<div class="suppl-no-results">Все още няма данни</div>`;
+    html += `<div class="suppl-divider"></div>`;
+    html += `<div class="suppl-group-title">Всички (${all.length})</div>`;
+    html += all.length
       ? supplOpts(all)
       : `<div class="suppl-no-results">Списъкът е празен</div>`;
   }
+
+  scroll.innerHTML = html;
+  scroll.scrollTop = 0;
 }
 
 function supplPosition(inputEl) {
@@ -2134,7 +2129,7 @@ window.supplOpen = function (idx, inputEl) {
   if (!panel) return;
   supplPosition(inputEl);
   supplPopulate(inputEl.value);
-  panel.style.display = "block";
+  panel.style.display = "flex";
 };
 
 window.supplFilter = function (idx, inputEl) {
@@ -2145,10 +2140,9 @@ window.supplFilter = function (idx, inputEl) {
   if (!panel) return;
   supplPosition(inputEl);
   supplPopulate(inputEl.value);
-  panel.style.display = "block";
+  panel.style.display = "flex";
 };
 
-// Keyboard навигация в dropdown-а
 window.supplKeyDown = function (idx, e) {
   const panel = document.getElementById("supplDropPanel");
 
@@ -2157,7 +2151,6 @@ window.supplKeyDown = function (idx, e) {
     _supplHighIdx = -1;
     return;
   }
-
   if (!panel || panel.style.display === "none") {
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
@@ -2177,20 +2170,18 @@ window.supplKeyDown = function (idx, e) {
     e.preventDefault();
     _supplHighIdx = Math.max(_supplHighIdx - 1, 0);
     supplHighlight(opts);
-  } else if (e.key === "Enter") {
-    if (_supplHighIdx >= 0 && opts[_supplHighIdx]) {
-      e.preventDefault();
-      supplPick(opts[_supplHighIdx].dataset.name);
-      _supplHighIdx = -1;
-    }
+  } else if (e.key === "Enter" && _supplHighIdx >= 0) {
+    e.preventDefault();
+    supplPick(opts[_supplHighIdx].dataset.name);
+    _supplHighIdx = -1;
   }
 };
 
 function supplHighlight(opts) {
   opts.forEach((opt, i) => {
-    const active = i === _supplHighIdx;
-    opt.classList.toggle("suppl-opt-active", active);
-    if (active) opt.scrollIntoView({ block: "nearest" });
+    const on = i === _supplHighIdx;
+    opt.classList.toggle("suppl-opt-active", on);
+    if (on) opt.scrollIntoView({ block: "nearest" });
   });
 }
 
@@ -2247,7 +2238,7 @@ window.supplAddConfirm = async function () {
   showDrBanner(`✅ Добавен: ${name}`, "info");
 };
 
-// Затваряне при клик извън
+// Затваряне при клик ИЗВЪН dropdown-а
 document.addEventListener("mousedown", function (e) {
   if (!e.target.closest("#supplDropPanel") && !e.target.closest(".suppl-input")) {
     clearTimeout(_supplCloseTimer);
@@ -2255,14 +2246,17 @@ document.addEventListener("mousedown", function (e) {
   }
 }, true);
 
-// Затваряне при scroll
-window.addEventListener("scroll", supplClose, true);
+// Затваряне при СТРАНИЧЕН scroll — НЕ при вътрешен scroll на dropdown-а
+window.addEventListener("scroll", function (e) {
+  const panel = document.getElementById("supplDropPanel");
+  if (!panel || panel.contains(e.target)) return; // вътрешен scroll → игнорирай
+  supplClose();
+}, true);
 
-// Event delegation за опциите + блокиране на scroll chaining
+// Event delegation — mousedown на опциите
 (function () {
   const panel = document.getElementById("supplDropPanel");
   if (!panel) return;
-
   panel.addEventListener("mousedown", function (e) {
     clearTimeout(_supplCloseTimer);
     const opt    = e.target.closest(".suppl-opt");
@@ -2274,12 +2268,6 @@ window.addEventListener("scroll", supplClose, true);
       e.preventDefault();
       supplAddNew();
     }
-  });
-
-  // Wheel върху скролируемите секции — не пропускай на страницата
-  ["supplRecentSection", "supplAllSection"].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener("wheel", e => e.stopPropagation(), { passive: true });
   });
 }());
 

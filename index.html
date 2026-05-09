@@ -1071,17 +1071,9 @@
 
   <!-- Supplier picker — глобален drop панел -->
   <div id="supplDropPanel" class="suppl-drop" style="display:none" role="listbox">
-    <!-- Честo използвани — макс 5, фиксирана височина -->
-    <div id="supplRecentSection" class="suppl-section-recent">
-      <div class="suppl-group-title">Честo използвани</div>
-      <div id="supplRecentList"></div>
-    </div>
-    <!-- Всички — скролируема секция -->
-    <div id="supplAllSection" class="suppl-section-all">
-      <div class="suppl-group-title" id="supplAllTitle">Всички</div>
-      <div id="supplAllList"></div>
-    </div>
-    <!-- Sticky бутон долу -->
+    <!-- Единичен scroll контейнер — recent + all вътре -->
+    <div id="supplDropScroll" class="suppl-scroll"></div>
+    <!-- Бутон ИЗВЪН scroll-а — винаги видим -->
     <div class="suppl-add-row">
       <button type="button" class="suppl-add-btn">＋ Добави нов доставчик</button>
     </div>
