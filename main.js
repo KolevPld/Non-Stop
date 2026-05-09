@@ -2677,23 +2677,56 @@ window.confirmCloseDay = async function() {
   if (saveBtn)  saveBtn.disabled = true;
   if (closeBtn) closeBtn.disabled = true;
 
+  // ── Стъпка 1: запис на отчета ────────────────────────
+  let report;
   try {
-    const report = await persistReport("closed");
-    await updateSuppliersLastUsed(report.expensesGoods);
-    await createMainRecordsFromDr(report);
-    await createAdvancesFromDr(report, _drDocId);
-    await sendOwnerNotification(report);
-    updateDrStatusUI();
-    showDrBanner("✅ Денят е затворен! Данните са изпратени към Собственика.", "success");
-    await loadRecentReports();
+    report = await persistReport("closed");
   } catch (err) {
-    console.error("confirmCloseDay:", err);
+    console.error("[closeDay] persistReport:", err);
     if (err.message !== "Дублиран отчет" && err.message !== "Липсва дата") {
-      alert("Грешка: " + err.message);
+      showDrBanner(`❌ Грешка при запис на отчета (daily_reports): ${err.message}`, "error");
     }
     if (saveBtn)  saveBtn.disabled = false;
     if (closeBtn) closeBtn.disabled = false;
+    return;
   }
+
+  // ── Стъпка 2: update на доставчиците (некритична) ───
+  try {
+    await updateSuppliersLastUsed(report.expensesGoods);
+  } catch (err) {
+    console.warn("[closeDay] updateSuppliersLastUsed (некритична):", err);
+    // Не спираме затварянето заради доставчици
+  }
+
+  // ── Стъпка 3: записи в records ───────────────────────
+  try {
+    await createMainRecordsFromDr(report);
+  } catch (err) {
+    console.error("[closeDay] createMainRecordsFromDr:", err);
+    showDrBanner(`❌ Грешка при запис на транзакциите (records): ${err.message}`, "error");
+    if (saveBtn)  saveBtn.disabled = false;
+    if (closeBtn) closeBtn.disabled = false;
+    return;
+  }
+
+  // ── Стъпка 4: аванси (некритична) ───────────────────
+  try {
+    await createAdvancesFromDr(report, _drDocId);
+  } catch (err) {
+    console.warn("[closeDay] createAdvancesFromDr (некритична):", err);
+  }
+
+  // ── Стъпка 5: известие към собственика (некритична) ─
+  try {
+    await sendOwnerNotification(report);
+  } catch (err) {
+    console.warn("[closeDay] sendOwnerNotification (некритична):", err);
+  }
+
+  updateDrStatusUI();
+  showDrBanner("✅ Денят е затворен! Данните са изпратени към Собственика.", "success");
+  await loadRecentReports();
 };
 
 async function persistReport(status) {
