@@ -2067,36 +2067,53 @@ async function loadSuppliers() {
 let _supplActiveIdx  = -1;
 let _supplCloseTimer = null;
 
-function supplBuildHtml(filter) {
-  const q   = (filter || "").toLowerCase().trim();
-  let   html = "";
+function supplOpts(arr) {
+  return arr.map(s =>
+    `<div class="suppl-opt" data-name="${escHtml(s.name)}">${escHtml(s.name)}</div>`
+  ).join("");
+}
 
-  if (!q) {
+function supplPopulate(filter) {
+  const q             = (filter || "").toLowerCase().trim();
+  const recentSection = document.getElementById("supplRecentSection");
+  const recentList    = document.getElementById("supplRecentList");
+  const allSection    = document.getElementById("supplAllSection");
+  const allTitle      = document.getElementById("supplAllTitle");
+  const allList       = document.getElementById("supplAllList");
+  if (!recentList || !allList) return;
+
+  if (q) {
+    // Режим търсене: скрий "Честo използвани", покажи само резултатите
+    if (recentSection) recentSection.style.display = "none";
+    if (allTitle) allTitle.textContent = "Резултати от търсенето";
+
+    const filtered = [..._suppliers]
+      .sort((a, b) => (a.name || "").localeCompare(b.name || "", "bg"))
+      .filter(s => (s.name || "").toLowerCase().includes(q));
+
+    allList.innerHTML = filtered.length
+      ? supplOpts(filtered)
+      : `<div class="suppl-no-results">Няма намерени доставчици</div>`;
+  } else {
+    // Нормален режим: двете секции
+    if (recentSection) recentSection.style.display = "";
+    if (allTitle) allTitle.textContent = "Всички";
+
     const recent = [..._suppliers]
       .sort((a, b) => (b.lastUsed || "").localeCompare(a.lastUsed || ""))
-      .slice(0, 10);
-    if (recent.length) {
-      html += `<div class="suppl-group-title">Честo използвани</div>`;
-      html += recent.map(s =>
-        `<div class="suppl-opt" data-name="${escHtml(s.name)}">${escHtml(s.name)}</div>`
-      ).join("");
-      html += `<div class="suppl-divider"></div>`;
-      html += `<div class="suppl-group-title">Всички</div>`;
-    }
-  }
+      .slice(0, 5);
 
-  const all = [..._suppliers]
-    .sort((a, b) => (a.name || "").localeCompare(b.name || "", "bg"))
-    .filter(s => !q || (s.name || "").toLowerCase().includes(q));
+    const all = [..._suppliers]
+      .sort((a, b) => (a.name || "").localeCompare(b.name || "", "bg"));
 
-  if (all.length) {
-    html += all.map(s =>
-      `<div class="suppl-opt" data-name="${escHtml(s.name)}">${escHtml(s.name)}</div>`
-    ).join("");
-  } else {
-    html += `<div class="suppl-no-results">Няма намерени доставчици</div>`;
+    recentList.innerHTML = recent.length
+      ? supplOpts(recent)
+      : `<div class="suppl-no-results" style="font-size:.8rem;">Няма данни</div>`;
+
+    allList.innerHTML = all.length
+      ? supplOpts(all)
+      : `<div class="suppl-no-results">Списъкът е празен</div>`;
   }
-  return html;
 }
 
 function supplPosition(inputEl) {
@@ -2112,10 +2129,9 @@ window.supplOpen = function (idx, inputEl) {
   clearTimeout(_supplCloseTimer);
   _supplActiveIdx = idx;
   const panel = document.getElementById("supplDropPanel");
-  const list  = document.getElementById("supplDropList");
-  if (!panel || !list) return;
+  if (!panel) return;
   supplPosition(inputEl);
-  list.innerHTML   = supplBuildHtml(inputEl.value);
+  supplPopulate(inputEl.value);
   panel.style.display = "block";
 };
 
@@ -2123,10 +2139,9 @@ window.supplFilter = function (idx, inputEl) {
   clearTimeout(_supplCloseTimer);
   _supplActiveIdx = idx;
   const panel = document.getElementById("supplDropPanel");
-  const list  = document.getElementById("supplDropList");
-  if (!panel || !list) return;
+  if (!panel) return;
   supplPosition(inputEl);
-  list.innerHTML   = supplBuildHtml(inputEl.value);
+  supplPopulate(inputEl.value);
   panel.style.display = "block";
 };
 
