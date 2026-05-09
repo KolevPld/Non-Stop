@@ -1084,6 +1084,39 @@ body.admin .table-responsive.admin-only { display: block; }
   }
 }
 
+/* ── Portrait mobile: horizontal-scroll bottom nav ─ */
+@media (max-width: 599px) and (orientation: portrait) {
+  .bottom-nav {
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    /* Gradient fade on right — sticky flex item at end */
+  }
+  .bottom-nav::-webkit-scrollbar { display: none; }
+
+  /* Gradient fade indicator */
+  .bottom-nav::after {
+    content: '';
+    position: sticky;
+    right: 0;
+    align-self: stretch;
+    flex: 0 0 36px;
+    min-width: 36px;
+    background: linear-gradient(to right, transparent, var(--bg2) 70%);
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  /* Each button: fixed width, tappable, snaps */
+  .nav-btn {
+    flex: 0 0 auto;
+    min-width: 72px;
+    padding: 0 4px;
+    scroll-snap-align: start;
+  }
+}
+
 /* ── Landscape мобилен (≤1023px, landscape) ──── */
 @media (orientation: landscape) and (max-width: 1023px) {
   #app {
@@ -1093,6 +1126,10 @@ body.admin .table-responsive.admin-only { display: block; }
   #screen-report {
     max-width: none;
   }
+  /* All items fit in one row — no scroll */
+  .bottom-nav { overflow-x: visible; scroll-snap-type: none; }
+  .bottom-nav::after { display: none; }
+  .nav-btn { flex: 1; min-width: 0; }
 }
 
 /* ── Desktop (1024px+) ───────────────────────── */
@@ -1127,6 +1164,8 @@ body.admin .table-responsive.admin-only { display: block; }
     left: 0;
     bottom: 0;
     right: auto;
+    overflow-x: visible;
+    scroll-snap-type: none;
     width: 220px;
     height: 100dvh;
     flex-direction: column;
@@ -1151,6 +1190,8 @@ body.admin .table-responsive.admin-only { display: block; }
     border-bottom: 1px solid var(--border);
     letter-spacing: -0.01em;
   }
+  /* No gradient fade in sidebar */
+  .bottom-nav::after { display: none; }
 
   .nav-btn {
     flex: 0 0 auto;
