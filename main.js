@@ -22,7 +22,8 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   onAuthStateChanged,
-  signOut
+  signOut,
+  sendPasswordResetEmail
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
 // --------------------------------------------------
@@ -3540,6 +3541,14 @@ async function renderAccountsList() {
           </div>
           <div class="acc-actions">
             ${canDelete && !isDisabled ? `
+              <button class="acc-edit-btn" onclick="editAccountEmail('${u.uid}', '${escHtml(u.email || "")}')"
+                      title="Редактирай имейл">
+                ✏️ Редактирай
+              </button>
+              <button class="acc-reset-btn" onclick="resetAccountPassword('${escHtml(u.email || "")}')"
+                      title="Изпрати линк за смяна на парола">
+                🔑 Reset парола
+              </button>
               <button class="btn-danger acc-del-btn" onclick="deactivateAccount('${u.uid}', '${escHtml(u.email || "")}')"
                       title="Деактивирай акаунта">
                 <i class="fa-solid fa-ban"></i> Изтрий
@@ -3559,6 +3568,33 @@ async function renderAccountsList() {
     el.innerHTML = `<div class="acc-empty">Грешка: ${err.message}</div>`;
   }
 }
+
+// ── Reset парола (изпраща email линк) ────────────
+window.resetAccountPassword = async function(email) {
+  if (!confirm(`Да изпратим линк за смяна на парола на:\n${email}?`)) return;
+  try {
+    await sendPasswordResetEmail(auth, email);
+    alert(`✅ Линк изпратен на ${email}\n\nПровери входящата поща (и Spam).`);
+  } catch (err) {
+    alert(`❌ Грешка: ${err.message}`);
+  }
+};
+
+// ── Редактирай email (само Firestore — auth email непроменен) ──
+window.editAccountEmail = async function(uid, currentEmail) {
+  const raw = prompt("Нов имейл за показване:", currentEmail);
+  if (!raw) return;
+  const newEmail = raw.trim().toLowerCase();
+  if (newEmail === currentEmail.toLowerCase()) return;
+  if (!newEmail.includes("@")) { alert("Невалиден имейл."); return; }
+  try {
+    await updateDoc(doc(db, "users", uid), { email: newEmail });
+    alert(`✅ Имейлът е обновен на: ${newEmail}\n\n⚠️ Бележка: входът в системата остава с оригиналния имейл.`);
+    renderAccountsList();
+  } catch (err) {
+    alert(`❌ Грешка: ${err.message}`);
+  }
+};
 
 // ── Задаване на роля в UI формата ───────────────
 window.setNewAccRole = function(role, btn) {
