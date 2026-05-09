@@ -2055,18 +2055,162 @@ async function checkManagerNotifications() {
   } catch (e) { console.warn("checkManagerNotifications:", e); }
 }
 
-// ── Доставчици (autocomplete) ─────────────────────────
+// ── Доставчици ────────────────────────────────────────
 async function loadSuppliers() {
   try {
-    const q    = query(collection(db, "suppliers"), where("shopId", "==", _drShopId));
-    const snap = await getDocs(q);
-    _suppliers = snap.docs
-      .map(d => ({ id: d.id, ...d.data() }))
-      .sort((a, b) => (b.lastUsed || "").localeCompare(a.lastUsed || ""));
-    const dl = document.getElementById("drSuppliersList");
-    if (dl) dl.innerHTML = _suppliers.map(s => `<option value="${escHtml(s.name)}">`).join("");
+    const snap = await getDocs(query(collection(db, "suppliers"), where("shopId", "==", _drShopId)));
+    _suppliers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
   } catch (e) { console.warn("loadSuppliers:", e); }
 }
+
+// ── Supplier picker ───────────────────────────────────
+let _supplActiveIdx  = -1;
+let _supplCloseTimer = null;
+
+function supplBuildHtml(filter) {
+  const q   = (filter || "").toLowerCase().trim();
+  let   html = "";
+
+  if (!q) {
+    const recent = [..._suppliers]
+      .sort((a, b) => (b.lastUsed || "").localeCompare(a.lastUsed || ""))
+      .slice(0, 10);
+    if (recent.length) {
+      html += `<div class="suppl-group-title">Честo използвани</div>`;
+      html += recent.map(s =>
+        `<div class="suppl-opt" data-name="${escHtml(s.name)}">${escHtml(s.name)}</div>`
+      ).join("");
+      html += `<div class="suppl-divider"></div>`;
+      html += `<div class="suppl-group-title">Всички</div>`;
+    }
+  }
+
+  const all = [..._suppliers]
+    .sort((a, b) => (a.name || "").localeCompare(b.name || "", "bg"))
+    .filter(s => !q || (s.name || "").toLowerCase().includes(q));
+
+  if (all.length) {
+    html += all.map(s =>
+      `<div class="suppl-opt" data-name="${escHtml(s.name)}">${escHtml(s.name)}</div>`
+    ).join("");
+  } else {
+    html += `<div class="suppl-no-results">Няма намерени доставчици</div>`;
+  }
+  return html;
+}
+
+function supplPosition(inputEl) {
+  const rect  = inputEl.getBoundingClientRect();
+  const panel = document.getElementById("supplDropPanel");
+  if (!panel) return;
+  panel.style.left     = rect.left + "px";
+  panel.style.top      = rect.bottom + "px";
+  panel.style.minWidth = Math.max(rect.width, 300) + "px";
+}
+
+window.supplOpen = function (idx, inputEl) {
+  clearTimeout(_supplCloseTimer);
+  _supplActiveIdx = idx;
+  const panel = document.getElementById("supplDropPanel");
+  const list  = document.getElementById("supplDropList");
+  if (!panel || !list) return;
+  supplPosition(inputEl);
+  list.innerHTML   = supplBuildHtml(inputEl.value);
+  panel.style.display = "block";
+};
+
+window.supplFilter = function (idx, inputEl) {
+  clearTimeout(_supplCloseTimer);
+  _supplActiveIdx = idx;
+  const panel = document.getElementById("supplDropPanel");
+  const list  = document.getElementById("supplDropList");
+  if (!panel || !list) return;
+  supplPosition(inputEl);
+  list.innerHTML   = supplBuildHtml(inputEl.value);
+  panel.style.display = "block";
+};
+
+window.supplBlur = function () {
+  _supplCloseTimer = setTimeout(supplClose, 200);
+};
+
+function supplClose() {
+  const panel = document.getElementById("supplDropPanel");
+  if (panel) panel.style.display = "none";
+}
+
+async function supplPick(name) {
+  const idx = _supplActiveIdx;
+  supplClose();
+  if (idx < 0) return;
+  setDrField("goods", idx, "supplier", name);
+
+  const now      = new Date().toISOString();
+  const existing = _suppliers.find(s => s.name.toLowerCase() === name.toLowerCase());
+  if (existing) {
+    existing.lastUsed = now;
+    updateDoc(doc(db, "suppliers", existing.id), { lastUsed: now }).catch(() => {});
+  }
+}
+
+window.supplAddNew = function () {
+  supplClose();
+  const modal = document.getElementById("supplAddModal");
+  if (!modal) return;
+  modal.classList.remove("hidden");
+  const inp = document.getElementById("supplNewName");
+  if (inp) { inp.value = ""; setTimeout(() => inp.focus(), 50); }
+};
+
+window.supplAddCancel = function () {
+  document.getElementById("supplAddModal")?.classList.add("hidden");
+};
+
+window.supplAddConfirm = async function () {
+  const nameEl = document.getElementById("supplNewName");
+  const name   = nameEl?.value.trim();
+  if (!name) return;
+  const now      = new Date().toISOString();
+  const existing = _suppliers.find(s => s.name.toLowerCase() === name.toLowerCase());
+  if (!existing) {
+    try {
+      const ref = await addDoc(collection(db, "suppliers"), { shopId: _drShopId, name, lastUsed: now });
+      _suppliers.push({ id: ref.id, shopId: _drShopId, name, lastUsed: now });
+    } catch (e) { console.error("supplAddConfirm:", e); return; }
+  }
+  if (_supplActiveIdx >= 0) setDrField("goods", _supplActiveIdx, "supplier", name);
+  document.getElementById("supplAddModal")?.classList.add("hidden");
+  showDrBanner(`✅ Добавен: ${name}`, "info");
+};
+
+// Затваряне при клик извън
+document.addEventListener("mousedown", function (e) {
+  if (!e.target.closest("#supplDropPanel") && !e.target.closest(".suppl-input")) {
+    clearTimeout(_supplCloseTimer);
+    supplClose();
+  }
+}, true);
+
+// Затваряне при scroll
+window.addEventListener("scroll", supplClose, true);
+
+// Event delegation за опциите
+(function () {
+  const panel = document.getElementById("supplDropPanel");
+  if (!panel) return;
+  panel.addEventListener("mousedown", function (e) {
+    clearTimeout(_supplCloseTimer);
+    const opt    = e.target.closest(".suppl-opt");
+    const addBtn = e.target.closest(".suppl-add-btn");
+    if (opt) {
+      e.preventDefault();
+      supplPick(opt.dataset.name);
+    } else if (addBtn) {
+      e.preventDefault();
+      supplAddNew();
+    }
+  });
+}());
 
 // ── Рендиране на таблиците ───────────────────────────
 function renderDrShiftsTable() {
@@ -2093,7 +2237,17 @@ function renderDrGoodsTable() {
   const row = i => `
     <tr>
       <td class="dr-num">${i + 1}</td>
-      <td><input type="text"   class="dr-input"      placeholder="Доставчик" list="drSuppliersList" data-goods="${i}" data-field="supplier"></td>
+      <td class="suppl-cell">
+        <div class="suppl-wrap">
+          <input type="text" class="dr-input suppl-input"
+                 data-goods="${i}" data-field="supplier"
+                 placeholder="Доставчик" autocomplete="off"
+                 onfocus="supplOpen(${i}, this)"
+                 oninput="supplFilter(${i}, this)"
+                 onblur="supplBlur()"
+                 onkeydown="if(event.key==='Escape')supplBlur()">
+        </div>
+      </td>
       <td><input type="number" class="dr-input mono" step="0.01" placeholder="0.00" data-goods="${i}" data-field="amount" oninput="drCalc()"></td>
     </tr>`;
   tbody.innerHTML = Array.from({ length: split }, (_, i) => row(i)).join("");

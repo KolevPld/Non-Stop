@@ -2375,6 +2375,124 @@ body.light .dr-detail-summary { background: #f6f8fa; }
 body.light .dr-owner-totals-row td { background: #f0f2f5 !important; }
 
 /* ════════════════════════════════════════════════
+   🔍 SUPPLIER PICKER — searchable dropdown
+   ════════════════════════════════════════════════ */
+
+.suppl-cell { padding: 4px 8px !important; }
+.suppl-wrap { position: relative; width: 100%; }
+
+.suppl-drop {
+  position: fixed;
+  z-index: 9999;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 28px rgba(0,0,0,.5);
+  max-height: 320px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.suppl-group-title {
+  padding: 7px 12px 3px;
+  font-size: .7rem;
+  font-weight: 700;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  user-select: none;
+}
+
+.suppl-opt {
+  padding: 9px 14px;
+  cursor: pointer;
+  font-size: .9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background .1s;
+}
+
+.suppl-opt:hover,
+.suppl-opt:focus { background: var(--bg3); color: var(--accent); }
+
+.suppl-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+
+.suppl-no-results {
+  padding: 12px 14px;
+  font-size: .85rem;
+  color: var(--text3);
+  font-style: italic;
+}
+
+.suppl-add-row {
+  position: sticky;
+  bottom: 0;
+  background: var(--bg2);
+  border-top: 1px solid var(--border);
+  padding: 8px 10px;
+}
+
+.suppl-add-btn {
+  width: 100%;
+  padding: 8px 12px;
+  background: transparent;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  color: var(--accent);
+  font-size: .875rem;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: background .15s;
+}
+.suppl-add-btn:hover { background: var(--bg3); }
+
+/* ── Supplier add modal ──────────────────────────── */
+.suppl-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.65);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.suppl-modal-overlay.hidden { display: none; }
+
+.suppl-modal-box {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 28px 24px 24px;
+  width: 380px;
+  max-width: 92vw;
+  box-shadow: 0 16px 48px rgba(0,0,0,.55);
+}
+
+.suppl-modal-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.suppl-modal-box input[type="text"] {
+  width: 100%;
+  margin-bottom: 0;
+}
+
+.suppl-modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+  justify-content: flex-end;
+}
+
+/* ════════════════════════════════════════════════
    🕐 РАБОТНИ ЧАСОВЕ — Модул 4
    ════════════════════════════════════════════════ */
 

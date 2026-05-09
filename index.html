@@ -1054,8 +1054,26 @@
 
   </div><!-- /drFormContent -->
 
-  <!-- Autocomplete за доставчици -->
-  <datalist id="drSuppliersList"></datalist>
+  <!-- Supplier picker — глобален drop панел -->
+  <div id="supplDropPanel" class="suppl-drop" style="display:none" role="listbox">
+    <div id="supplDropList"></div>
+    <div class="suppl-add-row">
+      <button type="button" class="suppl-add-btn">＋ Добави нов доставчик</button>
+    </div>
+  </div>
+
+  <!-- Supplier add modal -->
+  <div id="supplAddModal" class="suppl-modal-overlay hidden">
+    <div class="suppl-modal-box">
+      <div class="suppl-modal-title">Нов доставчик</div>
+      <input id="supplNewName" type="text" placeholder="Наименование на фирмата"
+             onkeydown="if(event.key==='Enter')supplAddConfirm();if(event.key==='Escape')supplAddCancel();">
+      <div class="suppl-modal-actions">
+        <button class="btn btn-secondary" onclick="supplAddCancel()">Отказ</button>
+        <button class="btn btn-primary"   onclick="supplAddConfirm()">Добави</button>
+      </div>
+    </div>
+  </div>
 
   </div><!-- /storeTabDrContent -->
 
