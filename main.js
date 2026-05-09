@@ -3279,9 +3279,12 @@ window.closeDrDetailModal = function() {
 function buildDrDetailHtml(r) {
   const fmt = n => (n || 0).toFixed(2) + " €";
 
+  const statusMap = { closed: ["🔒 Затворен", "var(--green)"], draft: ["📝 Чернова", "var(--amber)"], open: ["🔓 Отворен", "var(--blue)"] };
+  const [statusLabel, statusColor] = statusMap[r.status] || ["—", "var(--text3)"];
+
   const shiftsHtml = (r.shifts || []).map(sh => `
     <tr>
-      <td>${sh.name}</td><td>${sh.from}–${sh.to}</td>
+      <td>${escHtml(sh.name || "—")}</td><td>${sh.from}–${sh.to}</td>
       <td>${escHtml(sh.operator || "—")}</td>
       <td class="mono">${(sh.cash  || 0).toFixed(2)}</td>
       <td class="mono">${(sh.pos   || 0).toFixed(2)}</td>
@@ -3289,19 +3292,35 @@ function buildDrDetailHtml(r) {
       <td class="mono">${(sh.minus || 0).toFixed(2)}</td>
     </tr>`).join("") || '<tr><td colspan="7" class="tasks-empty">—</td></tr>';
 
+  const sideHtml = (r.sideIncomes || []).map((s, i) => `
+    <tr>
+      <td class="dr-num">${i + 1}</td>
+      <td>${escHtml(s.description || "—")}</td>
+      <td>${escHtml(s.method || "—")}</td>
+      <td class="mono pos">${fmt(s.amount)}</td>
+    </tr>`).join("") || '<tr><td colspan="4" class="tasks-empty">—</td></tr>';
+
   const goodsHtml = (r.expensesGoods || []).map((g, i) => `
     <tr>
       <td class="dr-num">${i + 1}</td>
       <td>${escHtml(g.supplier || "—")}</td>
-      <td class="mono">${fmt(g.amount)}</td>
+      <td class="mono neg">${fmt(g.amount)}</td>
     </tr>`).join("") || '<tr><td colspan="3" class="tasks-empty">—</td></tr>';
 
   const otherHtml = (r.expensesOther || []).map((o, i) => `
     <tr>
       <td class="dr-num">${i + 1}</td>
       <td>${escHtml(o.description || "—")}</td>
-      <td class="mono">${fmt(o.amount)}</td>
+      <td class="mono neg">${fmt(o.amount)}</td>
     </tr>`).join("") || '<tr><td colspan="3" class="tasks-empty">—</td></tr>';
+
+  const advHtml = (r.advances || []).map((a, i) => `
+    <tr>
+      <td class="dr-num">${i + 1}</td>
+      <td>${escHtml(a.employeeName || "—")}</td>
+      <td>${escHtml(a.note || "")}</td>
+      <td class="mono neg">${fmt(a.amount)}</td>
+    </tr>`).join("") || '<tr><td colspan="4" class="tasks-empty">—</td></tr>';
 
   const logLabels = { create: "📋 Създаден", save: "💾 Запазен", close: "🔒 Затворен", edit: "✏️ Редактиран" };
   const logHtml = (r.changeLog || []).slice().reverse().map(l => `
@@ -3312,13 +3331,24 @@ function buildDrDetailHtml(r) {
     </div>`).join("") || '<div class="tasks-empty" style="padding:8px 0;">—</div>';
 
   const endOk = (r.endCash || 0) >= 0;
+  const store  = r.shopId === "store1" ? "Магазин 1" : "Магазин 2";
+
   return `
+    <div class="dr-detail-meta" style="margin-bottom:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+      <span>🏪 <strong>${escHtml(store)}</strong></span>
+      <span>📅 <strong>${escHtml(r.date || "—")}</strong></span>
+      <span style="color:${statusColor};font-weight:700;">${statusLabel}</span>
+      ${r.editAllowed ? '<span style="color:var(--amber);font-size:.8rem;">✏️ Редакцията е разрешена</span>' : ''}
+    </div>
+
     <div class="dr-detail-summary">
       <div class="dr-detail-sum-row"><span>Начална каса</span><span class="mono">${fmt(r.startCash)}</span></div>
       <div class="dr-detail-sum-row"><span>+ Приходи КЕШ</span><span class="mono pos">${fmt(r.totalCashIncome)}</span></div>
       <div class="dr-detail-sum-row"><span>+ Приходи POS</span><span class="mono pos">${fmt(r.totalPosIncome)}</span></div>
+      ${(r.totalSideIncomes || 0) > 0 ? `<div class="dr-detail-sum-row"><span>+ Странични приходи</span><span class="mono pos">${fmt(r.totalSideIncomes)}</span></div>` : ""}
       <div class="dr-detail-sum-row"><span>− Разход Стоки</span><span class="mono neg">${fmt(r.totalGoodsExpense)}</span></div>
       <div class="dr-detail-sum-row"><span>− Разход Други</span><span class="mono neg">${fmt(r.totalOtherExpense)}</span></div>
+      ${(r.totalAdvances || 0) > 0 ? `<div class="dr-detail-sum-row"><span>− Аванси</span><span class="mono neg">${fmt(r.totalAdvances)}</span></div>` : ""}
       <div class="dr-sum-divider"></div>
       <div class="dr-detail-sum-row dr-detail-sum-final">
         <span><strong>Крайна каса</strong></span>
@@ -3328,15 +3358,23 @@ function buildDrDetailHtml(r) {
 
     <div class="dr-section-title" style="margin-top:16px;">👥 Смени</div>
     <div class="table-responsive">
-      <table class="dr-table">
+      <table class="dr-detail-shift-table">
         <thead><tr><th>Смяна</th><th>Час</th><th>Оператор</th><th>КЕШ</th><th>POS</th><th>+</th><th>−</th></tr></thead>
         <tbody>${shiftsHtml}</tbody>
       </table>
     </div>
 
+    <div class="dr-section-title" style="margin-top:16px;">💰 Странични приходи</div>
+    <div class="table-responsive">
+      <table class="dr-detail-shift-table">
+        <thead><tr><th>#</th><th>Описание</th><th>Метод</th><th>Сума</th></tr></thead>
+        <tbody>${sideHtml}</tbody>
+      </table>
+    </div>
+
     <div class="dr-section-title" style="margin-top:16px;">📦 Разход Стоки</div>
     <div class="table-responsive">
-      <table class="dr-table dr-table-narrow">
+      <table class="dr-detail-shift-table">
         <thead><tr><th>#</th><th>Доставчик</th><th>Сума</th></tr></thead>
         <tbody>${goodsHtml}</tbody>
       </table>
@@ -3344,19 +3382,26 @@ function buildDrDetailHtml(r) {
 
     <div class="dr-section-title" style="margin-top:16px;">💸 Разход Други</div>
     <div class="table-responsive">
-      <table class="dr-table dr-table-narrow">
+      <table class="dr-detail-shift-table">
         <thead><tr><th>#</th><th>Описание</th><th>Сума</th></tr></thead>
         <tbody>${otherHtml}</tbody>
+      </table>
+    </div>
+
+    <div class="dr-section-title" style="margin-top:16px;">👤 Аванси</div>
+    <div class="table-responsive">
+      <table class="dr-detail-shift-table">
+        <thead><tr><th>#</th><th>Служител</th><th>Бележка</th><th>Сума</th></tr></thead>
+        <tbody>${advHtml}</tbody>
       </table>
     </div>
 
     <div class="dr-section-title" style="margin-top:16px;">📋 Лог на промени</div>
     ${logHtml}
 
-    <div class="dr-detail-meta">
+    <div class="dr-detail-meta" style="margin-top:14px;font-size:.75rem;">
       Създаден: ${(r.createdAt || "").slice(0, 16).replace("T", " ")} |
       Последна промяна: ${(r.lastModifiedAt || "").slice(0, 16).replace("T", " ")}
-      ${r.editAllowed ? ' | <span style="color:var(--amber)">✏️ Редакцията е разрешена</span>' : ''}
     </div>`;
 }
 
