@@ -5,5 +5,34 @@
   },
   "functions": {
     "source": "functions"
+  },
+  "hosting": {
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "firestore.rules",
+      "firestore.indexes.json",
+      "seed-suppliers.html",
+      "http-server.exe",
+      "*.md",
+      ".git",
+      ".git/**",
+      ".github",
+      ".github/**",
+      ".gitignore",
+      ".firebaserc",
+      "functions",
+      "functions/**"
+    ],
+    "headers": [
+      {
+        "source": "**/*.@(js|css)",
+        "headers": [{ "key": "Cache-Control", "value": "max-age=3600" }]
+      },
+      {
+        "source": "**/*.@(jpg|jpeg|gif|png|svg|webp|ico)",
+        "headers": [{ "key": "Cache-Control", "value": "max-age=86400" }]
+      }
+    ]
   }
 }
