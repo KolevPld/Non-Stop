@@ -21,6 +21,10 @@
       ".github/**",
       ".gitignore",
       ".firebaserc",
+      ".firebase",
+      ".firebase/**",
+      ".claude",
+      ".claude/**",
       "functions",
       "functions/**"
     ],
