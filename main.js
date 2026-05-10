@@ -2018,7 +2018,7 @@ function initDailyReport(storeRole) {
 
   const today  = new Date().toISOString().slice(0, 10);
   const dateEl = document.getElementById("drDate");
-  if (dateEl) { dateEl.value = today; dateEl.max = today; }
+  if (dateEl) { dateEl.value = today; dateEl.max = ""; }
 
   loadSuppliers();
   loadOrCreateReport();
@@ -2619,17 +2619,91 @@ function clearDrForm() {
   drCalc();
 }
 
-window.drNewReport = function() {
+// ── Помощна: следваща дата след последния затворен отчет ──
+async function suggestNextDrDate() {
+  const today = new Date().toISOString().slice(0, 10);
+  try {
+    const snap = await getDocs(query(
+      collection(db, "daily_reports"),
+      where("shopId", "==", _drShopId),
+      where("status", "==", "closed")
+    ));
+    if (snap.empty) return today;
+    const dates = snap.docs.map(d => d.data().date).sort();
+    const lastClosed = dates[dates.length - 1];
+    const next = new Date(lastClosed + "T12:00:00");
+    next.setDate(next.getDate() + 1);
+    const nextStr = next.toISOString().slice(0, 10);
+    return nextStr <= today ? nextStr : today;
+  } catch (e) { return today; }
+}
+
+// ── Отвори отчет за конкретна дата (от банер / диалог) ──
+window.drNewReportForDate = async function(date) {
   _drDocId  = null;
   _drData   = null;
   _drStatus = "draft";
-  const today  = new Date().toISOString().slice(0, 10);
   const dateEl = document.getElementById("drDate");
-  if (dateEl) { dateEl.value = today; dateEl.disabled = false; }
+  if (dateEl) { dateEl.value = date; dateEl.disabled = false; }
   clearDrForm();
   updateDrStatusUI();
   hideDrBanner();
-  loadOrCreateReport();
+  await loadOrCreateReport();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+};
+
+// ── Банер за незатворени дни ──────────────────────────
+async function checkMissingDays() {
+  const banner = document.getElementById("drMissingBanner");
+  if (!banner || !_drShopId) return;
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const snap  = await getDocs(query(
+      collection(db, "daily_reports"),
+      where("shopId", "==", _drShopId),
+      where("status", "==", "closed")
+    ));
+    if (snap.empty) { banner.style.display = "none"; return; }
+
+    const closedDates = snap.docs.map(d => d.data().date).sort();
+    const lastClosed  = closedDates[closedDates.length - 1];
+    if (lastClosed >= today) { banner.style.display = "none"; return; }
+
+    const closedSet = new Set(closedDates);
+    const missing   = [];
+    const d = new Date(lastClosed + "T12:00:00");
+    d.setDate(d.getDate() + 1);
+    while (d.toISOString().slice(0, 10) < today) {
+      const ds = d.toISOString().slice(0, 10);
+      if (!closedSet.has(ds)) missing.push(ds);
+      d.setDate(d.getDate() + 1);
+    }
+    if (!missing.length) { banner.style.display = "none"; return; }
+
+    const fmt = s => s.slice(8, 10) + "." + s.slice(5, 7);
+    const shown = missing.slice(0, 4).map(fmt).join(", ");
+    const extra = missing.length > 4 ? ` и още ${missing.length - 4}` : "";
+    banner.style.display = "";
+    banner.innerHTML =
+      `<span>⚠️ Незатворени дни: <strong>${missing.length}</strong> — ${shown}${extra}</span>` +
+      `<button class="dr-missing-btn" onclick="drNewReportForDate('${missing[0]}')">` +
+      `Попълни ${fmt(missing[0])}</button>`;
+  } catch (e) { banner.style.display = "none"; }
+}
+
+// ── Нов отчет (предлага умна дата) ────────────────────
+window.drNewReport = async function() {
+  _drDocId  = null;
+  _drData   = null;
+  _drStatus = "draft";
+  const dateEl = document.getElementById("drDate");
+  if (dateEl) dateEl.disabled = false;
+  clearDrForm();
+  updateDrStatusUI();
+  hideDrBanner();
+  const suggested = await suggestNextDrDate();
+  if (dateEl) dateEl.value = suggested;
+  await loadOrCreateReport();
   window.scrollTo({ top: 0, behavior: "smooth" });
 };
 
@@ -2728,6 +2802,28 @@ window.confirmCloseDay = async function() {
   updateDrStatusUI();
   showDrBanner("✅ Денят е затворен! Данните са изпратени към Собственика.", "success");
   await loadRecentReports();
+
+  // ── Предложи следващия незатворен ден ───────────────
+  const today = new Date().toISOString().slice(0, 10);
+  const closedDate = report.date;
+  const nextD = new Date(closedDate + "T12:00:00");
+  nextD.setDate(nextD.getDate() + 1);
+  const nextDate = nextD.toISOString().slice(0, 10);
+  if (nextDate <= today) {
+    const nextSnap = await getDocs(query(
+      collection(db, "daily_reports"),
+      where("shopId", "==", _drShopId),
+      where("date",   "==", nextDate),
+      where("status", "==", "closed"),
+      limit(1)
+    ));
+    if (nextSnap.empty) {
+      const fmt = s => s.slice(8, 10) + "." + s.slice(5, 7) + "." + s.slice(0, 4);
+      if (confirm(`✅ Отчет за ${fmt(closedDate)} е затворен!\n\nИскаш ли да попълниш ${fmt(nextDate)}?`)) {
+        await drNewReportForDate(nextDate);
+      }
+    }
+  }
 };
 
 async function persistReport(status) {
@@ -3052,13 +3148,16 @@ async function loadRecentReports() {
 
     const fmt = n => (n || 0).toFixed(2) + " €";
     el.innerHTML = snap.docs.map(d => {
-      const r      = { id: d.id, ...d.data() };
-      const closed = r.status === "closed";
-      const active = r.id === _drDocId ? "dr-hist-active" : "";
+      const r       = { id: d.id, ...d.data() };
+      const closed  = r.status === "closed";
+      const active  = r.id === _drDocId ? "dr-hist-active" : "";
+      const created = (r.createdAt || "").slice(0, 10);
+      const delayed = created && created > r.date
+        ? `<span class="dr-hist-delayed" title="Въведен на ${created}">⏰</span>` : "";
       return `
         <div class="dr-hist-item ${active}" onclick="openDrReport('${r.id}')">
           <div class="dr-hist-top">
-            <strong>${r.date}</strong>
+            <strong>${r.date}</strong>${delayed}
             <span class="dr-hist-badge ${closed ? "badge-closed" : "badge-draft"}">
               ${closed ? "✅ Затворен" : "📝 Чернова"}
             </span>
@@ -3074,6 +3173,7 @@ async function loadRecentReports() {
     console.error("loadRecentReports:", err);
     el.innerHTML = '<div class="tasks-empty">Грешка при зареждане</div>';
   }
+  checkMissingDays();
 }
 
 window.openDrReport = async function(docId) {

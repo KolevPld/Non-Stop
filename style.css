@@ -2025,6 +2025,28 @@ body.light .dr-goods-total { background: #f0f2f5; }
   border-bottom: 1px solid var(--border);
   position: sticky; top: 100px; z-index: 90;
 }
+
+/* ── Незатворени дни — банер ─────────────────── */
+.dr-missing-banner {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; flex-wrap: wrap;
+  padding: 9px 14px;
+  background: var(--amber-dim); border-bottom: 1px solid rgba(227,179,65,.3);
+  font-size: .82rem; color: var(--amber);
+}
+.dr-missing-btn {
+  flex-shrink: 0; padding: 4px 12px;
+  background: var(--amber); color: #111; border: none;
+  border-radius: var(--radius-sm); font-size: .78rem; font-weight: 700;
+  cursor: pointer; font-family: var(--font);
+}
+.dr-missing-btn:hover { opacity: .85; }
+
+/* ── Въведен със закъснение ⏰ ──────────────── */
+.dr-hist-delayed {
+  font-size: .72rem; color: var(--amber); margin-left: 4px;
+  cursor: default;
+}
 .dr-top-bar input[type="date"] {
   flex: 1; min-height: 40px; padding: 8px 10px; font-size: .875rem;
 }
