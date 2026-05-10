@@ -3545,8 +3545,8 @@ async function renderAccountsList() {
                       title="Редактирай имейл">
                 ✏️ Редактирай
               </button>
-              <button class="acc-reset-btn" onclick="resetAccountPassword('${escHtml(u.email || "")}')"
-                      title="Изпрати линк за смяна на парола">
+              <button class="acc-reset-btn" onclick="openResetPwdModal('${u.uid}', '${escHtml(u.email || "")}')"
+                      title="Задай нова парола директно">
                 🔑 Reset парола
               </button>
               <button class="btn-danger acc-del-btn" onclick="deactivateAccount('${u.uid}', '${escHtml(u.email || "")}')"
@@ -3569,14 +3569,50 @@ async function renderAccountsList() {
   }
 }
 
-// ── Reset парола (изпраща email линк) ────────────
-window.resetAccountPassword = async function(email) {
-  if (!confirm(`Да изпратим линк за смяна на парола на:\n${email}?`)) return;
+// ── Reset парола — модал с директна смяна (Cloud Function) ──
+let _resetPwdUid   = null;
+let _resetPwdEmail = null;
+
+window.openResetPwdModal = function(uid, email) {
+  _resetPwdUid   = uid;
+  _resetPwdEmail = email;
+  document.getElementById("resetPwdEmailLbl").textContent = `Акаунт: ${email}`;
+  document.getElementById("resetPwdNew").value     = "";
+  document.getElementById("resetPwdConfirm").value = "";
+  document.getElementById("resetPwdErr").textContent = "";
+  const btn = document.getElementById("resetPwdSaveBtn");
+  if (btn) { btn.disabled = false; btn.textContent = "Запази"; }
+  document.getElementById("resetPwdModal").classList.remove("hidden");
+  setTimeout(() => document.getElementById("resetPwdNew").focus(), 60);
+};
+
+window.closeResetPwdModal = function() {
+  document.getElementById("resetPwdModal").classList.add("hidden");
+  _resetPwdUid = null; _resetPwdEmail = null;
+};
+
+window.confirmResetPwd = async function() {
+  const newPwd  = document.getElementById("resetPwdNew").value;
+  const confPwd = document.getElementById("resetPwdConfirm").value;
+  const errEl   = document.getElementById("resetPwdErr");
+  const btn     = document.getElementById("resetPwdSaveBtn");
+
+  errEl.textContent = "";
+  if (newPwd.length < 6) { errEl.textContent = "Паролата трябва да е поне 6 символа."; return; }
+  if (newPwd !== confPwd) { errEl.textContent = "Паролите не съвпадат."; return; }
+
+  btn.disabled = true; btn.textContent = "Запазване...";
   try {
-    await sendPasswordResetEmail(auth, email);
-    alert(`✅ Линк изпратен на ${email}\n\nПровери входящата поща (и Spam).`);
+    const { getFunctions, httpsCallable } =
+      await import("https://www.gstatic.com/firebasejs/9.22.2/firebase-functions.js");
+    const fns     = getFunctions(app, "europe-west1");
+    const resetFn = httpsCallable(fns, "resetUserPassword");
+    await resetFn({ uid: _resetPwdUid, newPassword: newPwd });
+    closeResetPwdModal();
+    alert(`✅ Паролата е сменена успешно!\nУведоми управителя за новата парола.`);
   } catch (err) {
-    alert(`❌ Грешка: ${err.message}`);
+    errEl.textContent = `❌ ${err.message}`;
+    btn.disabled = false; btn.textContent = "Запази";
   }
 };
 

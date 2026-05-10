@@ -1,0 +1,16 @@
+{
+  "name": "nonstop-functions",
+  "description": "Cloud Functions for NonStop App",
+  "scripts": {
+    "deploy": "firebase deploy --only functions"
+  },
+  "engines": {
+    "node": "22"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^13.0.0",
+    "firebase-functions": "^6.0.0"
+  },
+  "private": true
+}
