@@ -1082,27 +1082,6 @@
     </div>
   </div>
 
-  <!-- Reset парола на управител (Cloud Function) -->
-  <div id="resetPwdModal" class="suppl-modal-overlay hidden">
-    <div class="suppl-modal-box">
-      <div class="suppl-modal-title">🔑 Нова парола за управител</div>
-      <div id="resetPwdEmailLbl" style="font-size:.83rem;color:var(--text2);margin-bottom:16px;"></div>
-      <label class="field-label">Нова парола</label>
-      <input id="resetPwdNew" type="password" placeholder="Минимум 6 символа"
-             oninput="document.getElementById('resetPwdErr').textContent=''"
-             onkeydown="if(event.key==='Enter')confirmResetPwd();if(event.key==='Escape')closeResetPwdModal()">
-      <label class="field-label" style="margin-top:10px;">Потвърди паролата</label>
-      <input id="resetPwdConfirm" type="password" placeholder="Повтори паролата"
-             oninput="document.getElementById('resetPwdErr').textContent=''"
-             onkeydown="if(event.key==='Enter')confirmResetPwd();if(event.key==='Escape')closeResetPwdModal()">
-      <div id="resetPwdErr" style="color:var(--red);font-size:.8rem;min-height:20px;margin-top:6px;"></div>
-      <div class="suppl-modal-actions" style="margin-top:4px;">
-        <button class="btn btn-secondary" onclick="closeResetPwdModal()">Отказ</button>
-        <button class="btn btn-primary" id="resetPwdSaveBtn" onclick="confirmResetPwd()">Запази</button>
-      </div>
-    </div>
-  </div>
-
   <!-- Supplier add modal -->
   <div id="supplAddModal" class="suppl-modal-overlay hidden">
     <div class="suppl-modal-box">
@@ -1231,6 +1210,27 @@
   </div><!-- /storeWhScreen -->
 
 </div><!-- /storeApp -->
+
+<!-- Reset парола на управител (Cloud Function) — извън storeApp, достъпно за Owner -->
+<div id="resetPwdModal" class="suppl-modal-overlay hidden">
+  <div class="suppl-modal-box">
+    <div class="suppl-modal-title">🔑 Нова парола за управител</div>
+    <div id="resetPwdEmailLbl" style="font-size:.83rem;color:var(--text2);margin-bottom:16px;"></div>
+    <label class="field-label">Нова парола</label>
+    <input id="resetPwdNew" type="password" placeholder="Минимум 6 символа"
+           oninput="document.getElementById('resetPwdErr').textContent=''"
+           onkeydown="if(event.key==='Enter')confirmResetPwd();if(event.key==='Escape')closeResetPwdModal()">
+    <label class="field-label" style="margin-top:10px;">Потвърди паролата</label>
+    <input id="resetPwdConfirm" type="password" placeholder="Повтори паролата"
+           oninput="document.getElementById('resetPwdErr').textContent=''"
+           onkeydown="if(event.key==='Enter')confirmResetPwd();if(event.key==='Escape')closeResetPwdModal()">
+    <div id="resetPwdErr" style="color:var(--red);font-size:.8rem;min-height:20px;margin-top:6px;"></div>
+    <div class="suppl-modal-actions" style="margin-top:4px;">
+      <button class="btn btn-secondary" onclick="closeResetPwdModal()">Отказ</button>
+      <button class="btn btn-primary" id="resetPwdSaveBtn" onclick="confirmResetPwd()">Запази</button>
+    </div>
+  </div>
+</div>
 
 <!-- ── Daily Report Detail Modal ───────────────── -->
 <div id="drDetailModal" class="hidden">
