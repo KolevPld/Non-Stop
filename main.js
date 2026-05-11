@@ -3705,7 +3705,7 @@ window.confirmResetPwd = async function() {
   try {
     const { getFunctions, httpsCallable } =
       await import("https://www.gstatic.com/firebasejs/9.22.2/firebase-functions.js");
-    const fns     = getFunctions(app, "europe-west1");
+    const fns     = getFunctions(app, "us-central1");
     const resetFn = httpsCallable(fns, "resetUserPassword");
     await resetFn({ uid: _resetPwdUid, newPassword: newPwd });
     closeResetPwdModal();
