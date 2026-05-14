@@ -2640,16 +2640,29 @@ async function suggestNextDrDate() {
 
 // ── Отвори отчет за конкретна дата (от банер / диалог) ──
 window.drNewReportForDate = async function(date) {
-  _drDocId  = null;
-  _drData   = null;
-  _drStatus = "draft";
-  const dateEl = document.getElementById("drDate");
-  if (dateEl) { dateEl.value = date; dateEl.disabled = false; }
-  clearDrForm();
-  updateDrStatusUI();
-  hideDrBanner();
-  await loadOrCreateReport();
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  if (!date) return;
+  try {
+    _drDocId  = null;
+    _drData   = null;
+    _drStatus = "draft";
+    const dateEl = document.getElementById("drDate");
+    if (dateEl) { dateEl.value = date; dateEl.disabled = false; }
+    clearDrForm();
+    updateDrStatusUI();
+    hideDrBanner();
+    await loadOrCreateReport();
+    // Scroll to top using both window and container (handles all layout modes)
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    document.getElementById("storeTabDrContent")?.scrollTo({ top: 0, behavior: "smooth" });
+    // Brief visual highlight on the date input so user sees it changed
+    if (dateEl) {
+      dateEl.classList.add("dr-date-flash");
+      setTimeout(() => dateEl.classList.remove("dr-date-flash"), 1000);
+    }
+  } catch (err) {
+    console.error("drNewReportForDate:", err);
+    alert("Грешка при зареждане на отчет за " + date + ": " + err.message);
+  }
 };
 
 // ── Банер за незатворени дни ──────────────────────────

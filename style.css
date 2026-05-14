@@ -2042,6 +2042,12 @@ body.light .dr-goods-total { background: #f0f2f5; }
 }
 .dr-missing-btn:hover { opacity: .85; }
 
+@keyframes drDateFlash {
+  0%   { box-shadow: 0 0 0 3px var(--amber); }
+  100% { box-shadow: 0 0 0 0px transparent; }
+}
+.dr-date-flash { animation: drDateFlash .9s ease-out forwards; }
+
 /* ── Въведен със закъснение ⏰ ──────────────── */
 .dr-hist-delayed {
   font-size: .72rem; color: var(--amber); margin-left: 4px;
