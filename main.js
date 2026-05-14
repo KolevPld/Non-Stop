@@ -3061,13 +3061,13 @@ async function saveClosedReportEdits() {
 
   const payload = {
     shopId: _drShopId, date: data.date, status: "closed",
-    startCash: data.startCash, shifts: data.shifts,
+    startCash: _drData.startCash, shifts: data.shifts,
     expensesGoods: data.expensesGoods, expensesOther: data.expensesOther,
     sideIncomes: data.sideIncomes, advances: data.advances,
     totalCashIncome: data.totalCashIncome, totalPosIncome: data.totalPosIncome,
     totalGoodsExpense: data.totalGoodsExpense, totalOtherExpense: data.totalOtherExpense,
     totalSideIncomes: data.totalSideIncomes, totalAdvances: data.totalAdvances,
-    endCash: data.endCash,
+    endCash: _drData.endCash,
     createdBy: _drData.createdBy, createdAt: _drData.createdAt,
     lastModifiedBy: currentUserId, lastModifiedAt: now,
     changeLog,
@@ -3091,9 +3091,12 @@ function updateDrStatusUI() {
   const closed      = _drStatus === "closed";
   const editAllowed = closed && !!_drData?.editAllowed;
 
-  document.querySelectorAll("#storeApp .dr-input, #drStartCash").forEach(el => {
+  document.querySelectorAll("#storeApp .dr-input").forEach(el => {
     el.disabled = closed && !editAllowed;
   });
+  // Началната каса НИКОГА не се редактира при затворен отчет
+  const scEl = document.getElementById("drStartCash");
+  if (scEl) scEl.disabled = closed;
   const dateEl = document.getElementById("drDate");
   if (dateEl) dateEl.disabled = closed && !editAllowed;
 
