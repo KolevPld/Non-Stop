@@ -3427,19 +3427,35 @@ async function loadRecentReports() {
       collection(db, "daily_reports"),
       where("shopId", "==", _drShopId)
     ));
-    const snap = { docs: raw.docs.sort((a, b) => b.data().date.localeCompare(a.data().date)).slice(0, 5) };
+    const sorted = raw.docs
+      .filter(d => d.data() && typeof d.data().date === "string")
+      .sort((a, b) => b.data().date.localeCompare(a.data().date))
+      .slice(0, 5);
+    const snap = { docs: sorted, empty: sorted.length === 0 };
 
     if (snap.empty) {
       el.innerHTML = '<div class="tasks-empty">Все още няма отчети</div>';
       return;
     }
 
-    const fmt = n => (n || 0).toFixed(2) + " €";
+    const tsToYMD = (v) => {
+      if (!v) return "";
+      if (typeof v === "string") return v.slice(0, 10);
+      if (typeof v.toDate === "function") {
+        try { return v.toDate().toISOString().slice(0, 10); } catch { return ""; }
+      }
+      if (v.seconds) {
+        try { return new Date(v.seconds * 1000).toISOString().slice(0, 10); } catch { return ""; }
+      }
+      return "";
+    };
+
+    const fmt = n => (Number(n) || 0).toFixed(2) + " €";
     el.innerHTML = snap.docs.map(d => {
       const r       = { id: d.id, ...d.data() };
       const closed  = r.status === "closed";
       const active  = r.id === _drDocId ? "dr-hist-active" : "";
-      const created = (r.createdAt || "").slice(0, 10);
+      const created = tsToYMD(r.createdAt);
       const delayed = created && created > r.date
         ? `<span class="dr-hist-delayed" title="Въведен на ${created}">⏰</span>` : "";
       return `
