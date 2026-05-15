@@ -1645,6 +1645,24 @@ function renderTasks() {
   }).join('');
 }
 
+// ── Helper: изпраща нотификация през Service Worker (за мобилни) ──
+async function showAppNotification(title, options = {}) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return false;
+  try {
+    if ('serviceWorker' in navigator) {
+      const reg = await navigator.serviceWorker.ready;
+      if (reg && typeof reg.showNotification === 'function') {
+        await reg.showNotification(title, options);
+        return true;
+      }
+    }
+  } catch (e) {
+    console.warn('SW showNotification failed, fallback:', e);
+  }
+  try { new Notification(title, options); return true; }
+  catch (e) { console.error('Notification failed:', e); return false; }
+}
+
 // ── Напомняния за бележки — polling на всяка минута ──────────
 // Следим кои вече са изпратени (в рамките на тази сесия + localStorage)
 const _firedReminders = new Set(
@@ -1667,10 +1685,12 @@ function checkTaskReminders() {
     if (_firedReminders.has(key)) return;
 
     if (t.reminderDate === nowYM && t.reminderTime === nowHM) {
-      new Notification('📝 Нон Стоп — Бележка', {
+      showAppNotification('📝 Нон Стоп — Бележка', {
         body: t.text,
         icon: 'icon-192.png',
-        tag:  key   // предотвратява дублиране на OS ниво
+        badge: 'icon-192.png',
+        tag:  key,
+        requireInteraction: true
       });
       _firedReminders.add(key);
       // Запази само последните 200 ключа за да не расте без край
@@ -1709,9 +1729,10 @@ window.testTaskReminder = function() {
     if (statusEl) statusEl.textContent = '⚠️ Няма бележки с напомняне';
     alert('Няма бележки с напомняне за тест.'); return;
   }
-  new Notification('📝 Нон Стоп — Бележка (Тест)', {
+  showAppNotification('📝 Нон Стоп — Бележка (Тест)', {
     body: `${t.text} | ${t.reminderDate} ${t.reminderTime}`,
-    icon: 'icon-192.png'
+    icon: 'icon-192.png',
+    badge: 'icon-192.png'
   });
   if (statusEl) statusEl.textContent = `✅ Изпратено: „${t.text}"`;
   console.log('testTaskReminder → fired for:', t.text);
@@ -1750,7 +1771,7 @@ window.toggleNotifications = async function(on) {
 
 window.sendTestNotif = function() {
   if (!('Notification' in window) || Notification.permission !== 'granted') { alert('Разреши известията първо.'); return; }
-  new Notification('🏪 Нон Стоп — Тест', { body: 'Известията работят!', icon: 'icon-192.png' });
+  showAppNotification('🏪 Нон Стоп — Тест', { body: 'Известията работят!', icon: 'icon-192.png', badge: 'icon-192.png' });
 };
 
 function scheduleReminder() {
@@ -1761,7 +1782,7 @@ function scheduleReminder() {
     const today = new Date().toISOString().slice(0, 10);
     const hasToday = records.some(r => (r.date||'').startsWith(today));
     if (!hasToday && localStorage.getItem('ns_notif') === '1' && Notification.permission === 'granted') {
-      new Notification('🏪 Нон Стоп — Напомняне', { body: `Няма запис за днес (${today})!`, icon: 'icon-192.png' });
+      showAppNotification('🏪 Нон Стоп — Напомняне', { body: `Няма запис за днес (${today})!`, icon: 'icon-192.png', badge: 'icon-192.png' });
     }
     scheduleReminder();
   }, target - now);
