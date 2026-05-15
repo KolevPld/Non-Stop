@@ -26,6 +26,7 @@ import {
   sendPasswordResetEmail
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
+import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-messaging.js";
 // --------------------------------------------------
 // 🔥 Firebase Config
 // --------------------------------------------------
@@ -39,6 +40,61 @@ const firebaseConfig = {
 };
 
 const app  = initializeApp(firebaseConfig);
+
+// ── FCM Push Notifications ────────────────────────────
+const VAPID_KEY = "BHBy5Ar-JVm7KTaWOxUjMc2qO2yRMklkcSPZyEXNtkBplmGTn6hFDxW4bnzg686LDADtn_Oskvlh0-pF-bAdmBs";
+let _messaging = null;
+async function initFCM() {
+  try {
+    if (!('serviceWorker' in navigator) || !('Notification' in window)) {
+      console.warn('[FCM] Не се поддържа.');
+      return;
+    }
+    if (Notification.permission !== 'granted') {
+      console.log('[FCM] Permission не е granted, пропускам.');
+      return;
+    }
+    const reg = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/firebase-cloud-messaging-push-scope' });
+    console.log('[FCM] SW registered:', reg.scope);
+
+    _messaging = getMessaging(app);
+    const token = await getToken(_messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: reg });
+    if (!token) {
+      console.warn('[FCM] Няма token.');
+      return;
+    }
+    console.log('[FCM] Token:', token.slice(0, 20) + '...');
+
+    if (currentUserId) {
+      const tokRef = doc(db, 'fcmTokens', token.slice(0, 60));
+      await setDoc(tokRef, {
+        token,
+        userId: currentUserId,
+        userEmail: currentUserEmail || '',
+        role: currentUserRole || '',
+        ua: navigator.userAgent.slice(0, 200),
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+      console.log('[FCM] Token saved to Firestore.');
+    }
+
+    onMessage(_messaging, (payload) => {
+      console.log('[FCM] Foreground message:', payload);
+      const title = payload.notification?.title || '🏪 Нон Стоп';
+      const opts  = {
+        body: payload.notification?.body || '',
+        icon: '/icon-192.png',
+        badge: '/icon-192.png',
+        requireInteraction: true
+      };
+      showAppNotification(title, opts);
+    });
+  } catch (err) {
+    console.error('[FCM] init error:', err);
+  }
+}
+window.initFCM = initFCM;
+
 const db   = getFirestore(app);
 const auth = getAuth(app);
 
@@ -191,6 +247,7 @@ onAuthStateChanged(auth, async user => {
 
     const role      = await getUserRole(user);
     currentUserRole = role;
+    initFCM();
 
     // Блокиран акаунт
     if (role === "disabled") {
@@ -1763,6 +1820,7 @@ window.toggleNotifications = async function(on) {
     localStorage.setItem('ns_notif','1');
     status.textContent = '✅ Включено — 18:00';
     scheduleReminder();
+    initFCM();
   } else {
     localStorage.setItem('ns_notif','0');
     status.textContent = 'Изключено';
