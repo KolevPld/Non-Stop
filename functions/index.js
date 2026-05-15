@@ -271,3 +271,44 @@ exports.protectStartCash = onDocumentUpdated(
     }
   }
 );
+
+
+// ── При затваряне на неделя — push към Owner за седмична справка ─
+exports.notifyOwnerWeekClosed = onDocumentUpdated(
+  { document: 'daily_reports/{docId}', region: 'us-central1' },
+  async (event) => {
+    const before = event.data?.before?.data();
+    const after  = event.data?.after?.data();
+    if (!before || !after) return;
+    if (before.status === 'closed' || after.status !== 'closed') return;
+
+    // Проверяваме дали датата е неделя (UTC)
+    const d = new Date(after.date + 'T00:00:00Z');
+    if (d.getUTCDay() !== 0) return;
+
+    const db = admin.firestore();
+    const usersSnap = await db.collection('users').where('role', '==', 'owner').get();
+    const ownerIds = usersSnap.docs.map(u => u.id);
+    if (!ownerIds.length) return;
+
+    const tokensSnap = await db.collection('fcmTokens')
+      .where('userId', 'in', ownerIds.slice(0, 10)).get();
+    const tokens = tokensSnap.docs.map(d => d.data().token).filter(Boolean);
+    if (!tokens.length) return;
+
+    const shopName = after.shopId === 'store1' ? 'Магазин 1' : 'Магазин 2';
+
+    await admin.messaging().sendEachForMulticast({
+      notification: {
+        title: '📅 Седмична справка',
+        body:  `${shopName}: седмицата завърши (${after.date}) — справката е готова.`
+      },
+      webpush: {
+        fcmOptions: { link: '/' },
+        notification: { icon: '/icon-192.png', badge: '/icon-192.png' }
+      },
+      tokens
+    });
+    logger.info('Week-end notification sent', { shopId: after.shopId, date: after.date });
+  }
+);
