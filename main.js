@@ -1485,6 +1485,7 @@ window.showScreen = function(screen) {
     accountsScreen?.classList.remove("hidden");
     document.getElementById('navAccounts')?.classList.add('active');
     renderAccountsList();
+    loadLastBackupStatus();
 
   } else if (screen === "dailyreports") {
     if (!isAdmin) { alert("Нямаш достъп до този екран."); return; }
@@ -5846,3 +5847,67 @@ document.addEventListener("keydown", e => {
     }
   }
 });
+
+
+// ── Backup управление ────────────────────────────────────────────────────
+window.triggerBackupNow = async function() {
+  const btn  = document.getElementById('backupNowBtn');
+  const stat = document.getElementById('backupStatus');
+  if (!btn || !stat) return;
+  if (!confirm('Стартиране на ръчен backup на цялата база? Това отнема няколко минути.')) return;
+
+  btn.disabled = true;
+  const origHtml = btn.innerHTML;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Стартиране...';
+  stat.style.color = 'var(--text2)';
+  stat.textContent = '⏳ Изпращане на заявка...';
+
+  try {
+    const { getFunctions, httpsCallable } =
+      await import("https://www.gstatic.com/firebasejs/9.22.2/firebase-functions.js");
+    const fns = getFunctions(app, 'us-central1');
+    const fn  = httpsCallable(fns, 'triggerBackupNow');
+    const res = await fn({});
+    console.log('Backup triggered:', res.data);
+    stat.style.color = '#4caf50';
+    stat.textContent = '✅ Backup стартиран! Проверете след няколко минути в Cloud Storage.';
+  } catch (err) {
+    console.error('triggerBackupNow:', err);
+    stat.style.color = '#f44336';
+    stat.textContent = '❌ Грешка: ' + (err.message || err);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = origHtml;
+    setTimeout(() => loadLastBackupStatus(), 4000);
+  }
+};
+
+async function loadLastBackupStatus() {
+  const stat = document.getElementById('backupStatus');
+  if (!stat) return;
+  try {
+    const snap = await getDocs(collection(db, '_backups'));
+    if (snap.empty) { stat.textContent = 'ℹ️ Все още няма backup.'; return; }
+    const docs = snap.docs
+      .map(d => d.data())
+      .filter(d => d.startedAt)
+      .sort((a, b) => {
+        const ta = a.startedAt?.toMillis ? a.startedAt.toMillis() : 0;
+        const tb = b.startedAt?.toMillis ? b.startedAt.toMillis() : 0;
+        return tb - ta;
+      });
+    if (!docs.length) { stat.textContent = 'ℹ️ Все още няма backup.'; return; }
+    const last  = docs[0];
+    const dt    = last.startedAt?.toDate ? last.startedAt.toDate() : new Date();
+    const dtStr = dt.toLocaleString('bg-BG', { timeZone: 'Europe/Sofia' });
+    const icon  = last.status === 'failed' ? '❌' : last.status === 'started' ? '⏳' : '✅';
+    const tag   = last.manual ? ' (ръчен)' : '';
+    const errTxt = last.error ? ` — ${last.error.slice(0, 80)}` : '';
+    stat.style.color = last.status === 'failed' ? '#f44336' : 'var(--text2)';
+    stat.textContent = `${icon} Последен backup: ${dtStr}${tag}${errTxt}`;
+  } catch (e) {
+    console.warn('loadLastBackupStatus:', e);
+    stat.textContent = 'ℹ️ Не може да зареди статуса.';
+  }
+}
+window.loadLastBackupStatus = loadLastBackupStatus;

@@ -610,6 +610,23 @@
       </button>
     </div>
 
+    <!-- Backup на данните -->
+    <div class="card" id="backupCard">
+      <div class="card-title">
+        <i class="fa-solid fa-database"></i> Backup на данните
+      </div>
+      <p style="font-size:.85rem;color:var(--text3);margin:0 0 12px;">
+        Автоматичен backup на цялата база всяка нощ в 03:00 (Sofia time).
+        Държат се последните 30 backup-а. При грешка получавате push нотификация.
+      </p>
+      <div id="backupStatus" style="font-size:.85rem;min-height:1.4em;margin-bottom:10px;color:var(--text2);">
+        Зареждане на последен backup...
+      </div>
+      <button type="button" class="btn-primary" id="backupNowBtn" onclick="triggerBackupNow()">
+        <i class="fa-solid fa-cloud-arrow-up"></i> Backup сега
+      </button>
+    </div>
+
   </div><!-- /screen-accounts -->
 
   <!-- ── SCREEN: ДНЕВНИ ОТЧЕТИ (само за owner) ─── -->

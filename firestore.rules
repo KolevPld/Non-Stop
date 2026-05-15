@@ -22,6 +22,11 @@ service cloud.firestore {
     match /notes/{id}            { allow read, write: if isAuth(); }
     match /dailyReports/{id}     { allow read, write: if isAuth(); }
     match /fcmTokens/{id}        { allow read, write: if isAuth(); }
+
+    match /_backups/{docId} {
+      allow read:  if isAuth();
+      allow write: if false;
+    }
     match /reportChangeLogs/{id} { allow read, write: if isAuth(); }
 
     match /users/{id} {
