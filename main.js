@@ -321,7 +321,7 @@ function refreshUI() {
   if (isAdmin) {
     renderTable();
     renderMethodSummary();
-    renderChart();
+    /* renderChart(); — премахнато */
     applyFilters();
     renderTaxSummary();
     renderLiveBalance();
@@ -359,7 +359,7 @@ async function loadRecords() {
     renderTable();
     renderRecentList(); renderRecentTable();
     renderMethodSummary();
-    renderChart();
+    /* renderChart(); — премахнато */
     applyFilters();
     renderTaxSummary();
     window.showScreen("add"); document.getElementById("bottomNav")?.classList.remove("hidden");
@@ -837,7 +837,7 @@ function applyFilters() {
 
   renderTable(filteredRecords);
   updateFilterSummary(filteredRecords);
-  renderChart();
+  /* renderChart(); — премахнато */
 }
 
 function clearFilters() {
@@ -1438,7 +1438,7 @@ window.showScreen = function(screen) {
     reportScreen?.classList.remove("hidden");
     document.getElementById('navReports')?.classList.add('active');
     renderTable(); renderMethodSummary();
-    renderChart(); applyFilters(); renderTaxSummary();
+    /* renderChart(); — премахнато */ applyFilters(); renderTaxSummary();
     _wrPopulateWeekSelect(); renderWeeklyReport(); _wrAutoCheckSunday();
 
   } else if (screen === "notes") {
