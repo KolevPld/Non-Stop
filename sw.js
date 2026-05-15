@@ -1,4 +1,4 @@
-const CACHE_NAME = "nonstop-cache-v4";
+const CACHE_NAME = "nonstop-cache-v5";
 
 // Само статични asset-и се кешират — JS и HTML ВИНАГИ от мрежата
 const STATIC_CACHE = [
@@ -51,6 +51,19 @@ self.addEventListener("fetch", (event) => {
         caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         return response;
       });
+    })
+  );
+});
+
+// ── Notification click handler — фокусира приложението ──
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      for (const c of list) {
+        if ('focus' in c) return c.focus();
+      }
+      if (self.clients.openWindow) return self.clients.openWindow('/');
     })
   );
 });
