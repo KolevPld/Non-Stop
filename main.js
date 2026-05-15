@@ -54,8 +54,23 @@ async function initFCM() {
       console.log('[FCM] Permission не е granted, пропускам.');
       return;
     }
-    const reg = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/firebase-cloud-messaging-push-scope' });
+    // Регистрираме firebase-messaging-sw.js (default scope /)
+    const reg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
     console.log('[FCM] SW registered:', reg.scope);
+
+    // Чакаме SW-то реално да стане активен
+    if (reg.installing || reg.waiting) {
+      await new Promise(resolve => {
+        const sw = reg.installing || reg.waiting;
+        sw.addEventListener('statechange', () => {
+          if (sw.state === 'activated') resolve();
+        });
+        // safety timeout
+        setTimeout(resolve, 5000);
+      });
+    }
+    await navigator.serviceWorker.ready;
+    console.log('[FCM] SW активен.');
 
     _messaging = getMessaging(app);
     const token = await getToken(_messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: reg });
