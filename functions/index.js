@@ -172,3 +172,102 @@ exports.dailyCloseReminder = onSchedule(
     logger.info('Daily close reminder sent', { missing });
   }
 );
+
+
+// ── Авто-прехвърляне на начална каса при затваряне на ден ─────
+exports.autoCarryStartCash = onDocumentUpdated(
+  { document: 'daily_reports/{docId}', region: 'us-central1' },
+  async (event) => {
+    const before = event.data?.before?.data();
+    const after  = event.data?.after?.data();
+    if (!before || !after) return;
+
+    if (before.status === 'closed' || after.status !== 'closed') {
+      logger.info('autoCarryStartCash: не е draft→closed преход, skip', { docId: event.params.docId });
+      return;
+    }
+
+    const shopId  = after.shopId;
+    const date    = after.date;
+    const endCash = Number(after.endCash || 0);
+
+    if (!shopId || !date) {
+      logger.warn('autoCarryStartCash: липсва shopId/date', { docId: event.params.docId });
+      return;
+    }
+
+    const d = new Date(date + 'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate() + 1);
+    const nextDate = d.toISOString().slice(0, 10);
+    const nextDocId = `${shopId}_${nextDate}`;
+
+    const db   = admin.firestore();
+    const ref  = db.collection('daily_reports').doc(nextDocId);
+    const snap = await ref.get();
+
+    if (snap.exists) {
+      const existing = snap.data();
+      if (existing.status === 'closed') {
+        logger.info('autoCarryStartCash: следващият ден е затворен, skip', { nextDocId });
+        return;
+      }
+      await ref.update({
+        startCash: endCash,
+        carryFromDate: date,
+        carryUpdatedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+      logger.info('autoCarryStartCash: обновен съществуващ draft', { nextDocId, startCash: endCash });
+    } else {
+      await ref.set({
+        shopId,
+        date: nextDate,
+        status: 'draft',
+        startCash: endCash,
+        shifts: [],
+        expensesGoods: [],
+        expensesOther: [],
+        sideIncomes: [],
+        advances: [],
+        totalCashIncome: 0,
+        totalPosIncome: 0,
+        totalGoodsExpense: 0,
+        totalOtherExpense: 0,
+        totalSideIncomes: 0,
+        totalAdvances: 0,
+        endCash: endCash,
+        carryFromDate: date,
+        autoCreated: true,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        carryUpdatedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+      logger.info('autoCarryStartCash: създаден нов draft', { nextDocId, startCash: endCash });
+    }
+  }
+);
+
+exports.protectStartCash = onDocumentUpdated(
+  { document: 'daily_reports/{docId}', region: 'us-central1' },
+  async (event) => {
+    const before = event.data?.before?.data();
+    const after  = event.data?.after?.data();
+    if (!before || !after) return;
+
+    if (before.status !== 'closed' || after.status !== 'closed') return;
+
+    const startChanged = Number(before.startCash || 0) !== Number(after.startCash || 0);
+    const endChanged   = Number(before.endCash || 0)   !== Number(after.endCash || 0);
+
+    if (startChanged || endChanged) {
+      logger.warn('protectStartCash: опит за промяна на startCash/endCash на затворен отчет — възстановявам', {
+        docId: event.params.docId,
+        beforeStart: before.startCash, afterStart: after.startCash,
+        beforeEnd: before.endCash, afterEnd: after.endCash
+      });
+      await event.data.after.ref.update({
+        startCash: before.startCash,
+        endCash:   before.endCash,
+        startCashTamperedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+    }
+  }
+);
