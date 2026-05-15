@@ -1,5 +1,7 @@
-const functions = require("firebase-functions/v2/https");
-const admin     = require("firebase-admin");
+const functions             = require("firebase-functions/v2/https");
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const admin                 = require("firebase-admin");
+const { Storage }           = require("@google-cloud/storage");
 
 admin.initializeApp();
 
@@ -310,5 +312,133 @@ exports.notifyOwnerWeekClosed = onDocumentUpdated(
       tokens
     });
     logger.info('Week-end notification sent', { shopId: after.shopId, date: after.date });
+  }
+);
+
+
+// ── Firestore Backup — ежедневен export към Cloud Storage ─────────────────
+const BACKUP_BUCKET    = 'nonstopapp-c30b1-backups';
+const BACKUP_KEEP_DAYS = 30;
+const PROJECT_ID       = 'nonstopapp-c30b1';
+
+async function firestoreExport(outputUriPrefix) {
+  const tokenResp   = await admin.app().options.credential.getAccessToken();
+  const accessToken = tokenResp.access_token;
+
+  const url  = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default):exportDocuments`;
+  const resp = await fetch(url, {
+    method:  'POST',
+    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ outputUriPrefix, collectionIds: [] })
+  });
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`Firestore export HTTP ${resp.status}: ${text}`);
+  }
+  return resp.json();
+}
+
+async function cleanupOldBackups() {
+  try {
+    const storage  = new Storage();
+    const bucket   = storage.bucket(BACKUP_BUCKET);
+    const cutoff   = new Date();
+    cutoff.setDate(cutoff.getDate() - BACKUP_KEEP_DAYS);
+    const cutoffYmd = cutoff.toISOString().slice(0, 10);
+
+    const [files] = await bucket.getFiles({ prefix: 'firestore-backups/' });
+    let deleted = 0;
+    for (const file of files) {
+      const m = file.name.match(/^firestore-backups\/(\d{4}-\d{2}-\d{2})\//);
+      if (!m) continue;
+      if (m[1] < cutoffYmd) { await file.delete(); deleted++; }
+    }
+    logger.info('cleanupOldBackups', { deleted, cutoffYmd });
+  } catch (e) {
+    logger.warn('cleanupOldBackups failed', e);
+  }
+}
+
+exports.firestoreBackup = onSchedule(
+  { schedule: '0 3 * * *', timeZone: 'Europe/Sofia', region: 'us-central1', timeoutSeconds: 540, memory: '512MiB' },
+  async () => {
+    const now    = new Date();
+    const sofia  = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Sofia' }));
+    const ymd    = sofia.toISOString().slice(0, 10);
+    const outUri = `gs://${BACKUP_BUCKET}/firestore-backups/${ymd}`;
+    const db     = admin.firestore();
+
+    logger.info('firestoreBackup: starting', { outUri });
+    try {
+      const op = await firestoreExport(outUri);
+      await db.collection('_backups').doc(ymd).set({
+        date: ymd, outputUri: outUri, opName: op.name,
+        status: 'started',
+        startedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+      await cleanupOldBackups();
+      logger.info('firestoreBackup: export started', { ymd, op: op.name });
+    } catch (err) {
+      logger.error('firestoreBackup: FAILED', err);
+      await db.collection('_backups').doc(ymd).set({
+        date: ymd, status: 'failed',
+        error: String(err.message || err),
+        startedAt: admin.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+
+      // Push до owner-ите при грешка
+      try {
+        const usersSnap  = await db.collection('users').where('role', '==', 'owner').get();
+        const ownerIds   = usersSnap.docs.map(d => d.id);
+        if (ownerIds.length) {
+          const tokSnap = await db.collection('fcmTokens')
+            .where('userId', 'in', ownerIds.slice(0, 10)).get();
+          const tokens = tokSnap.docs.map(d => d.data().token).filter(Boolean);
+          if (tokens.length) {
+            await admin.messaging().sendEachForMulticast({
+              notification: {
+                title: '🚨 Грешка в backup-а',
+                body:  `Firestore backup за ${ymd}: ${String(err.message || err).slice(0, 100)}`
+              },
+              webpush: {
+                fcmOptions: { link: '/' },
+                notification: { icon: '/icon-192.png', badge: '/icon-192.png', requireInteraction: true }
+              },
+              tokens
+            });
+          }
+        }
+      } catch (ne) { logger.error('firestoreBackup: notify failed', ne); }
+
+      throw err;
+    }
+  }
+);
+
+exports.triggerBackupNow = onCall(
+  { region: 'us-central1' },
+  async (request) => {
+    if (!request.auth) throw new HttpsError('unauthenticated', 'Login required');
+    const db      = admin.firestore();
+    const userDoc = await db.collection('users').doc(request.auth.uid).get();
+    if (!userDoc.exists || userDoc.data().role !== 'owner') {
+      throw new HttpsError('permission-denied', 'Only owner can trigger backup');
+    }
+
+    const now   = new Date();
+    const sofia = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Sofia' }));
+    const ymd   = sofia.toISOString().slice(0, 10);
+    const hms   = sofia.toTimeString().slice(0, 8).replace(/:/g, '-');
+    const docId  = `manual-${ymd}_${hms}`;
+    const outUri = `gs://${BACKUP_BUCKET}/firestore-backups/${docId}`;
+
+    const op = await firestoreExport(outUri);
+    await db.collection('_backups').doc(docId).set({
+      date: ymd, outputUri: outUri, opName: op.name,
+      status: 'started', manual: true,
+      triggeredBy: request.auth.uid,
+      startedAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+    return { success: true, outputUri: outUri, opName: op.name };
   }
 );
