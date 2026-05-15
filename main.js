@@ -1073,6 +1073,175 @@ function renderTaxSummary() {
   </div>`;
 }
 
+// ── Седмична справка ──────────────────────────────────────────────────────
+function _wrFormatDate(ymd) {
+  if (!ymd) return "";
+  const [, m, d] = ymd.split("-");
+  return `${d}.${m}`;
+}
+
+function _wrMondayOf(ymd) {
+  const [y, mo, d] = ymd.split("-").map(Number);
+  const dt = new Date(y, mo - 1, d);
+  const day = dt.getDay(); // 0=Sun
+  const diff = day === 0 ? -6 : 1 - day;
+  dt.setDate(dt.getDate() + diff);
+  return dt.toISOString().slice(0, 10);
+}
+
+function _wrBuildWeekOptions() {
+  const weeks = [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  let mon = new Date(today);
+  const day = mon.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  mon.setDate(mon.getDate() + diff);
+  for (let i = 0; i < 12; i++) {
+    const monStr = mon.toISOString().slice(0, 10);
+    const sun = new Date(mon);
+    sun.setDate(sun.getDate() + 6);
+    const sunStr = sun.toISOString().slice(0, 10);
+    weeks.push({ value: monStr, label: `${_wrFormatDate(monStr)} – ${_wrFormatDate(sunStr)}` });
+    mon.setDate(mon.getDate() - 7);
+  }
+  return weeks;
+}
+
+function _wrPopulateWeekSelect() {
+  const sel = document.getElementById("wrWeekSel");
+  if (!sel) return;
+  const opts = _wrBuildWeekOptions();
+  sel.innerHTML = opts.map((o, i) =>
+    `<option value="${o.value}"${i === 0 ? " selected" : ""}>${o.label}</option>`
+  ).join("");
+}
+
+window.renderWeeklyReport = async function() {
+  const shopId = document.getElementById("wrShopSel")?.value;
+  const monStr = document.getElementById("wrWeekSel")?.value;
+  const wrap = document.getElementById("wrTableWrap");
+  if (!wrap) return;
+  if (!shopId || !monStr) { wrap.innerHTML = '<div class="tasks-empty">Изберете магазин и седмица.</div>'; return; }
+
+  wrap.innerHTML = '<div class="tasks-empty">Зарежда...</div>';
+
+  const DAY_NAMES = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд"];
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const dt = new Date(monStr + "T00:00:00Z");
+    dt.setUTCDate(dt.getUTCDate() + i);
+    days.push(dt.toISOString().slice(0, 10));
+  }
+
+  try {
+    const snap = await getDocs(
+      query(
+        collection(db, "daily_reports"),
+        where("shopId", "==", shopId),
+        where("date", "in", days)
+      )
+    );
+    const byDate = {};
+    snap.forEach(d => { byDate[d.data().date] = d.data(); });
+
+    const n2 = (v) => Number(v || 0).toFixed(2);
+    const fmt = (v) => Number(v || 0) === 0 ? '<span style="color:var(--text3)">—</span>' : `${Number(v || 0).toFixed(2)}`;
+
+    let totCash = 0, totPos = 0, totGoods = 0, totOther = 0, totSide = 0, totAdv = 0;
+
+    const rows = days.map((ymd, i) => {
+      const r = byDate[ymd];
+      if (!r) {
+        return `<tr>
+          <td class="wr-day-name">${DAY_NAMES[i]}<br><small>${_wrFormatDate(ymd)}</small></td>
+          <td colspan="7" style="color:var(--text3);text-align:center;">(няма отчет)</td>
+        </tr>`;
+      }
+      const cash  = Number(r.totalCashIncome  || 0);
+      const pos   = Number(r.totalPosIncome   || 0);
+      const goods = Number(r.totalGoodsExpense || 0);
+      const other = Number(r.totalOtherExpense || 0);
+      const side  = Number(r.totalSideIncomes  || 0);
+      const adv   = Number(r.totalAdvances     || 0);
+      totCash  += cash;  totPos   += pos;
+      totGoods += goods; totOther += other;
+      totSide  += side;  totAdv   += adv;
+      const statusBadge = r.status === "closed"
+        ? '<span class="badge-closed" style="font-size:0.65rem;background:var(--green);color:#111;padding:1px 5px;border-radius:4px;">✔</span>'
+        : '<span class="badge-draft" style="font-size:0.65rem;background:var(--amber);color:#111;padding:1px 5px;border-radius:4px;">чернова</span>';
+      return `<tr>
+        <td class="wr-day-name">${DAY_NAMES[i]}<br><small>${_wrFormatDate(ymd)}</small> ${statusBadge}</td>
+        <td>${fmt(cash)}</td>
+        <td>${fmt(pos)}</td>
+        <td>${fmt(cash + pos)}</td>
+        <td>${fmt(goods)}</td>
+        <td>${fmt(other)}</td>
+        <td>${fmt(side)}</td>
+        <td>${fmt(adv)}</td>
+      </tr>`;
+    }).join("");
+
+    const totalInc = totCash + totPos;
+    const totalExp = totGoods + totOther + totAdv;
+    const net = totalInc + totSide - totalExp;
+
+    wrap.innerHTML = `
+    <table id="wrTable">
+      <thead>
+        <tr>
+          <th>Ден</th>
+          <th>Кеш</th>
+          <th>POS</th>
+          <th>Приход общо</th>
+          <th>Стока</th>
+          <th>Друг разход</th>
+          <th>Стр. приход</th>
+          <th>Аванси</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+      <tfoot>
+        <tr>
+          <td><strong>Общо</strong></td>
+          <td><strong>${totCash.toFixed(2)}</strong></td>
+          <td><strong>${totPos.toFixed(2)}</strong></td>
+          <td><strong>${totalInc.toFixed(2)}</strong></td>
+          <td><strong>${totGoods.toFixed(2)}</strong></td>
+          <td><strong>${totOther.toFixed(2)}</strong></td>
+          <td><strong>${totSide.toFixed(2)}</strong></td>
+          <td><strong>${totAdv.toFixed(2)}</strong></td>
+        </tr>
+        <tr style="background:rgba(255,202,40,0.08)">
+          <td colspan="3"><strong>Нетен резултат за седмицата:</strong></td>
+          <td colspan="5"><strong style="color:${net >= 0 ? "var(--green)" : "var(--red)"};">${net.toFixed(2)} €</strong></td>
+        </tr>
+      </tfoot>
+    </table>`;
+  } catch (err) {
+    wrap.innerHTML = `<div class="tasks-empty" style="color:var(--red);">Грешка: ${err.message}</div>`;
+    console.error("renderWeeklyReport:", err);
+  }
+};
+
+window.printWeeklyReport = function() {
+  window.print();
+};
+
+function _wrAutoCheckSunday() {
+  const banner = document.getElementById("wrAutoBanner");
+  if (!banner) return;
+  const todayDay = new Date().getDay();
+  if (todayDay === 0) {
+    banner.innerHTML = '<div class="wr-auto-banner">📅 Днес е неделя — показана е текущата седмица.</div>';
+    renderWeeklyReport();
+  } else {
+    banner.innerHTML = "";
+  }
+}
+
+// ── Край на седмична справка ──────────────────────────────────────────────
+
 function renderMethodSummary() {
   const localNormMethod = (m) => String(m ?? "").trim().split(" ")[0];
   const totals = { Кеш: 0, Карта: 0, Банка: 0 };
@@ -1270,6 +1439,7 @@ window.showScreen = function(screen) {
     document.getElementById('navReports')?.classList.add('active');
     renderTable(); renderMethodSummary();
     renderChart(); applyFilters(); renderTaxSummary();
+    _wrPopulateWeekSelect(); renderWeeklyReport(); _wrAutoCheckSunday();
 
   } else if (screen === "notes") {
     notesScreen?.classList.remove("hidden");
