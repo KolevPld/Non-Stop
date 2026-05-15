@@ -5,12 +5,12 @@ importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js'
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
 
 firebase.initializeApp({
-  apiKey: "AIzaSyBvA1pJV6XPnIPa50f2JNzlh4Tn5LtJVAg",
+  apiKey: "AIzaSyD692ktQboNPavUgo9XiANtaqm-8tUOB6c",
   authDomain: "nonstopapp-c30b1.firebaseapp.com",
   projectId: "nonstopapp-c30b1",
   storageBucket: "nonstopapp-c30b1.firebasestorage.app",
   messagingSenderId: "368870682423",
-  appId: "1:368870682423:web:placeholder"
+  appId: "1:368870682423:web:5f0ff3245c07c7796a74b2"
 });
 
 const messaging = firebase.messaging();
