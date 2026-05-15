@@ -1145,8 +1145,23 @@ window.renderWeeklyReport = async function() {
     const byDate = {};
     snap.forEach(d => { byDate[d.data().date] = d.data(); });
 
-    const n2 = (v) => Number(v || 0).toFixed(2);
     const fmt = (v) => Number(v || 0) === 0 ? '<span style="color:var(--text3)">—</span>' : `${Number(v || 0).toFixed(2)}`;
+
+    // Изчисляваме "Оставени за зареждане" по дни
+    let totalLeftForStock = 0;
+    const leftByDay = {};
+    days.forEach(ymd => {
+      const r = byDate[ymd];
+      if (!r) return;
+      let left = 0;
+      (r.expensesOther || []).forEach(o => {
+        if (String(o.description || "").trim() === "Оставени за зареждане") {
+          left += Number(o.amount || 0);
+        }
+      });
+      leftByDay[ymd] = left;
+      totalLeftForStock += left;
+    });
 
     let totCash = 0, totPos = 0, totGoods = 0, totOther = 0, totSide = 0, totAdv = 0;
 
@@ -1161,7 +1176,8 @@ window.renderWeeklyReport = async function() {
       const cash  = Number(r.totalCashIncome  || 0);
       const pos   = Number(r.totalPosIncome   || 0);
       const goods = Number(r.totalGoodsExpense || 0);
-      const other = Number(r.totalOtherExpense || 0);
+      const left  = leftByDay[ymd] || 0;
+      const other = Math.max(0, Number(r.totalOtherExpense || 0) - left);
       const side  = Number(r.totalSideIncomes  || 0);
       const adv   = Number(r.totalAdvances     || 0);
       totCash  += cash;  totPos   += pos;
@@ -1170,13 +1186,16 @@ window.renderWeeklyReport = async function() {
       const statusBadge = r.status === "closed"
         ? '<span class="badge-closed" style="font-size:0.65rem;background:var(--green);color:#111;padding:1px 5px;border-radius:4px;">✔</span>'
         : '<span class="badge-draft" style="font-size:0.65rem;background:var(--amber);color:#111;padding:1px 5px;border-radius:4px;">чернова</span>';
+      const leftNote = left > 0
+        ? ` <span title="Оставени за зареждане: ${left.toFixed(2)} €" style="font-size:0.7rem;color:var(--green);">📦${left.toFixed(2)}</span>`
+        : "";
       return `<tr>
         <td class="wr-day-name">${DAY_NAMES[i]}<br><small>${_wrFormatDate(ymd)}</small> ${statusBadge}</td>
         <td>${fmt(cash)}</td>
         <td>${fmt(pos)}</td>
         <td>${fmt(cash + pos)}</td>
         <td>${fmt(goods)}</td>
-        <td>${fmt(other)}</td>
+        <td>${fmt(other)}${leftNote}</td>
         <td>${fmt(side)}</td>
         <td>${fmt(adv)}</td>
       </tr>`;
@@ -1185,6 +1204,13 @@ window.renderWeeklyReport = async function() {
     const totalInc = totCash + totPos;
     const totalExp = totGoods + totOther + totAdv;
     const net = totalInc + totSide - totalExp;
+
+    const leftBanner = totalLeftForStock > 0
+      ? `<div style="margin-top:12px;padding:10px 14px;background:rgba(76,175,80,0.12);border:1px solid rgba(76,175,80,0.4);border-radius:8px;font-size:0.9rem;">
+          📦 <strong>Оставени за стока:</strong> ${totalLeftForStock.toFixed(2)} €
+          <span style="color:var(--text3);font-size:0.78rem;margin-left:6px;">(не участва в Нетния резултат — остава в касата за следваща седмица)</span>
+        </div>`
+      : "";
 
     wrap.innerHTML = `
     <table id="wrTable">
@@ -1217,7 +1243,7 @@ window.renderWeeklyReport = async function() {
           <td colspan="5"><strong style="color:${net >= 0 ? "var(--green)" : "var(--red)"};">${net.toFixed(2)} €</strong></td>
         </tr>
       </tfoot>
-    </table>`;
+    </table>${leftBanner}`;
   } catch (err) {
     wrap.innerHTML = `<div class="tasks-empty" style="color:var(--red);">Грешка: ${err.message}</div>`;
     console.error("renderWeeklyReport:", err);
@@ -2591,10 +2617,21 @@ function renderDrGoodsTable() {
 function renderDrOtherTable() {
   const tbody = document.getElementById("drOtherBody");
   if (!tbody) return;
-  tbody.innerHTML = Array.from({ length: DR_OTHER }, (_, i) => `
+
+  const dateVal = document.getElementById("drDate")?.value || "";
+  let isSunday = false;
+  if (dateVal && /^\d{4}-\d{2}-\d{2}$/.test(dateVal)) {
+    isSunday = new Date(dateVal + "T00:00:00Z").getUTCDay() === 0;
+  }
+
+  const baseOpts = ["Ремонт", "Консумативи", "Транспорт", "Комунални", "Друго"];
+  const sundayOpt = isSunday ? `<option value="Оставени за зареждане"></option>` : "";
+  const datalistHtml = `<datalist id="drOtherDescList">${baseOpts.map(o => `<option value="${o}"></option>`).join("")}${sundayOpt}</datalist>`;
+
+  tbody.innerHTML = datalistHtml + Array.from({ length: DR_OTHER }, (_, i) => `
     <tr>
       <td class="dr-num">${i + 1}</td>
-      <td><input type="text"   class="dr-input"      placeholder="Описание" data-other="${i}" data-field="desc"></td>
+      <td><input type="text" class="dr-input" placeholder="Описание" list="drOtherDescList" data-other="${i}" data-field="desc"></td>
       <td><input type="number" class="dr-input mono" step="0.01" placeholder="0.00" data-other="${i}" data-field="amount" oninput="drCalc()"></td>
     </tr>`).join("");
 }
@@ -2771,6 +2808,7 @@ function setText(id, val) {
 
 // ── Зареждане / Нов отчет ────────────────────────────
 window.loadOrCreateReport = async function() {
+  renderDrOtherTable();
   const date = document.getElementById("drDate")?.value;
   if (!date || !_drShopId) return;
 
