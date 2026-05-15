@@ -922,58 +922,64 @@ function renderTaxSummary() {
   const tax = document.getElementById("taxSummary");
   if (!tax) return;
 
-  const isSalary   = (cat) => {
-    const v = String(cat ?? "").trim().toLowerCase();
-    return v === "заплата" || v === "заплати";
-  };
-  const isNoVat    = (cat) => String(cat ?? "").trim().toLowerCase() === "без ддс";
-  const isCarryover = (cat) => String(cat ?? "").trim() === "Пренос";
+  // В ДДС участват САМО:
+  //   - Приходи с категория "Оборот"
+  //   - Разходи с категория "Стока"
+  // В Данък печалба участват И:
+  //   - Разходи с категория "Заплати" САМО когато са по БАНКА
+  const norm         = (s) => String(s ?? "").trim();
+  const normLow      = (s) => norm(s).toLowerCase();
+  const isOborot     = (cat) => norm(cat) === "Оборот";
+  const isStoka      = (cat) => norm(cat) === "Стока";
+  const isZaplata    = (cat) => { const v = normLow(cat); return v === "заплата" || v === "заплати"; };
+  const isBankMethod = (m)   => normLow(m).startsWith("банка");
 
   const sum = (arr) => arr.reduce((s, r) => s + Number(r.amount || 0), 0);
 
-  // ── Приходи ────────────────────────────────────
-  // С ДДС (всичко без "Без ДДС" и без "Пренос")
-  const incGrossVat = sum(records.filter(r => r.type === "Приход" && !isNoVat(r.category) && !isCarryover(r.category)));
-  // Без ДДС
-  const incNoVat    = sum(records.filter(r => r.type === "Приход" && isNoVat(r.category)));
+  // Бруто суми за ДДС
+  const incGrossVat   = sum(records.filter(r => r.type === "Приход" && isOborot(r.category)));
+  const expGrossVat   = sum(records.filter(r => r.type === "Разход" && isStoka(r.category)));
 
-  // ── Разходи ────────────────────────────────────
-  // С ДДС (без Заплати, без "Без ДДС", без "Пренос")
-  const expGrossVat = sum(records.filter(r => r.type === "Разход" && !isSalary(r.category) && !isNoVat(r.category) && !isCarryover(r.category)));
-  // Заплати — без ДДС, изключени и от печалбата
-  const expSalary   = sum(records.filter(r => r.type === "Разход" && isSalary(r.category)));
-  // Без ДДС — участват в печалбата, но не в ДДС
-  const expNoVat    = sum(records.filter(r => r.type === "Разход" && isNoVat(r.category)));
+  // Заплати по банка (без ДДС — приспадат се от печалбата директно)
+  const expSalaryBank = sum(records.filter(r =>
+    r.type === "Разход" && isZaplata(r.category) && isBankMethod(r.method)
+  ));
 
-  // ── 1) ДДС ────────────────────────────────────
+  // ── 1) ДДС (20% → /6 от бруто) ────────────────
   const outputVat = +(incGrossVat / 6).toFixed(2);
   const inputVat  = +(expGrossVat / 6).toFixed(2);
   const vatDue    = +Math.max(0, outputVat - inputVat).toFixed(2);
 
-  // ── 2) Печалба (нето, без Заплати) ────────────
-  // Приход нето = (с ДДС → нето) + (без ДДС → пълна сума)
-  const incNet    = incGrossVat / 1.20 + incNoVat;
-  // Разход нето  = (с ДДС → нето) + (без ДДС → пълна сума), Заплати изключени
-  const expNet    = expGrossVat / 1.20 + expNoVat;
+  // ── 2) Печалба (нето) ─────────────────────────
+  // Оборот и Стока → нето = бруто / 1.20
+  // Заплати по банка → пълната сума (без ДДС)
+  const incNet    = incGrossVat / 1.20;
+  const expNet    = expGrossVat / 1.20 + expSalaryBank;
   const profitNet = incNet - expNet;
 
-  const corpTax      = profitNet > 0 ? +(profitNet * 0.10).toFixed(2) : 0;
-  const netProfit    = +(profitNet - corpTax).toFixed(2);
+  const corpTax   = profitNet > 0 ? +(profitNet * 0.10).toFixed(2) : 0;
+  const netProfit = +(profitNet - corpTax).toFixed(2);
 
-  // Обороти без ДДС (нето на "Без ДДС" транзакциите)
-  const noVatNet  = incNoVat - expNoVat;
-  const hasNoVat  = incNoVat > 0 || expNoVat > 0;
+  const hasSalBank = expSalaryBank > 0;
 
   tax.innerHTML = `
   <h3><i class="fa-solid fa-file-invoice-dollar"></i> Данъчна справка</h3>
   <table>
     <tr>
+      <td>Оборот (бруто):</td>
+      <td class="mono">${incGrossVat.toFixed(2)} €</td>
+    </tr>
+    <tr>
+      <td>Стока (бруто):</td>
+      <td class="mono">${expGrossVat.toFixed(2)} €</td>
+    </tr>
+    <tr>
       <td><strong>ДДС (за внасяне):</strong></td>
       <td><strong>${vatDue.toFixed(2)} €</strong></td>
     </tr>
-    ${hasNoVat ? `<tr>
-      <td>Обороти без ДДС:</td>
-      <td>${noVatNet.toFixed(2)} €</td>
+    ${hasSalBank ? `<tr>
+      <td>Заплати по банка:</td>
+      <td class="mono">${expSalaryBank.toFixed(2)} €</td>
     </tr>` : ""}
     <tr>
       <td><strong>Печалба (без ДДС):</strong></td>
@@ -989,7 +995,9 @@ function renderTaxSummary() {
     </tr>
   </table>
   <div style="font-size:0.72rem;color:var(--text3);margin-top:10px;">
-    * Категории изключени от ДДС: Заплати, Без ДДС, Пренос
+    * ДДС: само Оборот (приход) и Стока (разход).<br>
+    * Данък печалба: Оборот, Стока + Заплати ПО БАНКА (без кеш).<br>
+    * Заплати в кеш, Друг приход, Друго, Без ДДС, Пренос — НЕ участват.
   </div>`;
 }
 
