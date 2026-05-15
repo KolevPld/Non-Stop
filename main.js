@@ -3094,9 +3094,9 @@ function updateDrStatusUI() {
   document.querySelectorAll("#storeApp .dr-input").forEach(el => {
     el.disabled = closed && !editAllowed;
   });
-  // Началната каса НИКОГА не се редактира при затворен отчет
+  // Началната каса НИКОГА не се редактира — винаги се прехвърля автоматично
   const scEl = document.getElementById("drStartCash");
-  if (scEl) scEl.disabled = closed;
+  if (scEl) { scEl.readOnly = true; scEl.tabIndex = -1; }
   const dateEl = document.getElementById("drDate");
   if (dateEl) dateEl.disabled = closed && !editAllowed;
 
