@@ -5,6 +5,7 @@ import {
   collection,
   addDoc,
   getDocs,
+  getDocsFromServer,
   getDoc,
   setDoc,
   query,
@@ -6343,7 +6344,10 @@ async function loadMonthlyReport() {
       collection(db, 'monthly_reports'),
       where('month', '==', monthVal)
     );
-    const snap = await getDocs(q);
+    let snap;
+    try { snap = await getDocsFromServer(q); }
+    catch (e) { snap = await getDocs(q); }
+    console.log('[monthly] docs:', snap.size, 'for', monthVal);
 
     if (snap.empty) {
       el.innerHTML = `<div class="tasks-empty">Няма месечна справка за ${monthVal}.<br>Може да я генерирате ръчно.</div>`;
@@ -6364,11 +6368,6 @@ async function loadMonthlyReport() {
       el.appendChild(wrapper);
       const tmp = document.createElement('div');
       wrapper.appendChild(tmp);
-      // render into tmp
-      const saved = document.getElementById('mrContent');
-      tmp.id = '__mrTmp';
-      const real = document.getElementById('mrContent');
-      // inline render
       _mrRenderInto(tmp, d);
     }
   } catch (e) {
@@ -6482,7 +6481,9 @@ window.exportMonthlyPDF = async function() {
   const monthVal = sel.value;
 
   const q = query(collection(db, 'monthly_reports'), where('month', '==', monthVal));
-  const snap = await getDocs(q);
+  let snap;
+  try { snap = await getDocsFromServer(q); }
+  catch (e) { snap = await getDocs(q); }
   if (snap.empty) { alert('Няма данни за избрания месец.'); return; }
 
   const reports = snap.docs.map(d => d.data());
