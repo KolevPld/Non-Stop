@@ -1261,7 +1261,7 @@ window.renderWeeklyReport = async function() {
           <td colspan="5"><strong style="color:${net >= 0 ? "var(--green)" : "var(--red)"};">${net.toFixed(2)} €</strong></td>
         </tr>
       </tfoot>
-    </table>${leftBanner}<div id="wrCompareWrap"></div>`;
+    </table>${leftBanner}`;
     _wrRenderComparison(shopId, monStr);
   } catch (err) {
     wrap.innerHTML = `<div class="tasks-empty" style="color:var(--red);">Грешка: ${err.message}</div>`;
