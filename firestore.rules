@@ -32,6 +32,11 @@ service cloud.firestore {
       allow read:  if isOwner();
       allow write: if false;
     }
+
+    match /monthly_reports/{docId} {
+      allow read:  if isOwner();
+      allow write: if false;
+    }
     match /reportChangeLogs/{id} { allow read, write: if isAuth(); }
 
     match /users/{id} {

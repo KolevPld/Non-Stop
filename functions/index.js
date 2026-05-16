@@ -557,3 +557,186 @@ exports.checkMissingDays = onSchedule(
     logger.info('checkMissingDays: готово', { alertsCount: alerts.length });
   }
 );
+
+
+// ── Месечна справка ───────────────────────────────────────────────────────
+async function _calcMonthlyData(year, month) {
+  const db      = admin.firestore();
+  const mm      = String(month).padStart(2, '0');
+  const yy      = String(year);
+  const firstDay = `${yy}-${mm}-01`;
+  const lastDate = new Date(year, month, 0);
+  const lastDay  = `${yy}-${mm}-${String(lastDate.getDate()).padStart(2, '0')}`;
+
+  const [drSnap, recSnap] = await Promise.all([
+    db.collection('daily_reports').where('date', '>=', firstDay).where('date', '<=', lastDay).get(),
+    db.collection('records').where('date', '>=', firstDay).where('date', '<=', lastDay).get()
+  ]);
+
+  const norm     = (s) => String(s ?? '').trim();
+  const normLow  = (s) => norm(s).toLowerCase();
+  const isSalary = (c) => { const v = normLow(c); return v === 'заплата' || v === 'заплати'; };
+
+  const summary = {
+    period: { firstDay, lastDay, year, month },
+    totalTurnover: 0, totalCash: 0, totalPos: 0,
+    totalStoka: 0, totalSalary: 0, totalOtherExp: 0,
+    totalSideInc: 0, totalAdvances: 0, totalLeftForStock: 0,
+    netProfit: 0, vatDue: 0, corpTax: 0,
+    closedDaysCount: 0, closedDaysByShop: { store1: 0, store2: 0 },
+    bestDay: null, worstDay: null,
+    perShop: {
+      store1: { turnover: 0, stoka: 0, netProfit: 0, closedDays: 0 },
+      store2: { turnover: 0, stoka: 0, netProfit: 0, closedDays: 0 }
+    }
+  };
+  const dayTotals = {};
+
+  drSnap.forEach(d => {
+    const dr = d.data();
+    if (dr.status !== 'closed') return;
+    summary.closedDaysCount++;
+    if (summary.closedDaysByShop[dr.shopId] !== undefined) summary.closedDaysByShop[dr.shopId]++;
+
+    let cash = 0, pos = 0, stoka = 0, otherExp = 0, sideInc = 0, avans = 0, leftToday = 0;
+    (dr.shifts        || []).forEach(sh => { cash += Number(sh.cash || 0); pos += Number(sh.pos || 0); });
+    (dr.expensesGoods || []).forEach(g  => stoka   += Number(g.amount || 0));
+    (dr.expensesOther || []).forEach(o  => {
+      const amt = Number(o.amount || 0);
+      if (norm(o.description) === 'Оставени за зареждане') leftToday += amt;
+      else otherExp += amt;
+    });
+    (dr.sideIncomes   || []).forEach(s  => sideInc += Number(s.amount || 0));
+    (dr.advances      || []).forEach(a  => avans   += Number(a.amount || 0));
+
+    const turnover = cash + pos;
+    summary.totalCash += cash; summary.totalPos += pos; summary.totalTurnover += turnover;
+    summary.totalStoka += stoka; summary.totalOtherExp += otherExp;
+    summary.totalSideInc += sideInc; summary.totalAdvances += avans;
+    summary.totalLeftForStock += leftToday;
+    if (summary.perShop[dr.shopId]) {
+      summary.perShop[dr.shopId].turnover += turnover;
+      summary.perShop[dr.shopId].stoka    += stoka;
+      summary.perShop[dr.shopId].closedDays++;
+    }
+    dayTotals[dr.date] = (dayTotals[dr.date] || 0) + turnover;
+  });
+
+  recSnap.forEach(d => {
+    const r = d.data();
+    if (r.type === 'Разход' && isSalary(r.category)) summary.totalSalary += Number(r.amount || 0);
+  });
+
+  summary.netProfit  = summary.totalTurnover + summary.totalSideInc - summary.totalStoka -
+                       summary.totalSalary - summary.totalOtherExp - summary.totalAdvances;
+  summary.vatDue     = Math.max(0, summary.totalTurnover / 6 - summary.totalStoka / 6);
+  const taxNet       = (summary.totalTurnover - summary.totalStoka) / 1.20;
+  summary.corpTax    = taxNet > 0 ? taxNet * 0.10 : 0;
+
+  for (const sid of ['store1', 'store2']) {
+    const ps = summary.perShop[sid];
+    ps.netProfit = ps.turnover - ps.stoka;
+  }
+
+  const dayEntries = Object.entries(dayTotals).sort((a, b) => b[1] - a[1]);
+  if (dayEntries.length) {
+    summary.bestDay  = { date: dayEntries[0][0],                           turnover: dayEntries[0][1] };
+    summary.worstDay = { date: dayEntries[dayEntries.length - 1][0], turnover: dayEntries[dayEntries.length - 1][1] };
+  }
+  return summary;
+}
+
+async function _comparePrevMonth(curSummary) {
+  const { year, month } = curSummary.period;
+  let prevYear = year, prevMonth = month - 1;
+  if (prevMonth < 1) { prevMonth = 12; prevYear--; }
+  try {
+    const prev = await _calcMonthlyData(prevYear, prevMonth);
+    const diff = (cur, p) => ({ abs: cur - p, pct: p !== 0 ? ((cur - p) / p) * 100 : null });
+    return {
+      prevYear, prevMonth,
+      turnover:   diff(curSummary.totalTurnover,    prev.totalTurnover),
+      stoka:      diff(curSummary.totalStoka,       prev.totalStoka),
+      netProfit:  diff(curSummary.netProfit,        prev.netProfit),
+      closedDays: diff(curSummary.closedDaysCount,  prev.closedDaysCount),
+      prevTotals: { turnover: prev.totalTurnover, stoka: prev.totalStoka, netProfit: prev.netProfit, closedDays: prev.closedDaysCount }
+    };
+  } catch (e) { logger.warn('_comparePrevMonth error', e); return null; }
+}
+
+async function _saveMonthlyReport(summary, comparison) {
+  const { year, month } = summary.period;
+  const docId = `${year}-${String(month).padStart(2, '0')}`;
+  await admin.firestore().collection('monthly_reports').doc(docId).set({
+    ...summary, comparison,
+    generatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    generated: true
+  });
+  logger.info('Monthly report saved', { docId, turnover: summary.totalTurnover });
+  return docId;
+}
+
+exports.generateMonthlyReport = onSchedule(
+  { schedule: '0 4 1 * *', timeZone: 'Europe/Sofia', region: 'us-central1', timeoutSeconds: 300, memory: '512MiB' },
+  async () => {
+    const now   = new Date();
+    const sofia = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Sofia' }));
+    let year = sofia.getFullYear(), month = sofia.getMonth();
+    if (month === 0) { month = 12; year--; }
+
+    logger.info('generateMonthlyReport: starting', { year, month });
+    try {
+      const summary    = await _calcMonthlyData(year, month);
+      const comparison = await _comparePrevMonth(summary);
+      const docId      = await _saveMonthlyReport(summary, comparison);
+
+      const db = admin.firestore();
+      const usersSnap  = await db.collection('users').where('role', '==', 'owner').get();
+      const ownerIds   = usersSnap.docs.map(d => d.id);
+      if (ownerIds.length) {
+        const tokSnap = await db.collection('fcmTokens').where('userId', 'in', ownerIds.slice(0, 10)).get();
+        const tokens  = tokSnap.docs.map(d => d.data().token).filter(Boolean);
+        if (tokens.length) {
+          const MONTHS = ['Януари','Февруари','Март','Април','Май','Юни','Юли','Август','Септември','Октомври','Ноември','Декември'];
+          await admin.messaging().sendEachForMulticast({
+            notification: {
+              title: `📊 Месечна справка — ${MONTHS[month - 1]} ${year}`,
+              body:  `Оборот: ${summary.totalTurnover.toFixed(2)} € | Нетна печалба: ${summary.netProfit.toFixed(2)} €`
+            },
+            webpush: { fcmOptions: { link: '/' }, notification: { icon: '/icon-192.png', badge: '/icon-192.png' } },
+            tokens
+          });
+        }
+      }
+      logger.info('generateMonthlyReport: success', { docId });
+    } catch (err) {
+      logger.error('generateMonthlyReport: FAILED', err);
+      throw err;
+    }
+  }
+);
+
+exports.generateMonthlyReportManual = onCall(
+  { region: 'us-central1' },
+  async (request) => {
+    if (!request.auth) throw new HttpsError('unauthenticated', 'Login required');
+    const db      = admin.firestore();
+    const userDoc = await db.collection('users').doc(request.auth.uid).get();
+    if (!userDoc.exists || userDoc.data().role !== 'owner') {
+      throw new HttpsError('permission-denied', 'Only owner can trigger.');
+    }
+    const { year, month } = request.data || {};
+    if (!year || !month || month < 1 || month > 12) {
+      throw new HttpsError('invalid-argument', 'year and month (1-12) required');
+    }
+    try {
+      const summary    = await _calcMonthlyData(Number(year), Number(month));
+      const comparison = await _comparePrevMonth(summary);
+      const docId      = await _saveMonthlyReport(summary, comparison);
+      return { success: true, docId, summary };
+    } catch (err) {
+      logger.error('generateMonthlyReportManual error', err);
+      throw new HttpsError('internal', err.message || String(err));
+    }
+  }
+);
