@@ -6503,17 +6503,16 @@ window.exportMonthlyPDF = async function() {
   if (!snap.exists()) { alert('Няма генерирана справка за ' + monthVal + '. Натиснете "Генерирай" първо.'); return; }
 
   const d = snap.data();
-  const p = d.period || {};
-  const monthLabel = (p.month && p.year)
-    ? _mrMonthNames[p.month - 1] + ' ' + p.year
-    : monthVal;
+  // Извличаме месец/година от docId ("2026-05"), не от d.period
+  const [yearStr, monthStr] = monthVal.split('-');
+  const monthLabel = _mrMonthNames[Number(monthStr) - 1] + ' ' + yearStr;
 
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const [regular, bold] = await _loadRobotoFont();
-  pdf.addFileToVFS('DejaVuSans.ttf', regular);
+  await _loadRobotoFont();
+  pdf.addFileToVFS('DejaVuSans.ttf',      _robotoRegular);
   pdf.addFont('DejaVuSans.ttf', 'DejaVuSans', 'normal');
-  pdf.addFileToVFS('DejaVuSans-Bold.ttf', bold);
+  pdf.addFileToVFS('DejaVuSans-Bold.ttf', _robotoBold);
   pdf.addFont('DejaVuSans-Bold.ttf', 'DejaVuSans', 'bold');
   pdf.setFont('DejaVuSans');
 
