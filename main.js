@@ -1752,6 +1752,7 @@ window.showScreen = function(screen) {
     renderTable(); renderMethodSummary();
     /* renderChart(); — премахнато */ applyFilters(); renderTaxSummary();
     _wrPopulateWeekSelect(); renderWeeklyReport(); _wrAutoCheckSunday();
+    _mrPopulateMonthSelect(); loadMonthlyReport();
 
   } else if (screen === "notes") {
     notesScreen?.classList.remove("hidden");
@@ -6197,3 +6198,362 @@ async function loadLastBackupStatus() {
   }
 }
 window.loadLastBackupStatus = loadLastBackupStatus;
+
+// ══════════════════════════════════════════════════════════════
+// МЕСЕЧНА СПРАВКА
+// ══════════════════════════════════════════════════════════════
+
+const _mrMonthNames = [
+  'Януари','Февруари','Март','Април','Май','Юни',
+  'Юли','Август','Септември','Октомври','Ноември','Декември'
+];
+
+function _mrPopulateMonthSelect() {
+  const sel = document.getElementById('mrMonthSel');
+  if (!sel) return;
+  const now = new Date();
+  sel.innerHTML = '';
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const val = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    const opt = document.createElement('option');
+    opt.value = val;
+    opt.textContent = _mrMonthNames[d.getMonth()] + ' ' + d.getFullYear();
+    sel.appendChild(opt);
+  }
+}
+
+function _mrFmt(n) {
+  if (n === undefined || n === null || isNaN(n)) return '—';
+  return Number(n).toFixed(2);
+}
+
+function _mrDiffSpan(diff, lowerIsBetter) {
+  if (diff === undefined || diff === null || isNaN(diff)) return '<span style="color:var(--text2)">—</span>';
+  const up = lowerIsBetter ? diff < 0 : diff > 0;
+  const col = up ? '#4caf50' : '#f44336';
+  const arrow = diff > 0 ? '▲' : diff < 0 ? '▼' : '●';
+  const sign = diff > 0 ? '+' : '';
+  return `<span style="color:${col}">${arrow} ${sign}${_mrFmt(diff)} лв.</span>`;
+}
+
+function _mrRender(d) {
+  const el = document.getElementById('mrContent');
+  if (!el) return;
+
+  const shopLabel = d.shopId === 'store1' ? 'Магазин 1' : d.shopId === 'store2' ? 'Магазин 2' : d.shopId || '—';
+  const period = d.monthLabel || (d.month || '');
+
+  el.innerHTML = `
+<div style="margin-bottom:10px;color:var(--text2);font-size:0.85rem;">
+  ${shopLabel} &mdash; ${period}
+  ${d.generatedAt ? ' &mdash; генерирана ' + new Date(d.generatedAt.seconds * 1000).toLocaleString('bg-BG', {timeZone:'Europe/Sofia'}) : ''}
+</div>
+
+<div class="wr-compare-row" style="grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;display:grid;">
+
+  <div class="wr-compare-card">
+    <div class="wr-compare-label">Оборот (лв.)</div>
+    <div class="wr-compare-val">${_mrFmt(d.totalRevenue)}</div>
+    ${d.prevMonth ? `<div class="wr-compare-diff">${_mrDiffSpan((d.totalRevenue||0)-(d.prevMonth.totalRevenue||0), false)}</div>` : ''}
+  </div>
+
+  <div class="wr-compare-card">
+    <div class="wr-compare-label">Стока (лв.)</div>
+    <div class="wr-compare-val">${_mrFmt(d.totalGoods)}</div>
+    ${d.prevMonth ? `<div class="wr-compare-diff">${_mrDiffSpan((d.totalGoods||0)-(d.prevMonth.totalGoods||0), true)}</div>` : ''}
+  </div>
+
+  <div class="wr-compare-card">
+    <div class="wr-compare-label">Нетна (лв.)</div>
+    <div class="wr-compare-val">${_mrFmt(d.netRevenue)}</div>
+    ${d.prevMonth ? `<div class="wr-compare-diff">${_mrDiffSpan((d.netRevenue||0)-(d.prevMonth.netRevenue||0), false)}</div>` : ''}
+  </div>
+
+  <div class="wr-compare-card">
+    <div class="wr-compare-label">Каса Кеш (лв.)</div>
+    <div class="wr-compare-val">${_mrFmt(d.cashBalance)}</div>
+    ${d.prevMonth ? `<div class="wr-compare-diff">${_mrDiffSpan((d.cashBalance||0)-(d.prevMonth.cashBalance||0), false)}</div>` : ''}
+  </div>
+
+  <div class="wr-compare-card">
+    <div class="wr-compare-label">Каса Банка (лв.)</div>
+    <div class="wr-compare-val">${_mrFmt(d.bankBalance)}</div>
+    ${d.prevMonth ? `<div class="wr-compare-diff">${_mrDiffSpan((d.bankBalance||0)-(d.prevMonth.bankBalance||0), false)}</div>` : ''}
+  </div>
+
+  <div class="wr-compare-card">
+    <div class="wr-compare-label">Работни дни</div>
+    <div class="wr-compare-val">${d.workingDays ?? '—'}</div>
+  </div>
+
+  <div class="wr-compare-card">
+    <div class="wr-compare-label">Служители</div>
+    <div class="wr-compare-val">${d.employeeCount ?? '—'}</div>
+  </div>
+
+  <div class="wr-compare-card">
+    <div class="wr-compare-label">Работни часа</div>
+    <div class="wr-compare-val">${_mrFmt(d.totalHours)}</div>
+  </div>
+
+  <div class="wr-compare-card">
+    <div class="wr-compare-label">Заплати (лв.)</div>
+    <div class="wr-compare-val">${_mrFmt(d.totalSalaries)}</div>
+  </div>
+
+  <div class="wr-compare-card">
+    <div class="wr-compare-label">Аванси (лв.)</div>
+    <div class="wr-compare-val">${_mrFmt(d.totalAdvances)}</div>
+  </div>
+
+</div>
+
+${d.topSuppliers && d.topSuppliers.length ? `
+<h4 style="margin:14px 0 6px;color:var(--text1)">Топ доставчици</h4>
+<table class="wr-table" style="width:100%;border-collapse:collapse;">
+  <thead><tr>
+    <th style="text-align:left;padding:4px 8px;background:var(--bg2)">Доставчик</th>
+    <th style="text-align:right;padding:4px 8px;background:var(--bg2)">Сума (лв.)</th>
+  </tr></thead>
+  <tbody>
+    ${d.topSuppliers.map(s => `<tr>
+      <td style="padding:4px 8px;border-bottom:1px solid var(--border)">${s.name || s.supplierId || '—'}</td>
+      <td style="padding:4px 8px;border-bottom:1px solid var(--border);text-align:right">${_mrFmt(s.total)}</td>
+    </tr>`).join('')}
+  </tbody>
+</table>` : ''}
+`;
+}
+
+async function loadMonthlyReport() {
+  const sel    = document.getElementById('mrMonthSel');
+  const status = document.getElementById('mrStatus');
+  const el     = document.getElementById('mrContent');
+  if (!sel || !el) return;
+
+  const monthVal = sel.value; // "2025-12"
+  if (!monthVal) { el.innerHTML = '<div class="tasks-empty">Изберете месец.</div>'; return; }
+
+  if (status) status.textContent = '';
+  el.innerHTML = '<div class="tasks-empty">⏳ Зареждане...</div>';
+
+  try {
+    const q = query(
+      collection(db, 'monthly_reports'),
+      where('month', '==', monthVal)
+    );
+    const snap = await getDocs(q);
+
+    if (snap.empty) {
+      el.innerHTML = `<div class="tasks-empty">Няма месечна справка за ${monthVal}.<br>Може да я генерирате ръчно.</div>`;
+      return;
+    }
+
+    // може да има за двата магазина — показваме и двете
+    const reports = snap.docs.map(d => d.data());
+    el.innerHTML = '';
+
+    for (const d of reports) {
+      const wrapper = document.createElement('div');
+      wrapper.style.marginBottom = '18px';
+      const header = document.createElement('h4');
+      header.style.cssText = 'margin:0 0 6px;color:var(--accent)';
+      header.textContent = d.shopId === 'store1' ? 'Магазин 1' : d.shopId === 'store2' ? 'Магазин 2' : (d.shopId || '');
+      wrapper.appendChild(header);
+      el.appendChild(wrapper);
+      const tmp = document.createElement('div');
+      wrapper.appendChild(tmp);
+      // render into tmp
+      const saved = document.getElementById('mrContent');
+      tmp.id = '__mrTmp';
+      const real = document.getElementById('mrContent');
+      // inline render
+      _mrRenderInto(tmp, d);
+    }
+  } catch (e) {
+    console.error('loadMonthlyReport:', e);
+    el.innerHTML = '<div class="tasks-empty" style="color:#f44336">Грешка при зареждане: ' + e.message + '</div>';
+  }
+}
+
+function _mrRenderInto(el, d) {
+  const shopLabel = d.shopId === 'store1' ? 'Магазин 1' : d.shopId === 'store2' ? 'Магазин 2' : d.shopId || '—';
+  const period = d.monthLabel || (d.month || '');
+
+  el.innerHTML = `
+<div style="margin-bottom:10px;color:var(--text2);font-size:0.85rem;">
+  ${period}
+  ${d.generatedAt ? ' &mdash; генерирана ' + new Date(d.generatedAt.seconds * 1000).toLocaleString('bg-BG', {timeZone:'Europe/Sofia'}) : ''}
+</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;">
+  <div class="wr-compare-card">
+    <div class="wr-compare-label">Оборот (лв.)</div>
+    <div class="wr-compare-val">${_mrFmt(d.totalRevenue)}</div>
+    ${d.prevMonth ? '<div class="wr-compare-diff">' + _mrDiffSpan((d.totalRevenue||0)-(d.prevMonth.totalRevenue||0), false) + '</div>' : ''}
+  </div>
+  <div class="wr-compare-card">
+    <div class="wr-compare-label">Стока (лв.)</div>
+    <div class="wr-compare-val">${_mrFmt(d.totalGoods)}</div>
+    ${d.prevMonth ? '<div class="wr-compare-diff">' + _mrDiffSpan((d.totalGoods||0)-(d.prevMonth.totalGoods||0), true) + '</div>' : ''}
+  </div>
+  <div class="wr-compare-card">
+    <div class="wr-compare-label">Нетна (лв.)</div>
+    <div class="wr-compare-val">${_mrFmt(d.netRevenue)}</div>
+    ${d.prevMonth ? '<div class="wr-compare-diff">' + _mrDiffSpan((d.netRevenue||0)-(d.prevMonth.netRevenue||0), false) + '</div>' : ''}
+  </div>
+  <div class="wr-compare-card">
+    <div class="wr-compare-label">Каса Кеш (лв.)</div>
+    <div class="wr-compare-val">${_mrFmt(d.cashBalance)}</div>
+    ${d.prevMonth ? '<div class="wr-compare-diff">' + _mrDiffSpan((d.cashBalance||0)-(d.prevMonth.cashBalance||0), false) + '</div>' : ''}
+  </div>
+  <div class="wr-compare-card">
+    <div class="wr-compare-label">Каса Банка (лв.)</div>
+    <div class="wr-compare-val">${_mrFmt(d.bankBalance)}</div>
+    ${d.prevMonth ? '<div class="wr-compare-diff">' + _mrDiffSpan((d.bankBalance||0)-(d.prevMonth.bankBalance||0), false) + '</div>' : ''}
+  </div>
+  <div class="wr-compare-card">
+    <div class="wr-compare-label">Работни дни</div>
+    <div class="wr-compare-val">${d.workingDays ?? '—'}</div>
+  </div>
+  <div class="wr-compare-card">
+    <div class="wr-compare-label">Служители</div>
+    <div class="wr-compare-val">${d.employeeCount ?? '—'}</div>
+  </div>
+  <div class="wr-compare-card">
+    <div class="wr-compare-label">Работни часа</div>
+    <div class="wr-compare-val">${_mrFmt(d.totalHours)}</div>
+  </div>
+  <div class="wr-compare-card">
+    <div class="wr-compare-label">Заплати (лв.)</div>
+    <div class="wr-compare-val">${_mrFmt(d.totalSalaries)}</div>
+  </div>
+  <div class="wr-compare-card">
+    <div class="wr-compare-label">Аванси (лв.)</div>
+    <div class="wr-compare-val">${_mrFmt(d.totalAdvances)}</div>
+  </div>
+</div>
+${d.topSuppliers && d.topSuppliers.length ? `
+<h4 style="margin:14px 0 6px;color:var(--text1)">Топ доставчици</h4>
+<table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
+  <thead><tr>
+    <th style="text-align:left;padding:4px 8px;background:var(--bg2)">Доставчик</th>
+    <th style="text-align:right;padding:4px 8px;background:var(--bg2)">Сума (лв.)</th>
+  </tr></thead>
+  <tbody>${d.topSuppliers.map(s => `<tr>
+    <td style="padding:4px 8px;border-bottom:1px solid var(--border)">${s.name||s.supplierId||'—'}</td>
+    <td style="padding:4px 8px;border-bottom:1px solid var(--border);text-align:right">${_mrFmt(s.total)}</td>
+  </tr>`).join('')}</tbody>
+</table>` : ''}`;
+}
+
+window.loadMonthlyReport = loadMonthlyReport;
+
+window.triggerMonthlyManual = async function() {
+  const sel    = document.getElementById('mrMonthSel');
+  const status = document.getElementById('mrStatus');
+  if (!sel || !status) return;
+  const monthVal = sel.value;
+  if (!monthVal) { alert('Изберете месец.'); return; }
+  if (!confirm(`Генериране на месечна справка за ${monthVal}? Може да отнеме около минута.`)) return;
+
+  status.style.color = 'var(--text2)';
+  status.textContent = '⏳ Генериране...';
+
+  try {
+    const { getFunctions, httpsCallable } =
+      await import("https://www.gstatic.com/firebasejs/9.22.2/firebase-functions.js");
+    const fns = getFunctions(app, 'us-central1');
+    const fn  = httpsCallable(fns, 'generateMonthlyReportManual');
+    const res = await fn({ month: monthVal });
+    status.style.color = '#4caf50';
+    status.textContent = '✅ ' + (res.data?.message || 'Готово!');
+    setTimeout(() => loadMonthlyReport(), 1500);
+  } catch (err) {
+    console.error('triggerMonthlyManual:', err);
+    status.style.color = '#f44336';
+    status.textContent = '❌ Грешка: ' + (err.message || err);
+  }
+};
+
+window.exportMonthlyPDF = async function() {
+  const sel = document.getElementById('mrMonthSel');
+  if (!sel?.value) { alert('Изберете месец.'); return; }
+  const monthVal = sel.value;
+
+  const q = query(collection(db, 'monthly_reports'), where('month', '==', monthVal));
+  const snap = await getDocs(q);
+  if (snap.empty) { alert('Няма данни за избрания месец.'); return; }
+
+  const reports = snap.docs.map(d => d.data());
+
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const [regular, bold] = await _loadRobotoFont();
+  pdf.addFileToVFS('DejaVuSans.ttf', regular);
+  pdf.addFont('DejaVuSans.ttf', 'DejaVuSans', 'normal');
+  pdf.addFileToVFS('DejaVuSans-Bold.ttf', bold);
+  pdf.addFont('DejaVuSans-Bold.ttf', 'DejaVuSans', 'bold');
+  pdf.setFont('DejaVuSans');
+
+  let yPos = 15;
+
+  for (let ri = 0; ri < reports.length; ri++) {
+    const d = reports[ri];
+    if (ri > 0) { pdf.addPage(); yPos = 15; }
+
+    const shopLabel = d.shopId === 'store1' ? 'Магазин 1' : d.shopId === 'store2' ? 'Магазин 2' : (d.shopId || '');
+    pdf.setFont('DejaVuSans', 'bold');
+    pdf.setFontSize(14);
+    pdf.text('Месечна справка — ' + shopLabel, 14, yPos);
+    yPos += 7;
+    pdf.setFont('DejaVuSans', 'normal');
+    pdf.setFontSize(10);
+    pdf.text((d.monthLabel || monthVal), 14, yPos);
+    yPos += 8;
+
+    const rows = [
+      ['Оборот (лв.)',       _mrFmt(d.totalRevenue)],
+      ['Стока (лв.)',        _mrFmt(d.totalGoods)],
+      ['Нетна (лв.)',        _mrFmt(d.netRevenue)],
+      ['Каса Кеш (лв.)',    _mrFmt(d.cashBalance)],
+      ['Каса Банка (лв.)',  _mrFmt(d.bankBalance)],
+      ['Работни дни',        String(d.workingDays ?? '—')],
+      ['Служители',          String(d.employeeCount ?? '—')],
+      ['Работни часа',       _mrFmt(d.totalHours)],
+      ['Заплати (лв.)',      _mrFmt(d.totalSalaries)],
+      ['Аванси (лв.)',       _mrFmt(d.totalAdvances)],
+    ];
+
+    pdf.autoTable({
+      startY: yPos,
+      head: [['Показател', 'Стойност']],
+      body: rows,
+      styles: { font: 'DejaVuSans', fontSize: 10 },
+      headStyles: { fillColor: [255, 202, 40], textColor: [0, 0, 0], fontStyle: 'bold' },
+      columnStyles: { 1: { halign: 'right' } },
+      margin: { left: 14, right: 14 },
+    });
+
+    yPos = pdf.lastAutoTable.finalY + 8;
+
+    if (d.topSuppliers && d.topSuppliers.length) {
+      pdf.setFont('DejaVuSans', 'bold');
+      pdf.setFontSize(11);
+      pdf.text('Топ доставчици', 14, yPos);
+      yPos += 5;
+      pdf.autoTable({
+        startY: yPos,
+        head: [['Доставчик', 'Сума (лв.)']],
+        body: d.topSuppliers.map(s => [s.name || s.supplierId || '—', _mrFmt(s.total)]),
+        styles: { font: 'DejaVuSans', fontSize: 10 },
+        headStyles: { fillColor: [66, 66, 66], textColor: [255, 255, 255], fontStyle: 'bold' },
+        columnStyles: { 1: { halign: 'right' } },
+        margin: { left: 14, right: 14 },
+      });
+      yPos = pdf.lastAutoTable.finalY + 8;
+    }
+  }
+
+  pdf.save('месечна-справка-' + monthVal + '.pdf');
+};
