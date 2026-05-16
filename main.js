@@ -1261,14 +1261,20 @@ let _robotoBold    = null;
 async function _loadRobotoFont() {
   if (_robotoRegular && _robotoBold) return;
   const fetchB64 = async (url) => {
-    const buf   = await (await fetch(url)).arrayBuffer();
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('Font fetch failed: ' + url);
+    const buf   = await resp.arrayBuffer();
     const bytes = new Uint8Array(buf);
     let bin = '';
-    for (let i = 0; i < bytes.byteLength; i++) bin += String.fromCharCode(bytes[i]);
+    const chunk = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunk) {
+      bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+    }
     return btoa(bin);
   };
-  _robotoRegular = await fetchB64('https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Mu4mxKKTU1Kg.ttf');
-  _robotoBold    = await fetchB64('https://fonts.gstatic.com/s/roboto/v30/KFOlCnqEu92Fr1MmWUlfBBc4.ttf');
+  // DejaVu Sans — Unicode TTF с кирилица, работи с jsPDF
+  _robotoRegular = await fetchB64('https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans.ttf');
+  _robotoBold    = await fetchB64('https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans-Bold.ttf');
 }
 
 window.exportWeeklyPDF = async function() {
@@ -1337,20 +1343,20 @@ window.exportWeeklyPDF = async function() {
     await _loadRobotoFont();
 
     const pdf  = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-    pdf.addFileToVFS('Roboto-Regular.ttf', _robotoRegular);
-    pdf.addFileToVFS('Roboto-Bold.ttf',    _robotoBold);
-    pdf.addFont('Roboto-Regular.ttf', 'Roboto', 'normal');
-    pdf.addFont('Roboto-Bold.ttf',    'Roboto', 'bold');
-    pdf.setFont('Roboto', 'normal');
+    pdf.addFileToVFS('DejaVuSans.ttf',      _robotoRegular);
+    pdf.addFileToVFS('DejaVuSans-Bold.ttf', _robotoBold);
+    pdf.addFont('DejaVuSans.ttf',      'DejaVuSans', 'normal');
+    pdf.addFont('DejaVuSans-Bold.ttf', 'DejaVuSans', 'bold');
+    pdf.setFont('DejaVuSans', 'normal');
 
     const pageW  = pdf.internal.pageSize.getWidth();
     const pageH  = pdf.internal.pageSize.getHeight();
     const margin = 12;
 
     // Header
-    pdf.setFontSize(16); pdf.setFont('Roboto', 'bold');
+    pdf.setFontSize(16); pdf.setFont('DejaVuSans', 'bold');
     pdf.text('Нон Стоп — Седмичен отчет', margin, 16);
-    pdf.setFontSize(11); pdf.setFont('Roboto', 'normal');
+    pdf.setFontSize(11); pdf.setFont('DejaVuSans', 'normal');
     const dispWeek = `${monStr.slice(8,10)}.${monStr.slice(5,7)}.${monStr.slice(0,4)} – ${sunStr.slice(8,10)}.${sunStr.slice(5,7)}.${sunStr.slice(0,4)}`;
     pdf.text(`Магазин: ${shopName}    Седмица: ${dispWeek}`, margin, 23);
     pdf.setFontSize(9);
@@ -1376,7 +1382,7 @@ window.exportWeeklyPDF = async function() {
               fmt(totals.otherExp), fmt(totals.sideInc), fmt(totals.avans), fmt(totals.total)]],
       startY: 32,
       margin: { left: margin, right: margin },
-      styles:      { font: 'Roboto', fontSize: 9, cellPadding: 2.5, halign: 'right' },
+      styles:      { font: 'DejaVuSans', fontSize: 9, cellPadding: 2.5, halign: 'right' },
       headStyles:  { fillColor: [44, 62, 80], textColor: 255, fontStyle: 'bold', halign: 'center' },
       footStyles:  { fillColor: [220, 220, 220], textColor: 30, fontStyle: 'bold' },
       columnStyles:{ 0: { halign: 'left' } },
@@ -1393,9 +1399,9 @@ window.exportWeeklyPDF = async function() {
     if (leftForStock > 0) {
       pdf.setFillColor(232, 245, 233); pdf.setDrawColor(76, 175, 80);
       pdf.rect(margin, curY, pageW - 2 * margin, 10, 'FD');
-      pdf.setFontSize(10); pdf.setFont('Roboto', 'bold'); pdf.setTextColor(40);
+      pdf.setFontSize(10); pdf.setFont('DejaVuSans', 'bold'); pdf.setTextColor(40);
       pdf.text(`Оставени за стока: ${fmt(leftForStock)} €`, margin + 3, curY + 6.5);
-      pdf.setFont('Roboto', 'normal'); pdf.setFontSize(8);
+      pdf.setFont('DejaVuSans', 'normal'); pdf.setFontSize(8);
       pdf.text('(не участва в Общото — остава в касата за следваща седмица)', margin + 65, curY + 6.5);
       curY += 14;
     }
