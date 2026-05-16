@@ -226,6 +226,24 @@ const ROLE_MAP = {
   "magazin2@nonstop.bg":    "store2"
 };
 
+// ── Helper: конвертира Firestore Timestamp / ISO string към дата стринг ──
+function tsToYMD(v, len) {
+  const n = len || 10;
+  if (!v) return '';
+  if (typeof v === 'string') return v.slice(0, n);
+  if (typeof v.toDate === 'function') {
+    try { return v.toDate().toISOString().slice(0, n); } catch { return ''; }
+  }
+  if (v.seconds) {
+    try { return new Date(v.seconds * 1000).toISOString().slice(0, n); } catch { return ''; }
+  }
+  if (v instanceof Date) {
+    try { return v.toISOString().slice(0, n); } catch { return ''; }
+  }
+  return '';
+}
+window.tsToYMD = tsToYMD;
+
 let currentUserId    = null;
 let currentUserEmail = null;
 let currentUserRole  = null;
@@ -4016,7 +4034,7 @@ function buildDrDetailHtml(r) {
     ${logHtml}
 
     <div class="dr-detail-meta" style="margin-top:14px;font-size:.75rem;">
-      Създаден: ${(r.createdAt || "").slice(0, 16).replace("T", " ")} |
+      Създаден: ${tsToYMD(r.createdAt, 16).replace("T", " ")} |
       Последна промяна: ${(r.lastModifiedAt || "").slice(0, 16).replace("T", " ")}
     </div>`;
 }
@@ -4152,7 +4170,7 @@ async function renderAccountsList() {
           <div class="acc-info">
             <span class="acc-email">${escHtml(u.email || "—")}</span>
             <span class="acc-badge acc-badge-${u.role || "unknown"}">${ROLE_LABELS[u.role] || u.role}</span>
-            ${u.createdAt ? `<span class="acc-date">от ${u.createdAt.slice(0,10)}</span>` : ""}
+            ${u.createdAt ? `<span class="acc-date">от ${tsToYMD(u.createdAt, 10)}</span>` : ""}
           </div>
           <div class="acc-actions">
             ${canDelete && !isDisabled ? `
