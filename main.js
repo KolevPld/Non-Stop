@@ -1370,12 +1370,11 @@ window.exportWeeklyPDF = async function() {
       fmt(r.sideInc), fmt(r.avans), fmt(r.total)
     ]);
 
-    const autoTableFn = (typeof window.jspdf?.autoTable === 'function')
-      ? window.jspdf.autoTable
-      : (typeof pdf.autoTable === 'function' ? pdf.autoTable.bind(pdf) : null);
-    if (!autoTableFn) throw new Error('jspdf-autotable plugin не е зареден');
+    if (typeof pdf.autoTable !== 'function') {
+      throw new Error('jspdf-autotable plugin не е зареден');
+    }
 
-    autoTableFn(pdf, {
+    pdf.autoTable({
       head: [['Ден', 'КЕШ', 'КАРТА', 'Стока', 'Други р.', 'Стр. прих.', 'Аванси', 'Общо']],
       body: tableBody,
       foot: [['ОБЩО', fmt(totals.cash), fmt(totals.pos), fmt(totals.stoka),
