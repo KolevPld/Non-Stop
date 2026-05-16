@@ -3744,6 +3744,7 @@ body.light .sal-log-entry        { background: #f0f2f5; }
   #weeklyReportCard * { color: black !important; background: white !important; border-color: #ccc !important; }
   .wr-controls { display: none !important; }
   #wrAutoBanner { display: none !important; }
+  #wrCompareWrap { display: none !important; }
   #wrTable th, #wrTable td { border: 1px solid #ccc; padding: 4px 6px; }
   #wrTable thead th { background: #f0f0f0 !important; }
   #wrTable tfoot td { background: #f0f0f0 !important; }
