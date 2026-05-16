@@ -289,6 +289,9 @@
         <button class="btn-secondary" onclick="printWeeklyReport()">
           <i class="fa-solid fa-print"></i> Печат
         </button>
+        <button class="btn-secondary" onclick="exportWeeklyPDF()">
+          <i class="fa-solid fa-file-pdf"></i> Изтегли PDF
+        </button>
       </div>
       <div id="wrAutoBanner"></div>
       <div id="wrTableWrap" class="table-responsive" style="margin-top:10px;">
@@ -1521,6 +1524,8 @@
   };
 </script>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.0/jspdf.plugin.autotable.min.js"></script>
 <script type="module" src="main.js?v=20260514"></script>
 
 </body>

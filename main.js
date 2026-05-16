@@ -1254,6 +1254,168 @@ window.printWeeklyReport = function() {
   window.print();
 };
 
+// ── Експорт на седмичната справка в PDF ──────────────────────────────────
+let _robotoRegular = null;
+let _robotoBold    = null;
+
+async function _loadRobotoFont() {
+  if (_robotoRegular && _robotoBold) return;
+  const fetchB64 = async (url) => {
+    const buf   = await (await fetch(url)).arrayBuffer();
+    const bytes = new Uint8Array(buf);
+    let bin = '';
+    for (let i = 0; i < bytes.byteLength; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin);
+  };
+  _robotoRegular = await fetchB64('https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Mu4mxKKTU1Kg.ttf');
+  _robotoBold    = await fetchB64('https://fonts.gstatic.com/s/roboto/v30/KFOlCnqEu92Fr1MmWUlfBBc4.ttf');
+}
+
+window.exportWeeklyPDF = async function() {
+  const shopSel = document.getElementById('wrShopSel');
+  const weekSel = document.getElementById('wrWeekSel');
+  if (!shopSel || !weekSel) { alert('Седмичната справка не е заредена.'); return; }
+  if (typeof window.jspdf === 'undefined' || !window.jspdf.jsPDF) { alert('jsPDF не е заредена.'); return; }
+  const { jsPDF } = window.jspdf;
+
+  const shopId   = shopSel.value;
+  const monStr   = weekSel.value;
+  const shopName = shopId === 'store1' ? 'Магазин 1' : 'Магазин 2';
+  if (!monStr) { alert('Изберете седмица.'); return; }
+
+  const mon  = new Date(monStr + 'T00:00:00Z');
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(mon);
+    d.setUTCDate(mon.getUTCDate() + i);
+    days.push(d.toISOString().slice(0, 10));
+  }
+  const sunStr = days[6];
+
+  try {
+    const snap = await getDocs(query(
+      collection(db, 'daily_reports'),
+      where('shopId', '==', shopId),
+      where('date', 'in', days)
+    ));
+    const byDate = {};
+    snap.forEach(d => { byDate[d.data().date] = d.data(); });
+
+    const norm     = (s) => String(s ?? '').trim();
+    const normLow  = (s) => norm(s).toLowerCase();
+    const isSalary = (c) => { const v = normLow(c); return v === 'заплата' || v === 'заплати'; };
+    const dayNames = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+    const fmt      = (n) => (Number(n) || 0).toFixed(2);
+
+    let leftForStock = 0;
+    const rows = days.map(date => {
+      const dr = byDate[date];
+      let cash = 0, pos = 0, stoka = 0, otherExp = 0, sideInc = 0, avans = 0, leftToday = 0;
+      if (dr) {
+        (dr.shifts || []).forEach(sh => { cash += Number(sh.cash || 0); pos += Number(sh.pos || 0); });
+        (dr.expensesGoods || []).forEach(g => stoka += Number(g.amount || 0));
+        (dr.expensesOther || []).forEach(o => {
+          const amt = Number(o.amount || 0);
+          if (norm(o.description) === 'Оставени за зареждане') { leftToday += amt; leftForStock += amt; }
+          else otherExp += amt;
+        });
+        (dr.sideIncomes || []).forEach(s => sideInc += Number(s.amount || 0));
+        (dr.advances   || []).forEach(a => avans    += Number(a.amount || 0));
+      }
+      const total = cash + pos + sideInc - stoka - otherExp - avans;
+      const d     = new Date(date + 'T00:00:00Z');
+      return { date, dayName: dayNames[d.getUTCDay()], cash, pos, stoka, otherExp, sideInc, avans, leftToday, total, hasReport: !!dr };
+    });
+
+    const totals = rows.reduce((acc, r) => ({
+      cash:     acc.cash + r.cash,     pos:      acc.pos + r.pos,
+      stoka:    acc.stoka + r.stoka,   otherExp: acc.otherExp + r.otherExp,
+      sideInc:  acc.sideInc + r.sideInc, avans: acc.avans + r.avans,
+      total:    acc.total + r.total
+    }), { cash:0, pos:0, stoka:0, otherExp:0, sideInc:0, avans:0, total:0 });
+
+    await _loadRobotoFont();
+
+    const pdf  = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    pdf.addFileToVFS('Roboto-Regular.ttf', _robotoRegular);
+    pdf.addFileToVFS('Roboto-Bold.ttf',    _robotoBold);
+    pdf.addFont('Roboto-Regular.ttf', 'Roboto', 'normal');
+    pdf.addFont('Roboto-Bold.ttf',    'Roboto', 'bold');
+    pdf.setFont('Roboto', 'normal');
+
+    const pageW  = pdf.internal.pageSize.getWidth();
+    const pageH  = pdf.internal.pageSize.getHeight();
+    const margin = 12;
+
+    // Header
+    pdf.setFontSize(16); pdf.setFont('Roboto', 'bold');
+    pdf.text('Нон Стоп — Седмичен отчет', margin, 16);
+    pdf.setFontSize(11); pdf.setFont('Roboto', 'normal');
+    const dispWeek = `${monStr.slice(8,10)}.${monStr.slice(5,7)}.${monStr.slice(0,4)} – ${sunStr.slice(8,10)}.${sunStr.slice(5,7)}.${sunStr.slice(0,4)}`;
+    pdf.text(`Магазин: ${shopName}    Седмица: ${dispWeek}`, margin, 23);
+    pdf.setFontSize(9);
+    pdf.text(`Генериран: ${new Date().toLocaleString('bg-BG', { timeZone: 'Europe/Sofia' })}`, pageW - margin, 23, { align: 'right' });
+    pdf.setDrawColor(180); pdf.line(margin, 27, pageW - margin, 27);
+
+    // Таблица
+    const tableBody = rows.map(r => [
+      `${r.date.slice(8,10)}.${r.date.slice(5,7)} (${r.dayName})${r.hasReport ? '' : ' *'}`,
+      fmt(r.cash), fmt(r.pos), fmt(r.stoka), fmt(r.otherExp),
+      fmt(r.sideInc), fmt(r.avans), fmt(r.total)
+    ]);
+
+    pdf.autoTable({
+      head: [['Ден', 'КЕШ', 'КАРТА', 'Стока', 'Други р.', 'Стр. прих.', 'Аванси', 'Общо']],
+      body: tableBody,
+      foot: [['ОБЩО', fmt(totals.cash), fmt(totals.pos), fmt(totals.stoka),
+              fmt(totals.otherExp), fmt(totals.sideInc), fmt(totals.avans), fmt(totals.total)]],
+      startY: 32,
+      margin: { left: margin, right: margin },
+      styles:      { font: 'Roboto', fontSize: 9, cellPadding: 2.5, halign: 'right' },
+      headStyles:  { fillColor: [44, 62, 80], textColor: 255, fontStyle: 'bold', halign: 'center' },
+      footStyles:  { fillColor: [220, 220, 220], textColor: 30, fontStyle: 'bold' },
+      columnStyles:{ 0: { halign: 'left' } },
+      didParseCell: (data) => {
+        if (data.section === 'body' && data.row.raw[0].includes('*')) {
+          data.cell.styles.textColor = [150, 150, 150];
+        }
+      }
+    });
+
+    let curY = pdf.lastAutoTable.finalY + 8;
+
+    // Оставени за стока банер
+    if (leftForStock > 0) {
+      pdf.setFillColor(232, 245, 233); pdf.setDrawColor(76, 175, 80);
+      pdf.rect(margin, curY, pageW - 2 * margin, 10, 'FD');
+      pdf.setFontSize(10); pdf.setFont('Roboto', 'bold'); pdf.setTextColor(40);
+      pdf.text(`Оставени за стока: ${fmt(leftForStock)} €`, margin + 3, curY + 6.5);
+      pdf.setFont('Roboto', 'normal'); pdf.setFontSize(8);
+      pdf.text('(не участва в Общото — остава в касата за следваща седмица)', margin + 65, curY + 6.5);
+      curY += 14;
+    }
+
+    // Бележка за дни без отчет
+    if (rows.some(r => !r.hasReport)) {
+      pdf.setFontSize(8); pdf.setTextColor(120);
+      pdf.text('* дни без затворен отчет', margin, curY);
+    }
+
+    // Подписи
+    const signY = pageH - 25;
+    pdf.setDrawColor(100); pdf.setTextColor(80); pdf.setFontSize(9);
+    pdf.line(margin, signY, margin + 70, signY);
+    pdf.line(pageW - margin - 70, signY, pageW - margin, signY);
+    pdf.text('Изготвил (управител)', margin, signY + 5);
+    pdf.text('Приел (собственик)', pageW - margin - 70, signY + 5);
+
+    pdf.save(`седмичен_отчет_${shopId}_${monStr}.pdf`);
+  } catch (err) {
+    console.error('exportWeeklyPDF:', err);
+    alert('Грешка при генериране на PDF: ' + (err.message || err));
+  }
+};
+
 function _wrAutoCheckSunday() {
   const banner = document.getElementById("wrAutoBanner");
   if (!banner) return;
