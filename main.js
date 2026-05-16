@@ -1261,7 +1261,8 @@ window.renderWeeklyReport = async function() {
           <td colspan="5"><strong style="color:${net >= 0 ? "var(--green)" : "var(--red)"};">${net.toFixed(2)} €</strong></td>
         </tr>
       </tfoot>
-    </table>${leftBanner}`;
+    </table>${leftBanner}<div id="wrCompareWrap"></div>`;
+    _wrRenderComparison(shopId, monStr);
   } catch (err) {
     wrap.innerHTML = `<div class="tasks-empty" style="color:var(--red);">Грешка: ${err.message}</div>`;
     console.error("renderWeeklyReport:", err);
@@ -1271,6 +1272,101 @@ window.renderWeeklyReport = async function() {
 window.printWeeklyReport = function() {
   window.print();
 };
+
+// ── Helper: зарежда обобщени данни за дадена седмица ─────────────────────
+async function _wrLoadWeekData(shopId, monStr) {
+  const mon  = new Date(monStr + 'T00:00:00Z');
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(mon);
+    d.setUTCDate(mon.getUTCDate() + i);
+    days.push(d.toISOString().slice(0, 10));
+  }
+  const sunStr = days[6];
+
+  const snap = await getDocs(query(
+    collection(db, 'daily_reports'),
+    where('shopId', '==', shopId),
+    where('date', 'in', days)
+  ));
+  const byDate = {};
+  snap.forEach(d => { byDate[d.data().date] = d.data(); });
+
+  const norm     = (s) => String(s ?? '').trim();
+  const normLow  = (s) => norm(s).toLowerCase();
+  const isSalary = (c) => { const v = normLow(c); return v === 'заплата' || v === 'заплати'; };
+
+  let cash = 0, pos = 0, stoka = 0, otherExp = 0, sideInc = 0, avans = 0, leftForStock = 0;
+  Object.values(byDate).forEach(dr => {
+    (dr.shifts        || []).forEach(sh => { cash += Number(sh.cash || 0); pos += Number(sh.pos || 0); });
+    (dr.expensesGoods || []).forEach(g  => stoka   += Number(g.amount || 0));
+    (dr.expensesOther || []).forEach(o  => {
+      const amt = Number(o.amount || 0);
+      if (norm(o.description) === 'Оставени за зареждане') leftForStock += amt;
+      else otherExp += amt;
+    });
+    (dr.sideIncomes   || []).forEach(s  => sideInc += Number(s.amount || 0));
+    (dr.advances      || []).forEach(a  => avans   += Number(a.amount || 0));
+  });
+
+  const turnover  = cash + pos;
+  const netProfit = turnover + sideInc - stoka - otherExp - avans;
+  return { turnover, stoka, netProfit, cash, pos, sideInc, otherExp, avans, leftForStock, hasData: snap.size > 0 };
+}
+
+// ── Сравнение спрямо миналата седмица ────────────────────────────────────
+async function _wrRenderComparison(shopId, monStr) {
+  const wrap = document.getElementById('wrCompareWrap');
+  if (!wrap) return;
+  try {
+    const prevMon = new Date(monStr + 'T00:00:00Z');
+    prevMon.setUTCDate(prevMon.getUTCDate() - 7);
+    const prevMonStr = prevMon.toISOString().slice(0, 10);
+
+    const [cur, prev] = await Promise.all([
+      _wrLoadWeekData(shopId, monStr),
+      _wrLoadWeekData(shopId, prevMonStr)
+    ]);
+    if (!cur.hasData && !prev.hasData) { wrap.innerHTML = ''; return; }
+
+    const fmt = (n) => (Number(n) || 0).toFixed(2);
+    const fmtDiff = (curVal, prevVal, lowerIsBetter) => {
+      const diff = curVal - prevVal;
+      const pct  = prevVal !== 0 ? (diff / prevVal) * 100 : (curVal !== 0 ? 100 : 0);
+      const good = lowerIsBetter ? diff < 0 : diff > 0;
+      const neutral = Math.abs(diff) < 0.01;
+      const color = neutral ? 'var(--text3)' : (good ? '#4caf50' : '#f44336');
+      const arrow = neutral ? '—' : (diff > 0 ? '▲' : '▼');
+      const sign  = diff > 0 ? '+' : '';
+      const pctStr = prevVal !== 0 ? `${sign}${pct.toFixed(1)}%` : (curVal !== 0 ? 'нова' : '—');
+      return `<span style="color:${color};font-weight:600;">${arrow} ${sign}${fmt(diff)} € (${pctStr})</span>`;
+    };
+
+    const prevLabel = `${prevMonStr.slice(8,10)}.${prevMonStr.slice(5,7)}`;
+    const card = (label, curVal, prevVal, low) => `
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;">
+        <div style="font-size:0.78rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;">${label}</div>
+        <div style="font-size:1.4rem;font-weight:700;margin:6px 0 4px;">${fmt(curVal)} €</div>
+        <div style="font-size:0.82rem;">${fmtDiff(curVal, prevVal, low)}</div>
+      </div>`;
+
+    wrap.innerHTML = `
+      <div style="margin-top:12px;">
+        <div style="font-size:0.85rem;color:var(--text3);margin-bottom:8px;">
+          📊 <strong>Сравнение спрямо седмица ${prevLabel}</strong>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;">
+          ${card('Оборот (КЕШ+КАРТА)', cur.turnover,  prev.turnover,  false)}
+          ${card('Стока (разход)',      cur.stoka,     prev.stoka,     true)}
+          ${card('Нетна печалба',       cur.netProfit, prev.netProfit, false)}
+        </div>
+      </div>`;
+  } catch (err) {
+    console.error('_wrRenderComparison:', err);
+    wrap.innerHTML = '';
+  }
+}
+window._wrRenderComparison = _wrRenderComparison;
 
 // ── Експорт на седмичната справка в PDF ──────────────────────────────────
 let _robotoRegular = null;
