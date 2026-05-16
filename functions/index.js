@@ -725,12 +725,23 @@ exports.generateMonthlyReportManual = onCall(
     if (!userDoc.exists || userDoc.data().role !== 'owner') {
       throw new HttpsError('permission-denied', 'Only owner can trigger.');
     }
-    const { year, month } = request.data || {};
+    const inputData = request.data || {};
+    let { year, month } = inputData;
+    // Клиентът праща { month: "2025-12" } — parse-ваме ако е string
+    if (typeof month === 'string' && month.includes('-') && !year) {
+      const parts = month.split('-');
+      year  = Number(parts[0]);
+      month = Number(parts[1]);
+    } else {
+      year  = Number(year);
+      month = Number(month);
+    }
+    logger.info('generateMonthlyReportManual input:', { year, month, rawData: inputData });
     if (!year || !month || month < 1 || month > 12) {
-      throw new HttpsError('invalid-argument', 'year and month (1-12) required');
+      throw new HttpsError('invalid-argument', `year and month (1-12) required. Got: year=${year}, month=${month}`);
     }
     try {
-      const summary    = await _calcMonthlyData(Number(year), Number(month));
+      const summary    = await _calcMonthlyData(year, month);
       const comparison = await _comparePrevMonth(summary);
       const docId      = await _saveMonthlyReport(summary, comparison);
       return { success: true, docId, summary };
