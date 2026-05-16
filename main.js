@@ -7,6 +7,7 @@ import {
   getDocs,
   getDocsFromServer,
   getDoc,
+  getDocFromServer,
   setDoc,
   query,
   orderBy,
@@ -6333,117 +6334,131 @@ async function loadMonthlyReport() {
   const el     = document.getElementById('mrContent');
   if (!sel || !el) return;
 
-  const monthVal = sel.value; // "2025-12"
+  const monthVal = sel.value; // "2026-05"
   if (!monthVal) { el.innerHTML = '<div class="tasks-empty">Изберете месец.</div>'; return; }
 
   if (status) status.textContent = '';
   el.innerHTML = '<div class="tasks-empty">⏳ Зареждане...</div>';
 
   try {
-    const q = query(
-      collection(db, 'monthly_reports'),
-      where('month', '==', monthVal)
-    );
+    // DocId е директно "YYYY-MM" — четем по ключ, не по query
+    const ref = doc(db, 'monthly_reports', monthVal);
     let snap;
-    try { snap = await getDocsFromServer(q); }
-    catch (e) { snap = await getDocs(q); }
-    console.log('[monthly] docs:', snap.size, 'for', monthVal);
+    try { snap = await getDocFromServer(ref); }
+    catch (e) { snap = await getDoc(ref); }
+    console.log('[monthly] exists:', snap.exists(), 'for', monthVal);
 
-    if (snap.empty) {
+    if (!snap.exists()) {
       el.innerHTML = `<div class="tasks-empty">Няма месечна справка за ${monthVal}.<br>Може да я генерирате ръчно.</div>`;
       return;
     }
 
-    // може да има за двата магазина — показваме и двете
-    const reports = snap.docs.map(d => d.data());
     el.innerHTML = '';
-
-    for (const d of reports) {
-      const wrapper = document.createElement('div');
-      wrapper.style.marginBottom = '18px';
-      const header = document.createElement('h4');
-      header.style.cssText = 'margin:0 0 6px;color:var(--accent)';
-      header.textContent = d.shopId === 'store1' ? 'Магазин 1' : d.shopId === 'store2' ? 'Магазин 2' : (d.shopId || '');
-      wrapper.appendChild(header);
-      el.appendChild(wrapper);
-      const tmp = document.createElement('div');
-      wrapper.appendChild(tmp);
-      _mrRenderInto(tmp, d);
-    }
+    _mrRenderInto(el, snap.data(), monthVal);
   } catch (e) {
     console.error('loadMonthlyReport:', e);
     el.innerHTML = '<div class="tasks-empty" style="color:#f44336">Грешка при зареждане: ' + e.message + '</div>';
   }
 }
 
-function _mrRenderInto(el, d) {
-  const shopLabel = d.shopId === 'store1' ? 'Магазин 1' : d.shopId === 'store2' ? 'Магазин 2' : d.shopId || '—';
-  const period = d.monthLabel || (d.month || '');
+function _mrRenderInto(el, d, monthVal) {
+  const p = d.period || {};
+  const monthLabel = (p.month && p.year)
+    ? _mrMonthNames[p.month - 1] + ' ' + p.year
+    : (monthVal || '');
+  const cmp = d.comparison || null;
 
-  el.innerHTML = `
-<div style="margin-bottom:10px;color:var(--text2);font-size:0.85rem;">
-  ${period}
-  ${d.generatedAt ? ' &mdash; генерирана ' + new Date(d.generatedAt.seconds * 1000).toLocaleString('bg-BG', {timeZone:'Europe/Sofia'}) : ''}
-</div>
-<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;">
-  <div class="wr-compare-card">
-    <div class="wr-compare-label">Оборот (лв.)</div>
-    <div class="wr-compare-val">${_mrFmt(d.totalRevenue)}</div>
-    ${d.prevMonth ? '<div class="wr-compare-diff">' + _mrDiffSpan((d.totalRevenue||0)-(d.prevMonth.totalRevenue||0), false) + '</div>' : ''}
-  </div>
-  <div class="wr-compare-card">
-    <div class="wr-compare-label">Стока (лв.)</div>
-    <div class="wr-compare-val">${_mrFmt(d.totalGoods)}</div>
-    ${d.prevMonth ? '<div class="wr-compare-diff">' + _mrDiffSpan((d.totalGoods||0)-(d.prevMonth.totalGoods||0), true) + '</div>' : ''}
-  </div>
-  <div class="wr-compare-card">
-    <div class="wr-compare-label">Нетна (лв.)</div>
-    <div class="wr-compare-val">${_mrFmt(d.netRevenue)}</div>
-    ${d.prevMonth ? '<div class="wr-compare-diff">' + _mrDiffSpan((d.netRevenue||0)-(d.prevMonth.netRevenue||0), false) + '</div>' : ''}
-  </div>
-  <div class="wr-compare-card">
-    <div class="wr-compare-label">Каса Кеш (лв.)</div>
-    <div class="wr-compare-val">${_mrFmt(d.cashBalance)}</div>
-    ${d.prevMonth ? '<div class="wr-compare-diff">' + _mrDiffSpan((d.cashBalance||0)-(d.prevMonth.cashBalance||0), false) + '</div>' : ''}
-  </div>
-  <div class="wr-compare-card">
-    <div class="wr-compare-label">Каса Банка (лв.)</div>
-    <div class="wr-compare-val">${_mrFmt(d.bankBalance)}</div>
-    ${d.prevMonth ? '<div class="wr-compare-diff">' + _mrDiffSpan((d.bankBalance||0)-(d.prevMonth.bankBalance||0), false) + '</div>' : ''}
-  </div>
-  <div class="wr-compare-card">
-    <div class="wr-compare-label">Работни дни</div>
-    <div class="wr-compare-val">${d.workingDays ?? '—'}</div>
-  </div>
-  <div class="wr-compare-card">
-    <div class="wr-compare-label">Служители</div>
-    <div class="wr-compare-val">${d.employeeCount ?? '—'}</div>
-  </div>
-  <div class="wr-compare-card">
-    <div class="wr-compare-label">Работни часа</div>
-    <div class="wr-compare-val">${_mrFmt(d.totalHours)}</div>
-  </div>
-  <div class="wr-compare-card">
-    <div class="wr-compare-label">Заплати (лв.)</div>
-    <div class="wr-compare-val">${_mrFmt(d.totalSalaries)}</div>
-  </div>
-  <div class="wr-compare-card">
-    <div class="wr-compare-label">Аванси (лв.)</div>
-    <div class="wr-compare-val">${_mrFmt(d.totalAdvances)}</div>
-  </div>
-</div>
-${d.topSuppliers && d.topSuppliers.length ? `
-<h4 style="margin:14px 0 6px;color:var(--text1)">Топ доставчици</h4>
-<table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
-  <thead><tr>
-    <th style="text-align:left;padding:4px 8px;background:var(--bg2)">Доставчик</th>
-    <th style="text-align:right;padding:4px 8px;background:var(--bg2)">Сума (лв.)</th>
-  </tr></thead>
-  <tbody>${d.topSuppliers.map(s => `<tr>
-    <td style="padding:4px 8px;border-bottom:1px solid var(--border)">${s.name||s.supplierId||'—'}</td>
-    <td style="padding:4px 8px;border-bottom:1px solid var(--border);text-align:right">${_mrFmt(s.total)}</td>
-  </tr>`).join('')}</tbody>
-</table>` : ''}`;
+  const diffAbs = (abs, lowerIsBetter) => {
+    if (abs === undefined || abs === null || isNaN(abs)) return '';
+    const up  = lowerIsBetter ? abs < 0 : abs > 0;
+    const col = abs === 0 ? 'var(--text2)' : up ? '#4caf50' : '#f44336';
+    const arr = abs > 0 ? '▲' : abs < 0 ? '▼' : '●';
+    return '<span style="color:' + col + ';font-size:0.8rem">' + arr + (abs > 0 ? '+' : '') + _mrFmt(abs) + ' лв.</span>';
+  };
+  const pctTxt = (pct, lowerIsBetter) => {
+    if (pct === undefined || pct === null) return '';
+    const up  = lowerIsBetter ? pct < 0 : pct > 0;
+    const col = pct === 0 ? 'var(--text2)' : up ? '#4caf50' : '#f44336';
+    return ' <span style="color:' + col + ';font-size:0.75rem">(' + (pct > 0 ? '+' : '') + pct.toFixed(1) + '%)</span>';
+  };
+
+  const perShopHtml = d.perShop ? ['store1', 'store2'].map(sid => {
+    const ps = d.perShop[sid];
+    if (!ps) return '';
+    const lbl = sid === 'store1' ? 'Магазин 1' : 'Магазин 2';
+    return '<div class="wr-compare-card">'
+      + '<div class="wr-compare-label" style="font-weight:600">' + lbl + '</div>'
+      + '<div style="font-size:0.85rem;color:var(--text2)">Оборот: <b>' + _mrFmt(ps.turnover) + '</b> лв.</div>'
+      + '<div style="font-size:0.85rem;color:var(--text2)">Стока: <b>' + _mrFmt(ps.stoka) + '</b> лв.</div>'
+      + '<div style="font-size:0.85rem;color:var(--text2)">Нетна: <b>' + _mrFmt(ps.netProfit) + '</b> лв.</div>'
+      + '<div style="font-size:0.85rem;color:var(--text2)">Дни: <b>' + (ps.closedDays ?? '—') + '</b></div>'
+      + '</div>';
+  }).join('') : '';
+
+  el.innerHTML = '<div style="margin-bottom:10px;color:var(--text2);font-size:0.85rem;">'
+    + monthLabel
+    + (d.generatedAt ? ' &mdash; генерирана ' + new Date(d.generatedAt.seconds * 1000).toLocaleString('bg-BG', {timeZone: 'Europe/Sofia'}) : '')
+    + '</div>'
+
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;margin-bottom:14px;">'
+
+    + '<div class="wr-compare-card"><div class="wr-compare-label">Оборот (лв.)</div>'
+    + '<div class="wr-compare-val">' + _mrFmt(d.totalTurnover) + '</div>'
+    + (cmp ? '<div class="wr-compare-diff">' + diffAbs(cmp.turnover && cmp.turnover.abs, false) + pctTxt(cmp.turnover && cmp.turnover.pct, false) + '</div>' : '')
+    + '</div>'
+
+    + '<div class="wr-compare-card"><div class="wr-compare-label">Стока (лв.)</div>'
+    + '<div class="wr-compare-val">' + _mrFmt(d.totalStoka) + '</div>'
+    + (cmp ? '<div class="wr-compare-diff">' + diffAbs(cmp.stoka && cmp.stoka.abs, true) + pctTxt(cmp.stoka && cmp.stoka.pct, true) + '</div>' : '')
+    + '</div>'
+
+    + '<div class="wr-compare-card"><div class="wr-compare-label">Нетна печалба (лв.)</div>'
+    + '<div class="wr-compare-val">' + _mrFmt(d.netProfit) + '</div>'
+    + (cmp ? '<div class="wr-compare-diff">' + diffAbs(cmp.netProfit && cmp.netProfit.abs, false) + pctTxt(cmp.netProfit && cmp.netProfit.pct, false) + '</div>' : '')
+    + '</div>'
+
+    + '<div class="wr-compare-card"><div class="wr-compare-label">Затворени дни</div>'
+    + '<div class="wr-compare-val">' + (d.closedDaysCount ?? '—') + '</div>'
+    + (cmp ? '<div class="wr-compare-diff">' + diffAbs(cmp.closedDays && cmp.closedDays.abs, false) + '</div>' : '')
+    + '</div>'
+
+    + '<div class="wr-compare-card"><div class="wr-compare-label">Заплати (лв.)</div>'
+    + '<div class="wr-compare-val">' + _mrFmt(d.totalSalary) + '</div></div>'
+
+    + '<div class="wr-compare-card"><div class="wr-compare-label">Аванси (лв.)</div>'
+    + '<div class="wr-compare-val">' + _mrFmt(d.totalAdvances) + '</div></div>'
+
+    + '<div class="wr-compare-card"><div class="wr-compare-label">Оставени за зареждане (лв.)</div>'
+    + '<div class="wr-compare-val">' + _mrFmt(d.totalLeftForStock) + '</div></div>'
+
+    + '<div class="wr-compare-card"><div class="wr-compare-label">ДДС дължим (лв.)</div>'
+    + '<div class="wr-compare-val">' + _mrFmt(d.vatDue) + '</div></div>'
+
+    + '<div class="wr-compare-card"><div class="wr-compare-label">Корп. данък (лв.)</div>'
+    + '<div class="wr-compare-val">' + _mrFmt(d.corpTax) + '</div></div>'
+
+    + '</div>'
+
+    + (d.bestDay || d.worstDay ? '<div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">'
+      + (d.bestDay ? '<div class="wr-compare-card" style="flex:1;min-width:150px">'
+        + '<div class="wr-compare-label">Най-добър ден</div>'
+        + '<div class="wr-compare-val" style="font-size:1rem">' + d.bestDay.date + '</div>'
+        + '<div style="color:var(--text2);font-size:0.85rem">' + _mrFmt(d.bestDay.turnover) + ' лв.</div></div>' : '')
+      + (d.worstDay ? '<div class="wr-compare-card" style="flex:1;min-width:150px">'
+        + '<div class="wr-compare-label">Най-слаб ден</div>'
+        + '<div class="wr-compare-val" style="font-size:1rem">' + d.worstDay.date + '</div>'
+        + '<div style="color:var(--text2);font-size:0.85rem">' + _mrFmt(d.worstDay.turnover) + ' лв.</div></div>' : '')
+      + '</div>' : '')
+
+    + (perShopHtml ? '<h4 style="margin:0 0 8px;color:var(--text1)">По магазин</h4>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">'
+      + perShopHtml + '</div>' : '')
+
+    + (cmp && cmp.prevTotals ? '<div style="font-size:0.82rem;color:var(--text2);margin-top:4px;">Сравнение спрямо '
+      + _mrMonthNames[(cmp.prevMonth || 1) - 1] + ' ' + cmp.prevYear
+      + ' — оборот: ' + _mrFmt(cmp.prevTotals.turnover)
+      + ' лв., стока: ' + _mrFmt(cmp.prevTotals.stoka)
+      + ' лв., нетна: ' + _mrFmt(cmp.prevTotals.netProfit) + ' лв.</div>' : '');
 }
 
 window.loadMonthlyReport = loadMonthlyReport;
@@ -6480,13 +6495,18 @@ window.exportMonthlyPDF = async function() {
   if (!sel?.value) { alert('Изберете месец.'); return; }
   const monthVal = sel.value;
 
-  const q = query(collection(db, 'monthly_reports'), where('month', '==', monthVal));
+  // DocId е "YYYY-MM" — четем директно по ключ
+  const ref = doc(db, 'monthly_reports', monthVal);
   let snap;
-  try { snap = await getDocsFromServer(q); }
-  catch (e) { snap = await getDocs(q); }
-  if (snap.empty) { alert('Няма данни за избрания месец.'); return; }
+  try { snap = await getDocFromServer(ref); }
+  catch (e) { snap = await getDoc(ref); }
+  if (!snap.exists()) { alert('Няма генерирана справка за ' + monthVal + '. Натиснете "Генерирай" първо.'); return; }
 
-  const reports = snap.docs.map(d => d.data());
+  const d = snap.data();
+  const p = d.period || {};
+  const monthLabel = (p.month && p.year)
+    ? _mrMonthNames[p.month - 1] + ' ' + p.year
+    : monthVal;
 
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -6498,62 +6518,79 @@ window.exportMonthlyPDF = async function() {
   pdf.setFont('DejaVuSans');
 
   let yPos = 15;
+  pdf.setFont('DejaVuSans', 'bold');
+  pdf.setFontSize(14);
+  pdf.text('Месечна справка', 14, yPos);
+  yPos += 7;
+  pdf.setFont('DejaVuSans', 'normal');
+  pdf.setFontSize(10);
+  pdf.text(monthLabel, 14, yPos);
+  yPos += 8;
 
-  for (let ri = 0; ri < reports.length; ri++) {
-    const d = reports[ri];
-    if (ri > 0) { pdf.addPage(); yPos = 15; }
+  const rows = [
+    ['Оборот (лв.)',                _mrFmt(d.totalTurnover)],
+    ['  в т.ч. Кеш (лв.)',         _mrFmt(d.totalCash)],
+    ['  в т.ч. ПОС (лв.)',         _mrFmt(d.totalPos)],
+    ['Стока (лв.)',                 _mrFmt(d.totalStoka)],
+    ['Нетна печалба (лв.)',        _mrFmt(d.netProfit)],
+    ['Заплати (лв.)',               _mrFmt(d.totalSalary)],
+    ['Аванси (лв.)',                _mrFmt(d.totalAdvances)],
+    ['Оставени за зареждане (лв.)', _mrFmt(d.totalLeftForStock)],
+    ['Странични приходи (лв.)',     _mrFmt(d.totalSideInc)],
+    ['ДДС дължим (лв.)',            _mrFmt(d.vatDue)],
+    ['Корп. данък (лв.)',           _mrFmt(d.corpTax)],
+    ['Затворени дни',               String(d.closedDaysCount ?? '—')],
+    ['  Магазин 1',                 String(d.closedDaysByShop && d.closedDaysByShop.store1 != null ? d.closedDaysByShop.store1 : '—')],
+    ['  Магазин 2',                 String(d.closedDaysByShop && d.closedDaysByShop.store2 != null ? d.closedDaysByShop.store2 : '—')],
+  ];
 
-    const shopLabel = d.shopId === 'store1' ? 'Магазин 1' : d.shopId === 'store2' ? 'Магазин 2' : (d.shopId || '');
+  pdf.autoTable({
+    startY: yPos,
+    head: [['Показател', 'Стойност']],
+    body: rows,
+    styles: { font: 'DejaVuSans', fontSize: 10 },
+    headStyles: { fillColor: [255, 202, 40], textColor: [0, 0, 0], fontStyle: 'bold' },
+    columnStyles: { 1: { halign: 'right' } },
+    margin: { left: 14, right: 14 },
+  });
+
+  yPos = pdf.lastAutoTable.finalY + 8;
+
+  // По магазин
+  if (d.perShop) {
     pdf.setFont('DejaVuSans', 'bold');
-    pdf.setFontSize(14);
-    pdf.text('Месечна справка — ' + shopLabel, 14, yPos);
-    yPos += 7;
-    pdf.setFont('DejaVuSans', 'normal');
-    pdf.setFontSize(10);
-    pdf.text((d.monthLabel || monthVal), 14, yPos);
-    yPos += 8;
-
-    const rows = [
-      ['Оборот (лв.)',       _mrFmt(d.totalRevenue)],
-      ['Стока (лв.)',        _mrFmt(d.totalGoods)],
-      ['Нетна (лв.)',        _mrFmt(d.netRevenue)],
-      ['Каса Кеш (лв.)',    _mrFmt(d.cashBalance)],
-      ['Каса Банка (лв.)',  _mrFmt(d.bankBalance)],
-      ['Работни дни',        String(d.workingDays ?? '—')],
-      ['Служители',          String(d.employeeCount ?? '—')],
-      ['Работни часа',       _mrFmt(d.totalHours)],
-      ['Заплати (лв.)',      _mrFmt(d.totalSalaries)],
-      ['Аванси (лв.)',       _mrFmt(d.totalAdvances)],
-    ];
-
+    pdf.setFontSize(11);
+    pdf.text('По магазин', 14, yPos);
+    yPos += 2;
+    const psRows = ['store1', 'store2'].map(sid => {
+      const ps = d.perShop[sid] || {};
+      const lbl = sid === 'store1' ? 'Магазин 1' : 'Магазин 2';
+      return [lbl, _mrFmt(ps.turnover), _mrFmt(ps.stoka), _mrFmt(ps.netProfit), String(ps.closedDays ?? '—')];
+    });
     pdf.autoTable({
       startY: yPos,
-      head: [['Показател', 'Стойност']],
-      body: rows,
+      head: [['Магазин', 'Оборот', 'Стока', 'Нетна', 'Дни']],
+      body: psRows,
       styles: { font: 'DejaVuSans', fontSize: 10 },
-      headStyles: { fillColor: [255, 202, 40], textColor: [0, 0, 0], fontStyle: 'bold' },
-      columnStyles: { 1: { halign: 'right' } },
+      headStyles: { fillColor: [66, 66, 66], textColor: [255, 255, 255], fontStyle: 'bold' },
+      columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' } },
       margin: { left: 14, right: 14 },
     });
-
     yPos = pdf.lastAutoTable.finalY + 8;
+  }
 
-    if (d.topSuppliers && d.topSuppliers.length) {
-      pdf.setFont('DejaVuSans', 'bold');
-      pdf.setFontSize(11);
-      pdf.text('Топ доставчици', 14, yPos);
-      yPos += 5;
-      pdf.autoTable({
-        startY: yPos,
-        head: [['Доставчик', 'Сума (лв.)']],
-        body: d.topSuppliers.map(s => [s.name || s.supplierId || '—', _mrFmt(s.total)]),
-        styles: { font: 'DejaVuSans', fontSize: 10 },
-        headStyles: { fillColor: [66, 66, 66], textColor: [255, 255, 255], fontStyle: 'bold' },
-        columnStyles: { 1: { halign: 'right' } },
-        margin: { left: 14, right: 14 },
-      });
-      yPos = pdf.lastAutoTable.finalY + 8;
-    }
+  // Най-добър/слаб ден
+  if (d.bestDay || d.worstDay) {
+    const dayRows = [];
+    if (d.bestDay)  dayRows.push(['Най-добър ден',  d.bestDay.date,  _mrFmt(d.bestDay.turnover)  + ' лв.']);
+    if (d.worstDay) dayRows.push(['Най-слаб ден',   d.worstDay.date, _mrFmt(d.worstDay.turnover) + ' лв.']);
+    pdf.autoTable({
+      startY: yPos,
+      body: dayRows,
+      styles: { font: 'DejaVuSans', fontSize: 10 },
+      columnStyles: { 2: { halign: 'right' } },
+      margin: { left: 14, right: 14 },
+    });
   }
 
   pdf.save('месечна-справка-' + monthVal + '.pdf');

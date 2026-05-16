@@ -669,6 +669,7 @@ async function _saveMonthlyReport(summary, comparison) {
   const docId = `${year}-${String(month).padStart(2, '0')}`;
   await admin.firestore().collection('monthly_reports').doc(docId).set({
     ...summary, comparison,
+    month: docId,
     generatedAt: admin.firestore.FieldValue.serverTimestamp(),
     generated: true
   });
