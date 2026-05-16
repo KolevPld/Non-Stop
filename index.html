@@ -300,6 +300,27 @@
       <div id="wrCompareWrap"></div>
     </div>
 
+    <!-- Месечна справка -->
+    <div id="monthlyReportCard" class="card admin-only" style="margin-bottom:14px;">
+      <h3 style="margin:0 0 12px;">
+        <i class="fa-solid fa-calendar-days" style="color:#ffca28"></i>
+        Месечна справка
+      </h3>
+      <div class="wr-controls">
+        <select id="mrMonthSel" onchange="loadMonthlyReport()"></select>
+        <button class="btn-secondary" onclick="exportMonthlyPDF()">
+          <i class="fa-solid fa-file-pdf"></i> Изтегли PDF
+        </button>
+        <button class="btn-secondary" onclick="triggerMonthlyManual()">
+          <i class="fa-solid fa-arrows-rotate"></i> Генерирай
+        </button>
+      </div>
+      <div id="mrStatus" style="margin-top:10px;font-size:0.85rem;color:var(--text2,#aab);"></div>
+      <div id="mrContent" style="margin-top:10px;">
+        <div class="tasks-empty">Изберете месец...</div>
+      </div>
+    </div>
+
     <!-- Records table -->
     <div class="table-responsive admin-only">
       <table id="recordsTable">
