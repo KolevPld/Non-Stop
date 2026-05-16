@@ -442,3 +442,118 @@ exports.triggerBackupNow = onCall(
     return { success: true, outputUri: outUri, opName: op.name };
   }
 );
+
+
+// ── Авто-засичане на пропуснати дни (всеки ден 11:00) ─────────────────────
+exports.checkMissingDays = onSchedule(
+  { schedule: '0 11 * * *', timeZone: 'Europe/Sofia', region: 'us-central1' },
+  async () => {
+    const db    = admin.firestore();
+    const now   = new Date();
+    const sofia = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Sofia' }));
+
+    const checkDates = [];
+    for (let i = 1; i <= 3; i++) {
+      const d = new Date(sofia);
+      d.setDate(sofia.getDate() - i);
+      checkDates.push(d.toISOString().slice(0, 10));
+    }
+    logger.info('checkMissingDays: проверявам дати', { checkDates });
+
+    const shops = ['store1', 'store2'];
+    const reportsSnap = await db.collection('daily_reports')
+      .where('date', 'in', checkDates)
+      .get();
+
+    const closedMap = { store1: new Set(), store2: new Set() };
+    reportsSnap.forEach(d => {
+      const r = d.data();
+      if (r.status === 'closed' && closedMap[r.shopId]) closedMap[r.shopId].add(r.date);
+    });
+
+    const alerts = [];
+    for (const shopId of shops) {
+      const missing = checkDates.filter(d => !closedMap[shopId].has(d));
+      if (missing.length) alerts.push({ shopId, missing });
+    }
+
+    if (!alerts.length) {
+      logger.info('checkMissingDays: всичко е чисто.');
+      return;
+    }
+
+    // Anti-spam — само веднъж на ден
+    const todayYmd  = sofia.toISOString().slice(0, 10);
+    const alertKey  = `alert-${todayYmd}`;
+    const existing  = await db.collection('missing_days_alerts').doc(alertKey).get();
+    if (existing.exists) {
+      logger.info('checkMissingDays: вече е пратено за днес, skip.');
+      return;
+    }
+
+    const ownersSnap = await db.collection('users').where('role', '==', 'owner').get();
+    const ownerIds   = ownersSnap.docs.map(d => d.id);
+
+    const managerByShop = {};
+    for (const shopId of shops) {
+      const mSnap = await db.collection('users').where('role', '==', shopId).get();
+      managerByShop[shopId] = mSnap.docs.map(d => d.id);
+    }
+
+    for (const alert of alerts) {
+      const shopName  = alert.shopId === 'store1' ? 'Магазин 1' : 'Магазин 2';
+      const missingFmt = alert.missing
+        .map(d => `${d.slice(8, 10)}.${d.slice(5, 7)}`).join(', ');
+
+      const recipientIds = [...new Set([...ownerIds, ...(managerByShop[alert.shopId] || [])])];
+      if (!recipientIds.length) continue;
+
+      const allTokens = [];
+      for (let i = 0; i < recipientIds.length; i += 10) {
+        const chunk = recipientIds.slice(i, i + 10);
+        const tSnap = await db.collection('fcmTokens').where('userId', 'in', chunk).get();
+        tSnap.forEach(d => { const t = d.data().token; if (t) allTokens.push(t); });
+      }
+      if (!allTokens.length) {
+        logger.warn('checkMissingDays: няма FCM tokens', { shopId: alert.shopId });
+        continue;
+      }
+
+      const title = `⚠️ Пропуснати дни — ${shopName}`;
+      const body  = alert.missing.length === 1
+        ? `Не е затворен отчет за ${missingFmt}`
+        : `Не са затворени отчети за: ${missingFmt}`;
+
+      try {
+        const resp = await admin.messaging().sendEachForMulticast({
+          notification: { title, body },
+          webpush: {
+            fcmOptions: { link: '/' },
+            notification: {
+              icon: '/icon-192.png',
+              badge: '/icon-192.png',
+              requireInteraction: true,
+              tag: `missing-${alert.shopId}-${todayYmd}`
+            }
+          },
+          tokens: allTokens
+        });
+        logger.info('checkMissingDays: push изпратен', {
+          shopId: alert.shopId,
+          success: resp.successCount,
+          failure: resp.failureCount,
+          missing: alert.missing
+        });
+      } catch (err) {
+        logger.error('checkMissingDays: push грешка', { shopId: alert.shopId, err: String(err) });
+      }
+    }
+
+    await db.collection('missing_days_alerts').doc(alertKey).set({
+      date: todayYmd,
+      alerts,
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+    logger.info('checkMissingDays: готово', { alertsCount: alerts.length });
+  }
+);

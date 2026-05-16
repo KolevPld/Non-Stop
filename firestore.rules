@@ -27,6 +27,11 @@ service cloud.firestore {
       allow read:  if isAuth();
       allow write: if false;
     }
+
+    match /missing_days_alerts/{docId} {
+      allow read:  if isOwner();
+      allow write: if false;
+    }
     match /reportChangeLogs/{id} { allow read, write: if isAuth(); }
 
     match /users/{id} {
