@@ -1364,7 +1364,12 @@ window.exportWeeklyPDF = async function() {
       fmt(r.sideInc), fmt(r.avans), fmt(r.total)
     ]);
 
-    pdf.autoTable({
+    const autoTableFn = (typeof window.jspdf?.autoTable === 'function')
+      ? window.jspdf.autoTable
+      : (typeof pdf.autoTable === 'function' ? pdf.autoTable.bind(pdf) : null);
+    if (!autoTableFn) throw new Error('jspdf-autotable plugin не е зареден');
+
+    autoTableFn(pdf, {
       head: [['Ден', 'КЕШ', 'КАРТА', 'Стока', 'Други р.', 'Стр. прих.', 'Аванси', 'Общо']],
       body: tableBody,
       foot: [['ОБЩО', fmt(totals.cash), fmt(totals.pos), fmt(totals.stoka),
@@ -1376,13 +1381,13 @@ window.exportWeeklyPDF = async function() {
       footStyles:  { fillColor: [220, 220, 220], textColor: 30, fontStyle: 'bold' },
       columnStyles:{ 0: { halign: 'left' } },
       didParseCell: (data) => {
-        if (data.section === 'body' && data.row.raw[0].includes('*')) {
+        if (data.section === 'body' && String(data.row.raw[0] || '').includes('*')) {
           data.cell.styles.textColor = [150, 150, 150];
         }
       }
     });
 
-    let curY = pdf.lastAutoTable.finalY + 8;
+    let curY = (pdf.lastAutoTable?.finalY ?? 100) + 8;
 
     // Оставени за стока банер
     if (leftForStock > 0) {
