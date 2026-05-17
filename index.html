@@ -1442,6 +1442,116 @@
   </div><!-- /sal-modal-panel -->
 </div>
 
+<!-- ── Finalize Salary Modal ────────────────────── -->
+<div id="finalizeSalModal" class="hidden">
+  <div class="dr-detail-backdrop" onclick="closeFinalizeSalModal()"></div>
+  <div class="sal-modal-panel">
+
+    <div class="dr-detail-header">
+      <span id="finSalTitle" class="dr-detail-title-text">Финализирай ведомост</span>
+      <button class="dr-detail-close" onclick="closeFinalizeSalModal()">✖</button>
+    </div>
+
+    <div class="sal-modal-body">
+
+      <!-- База -->
+      <div class="sal-section">
+        <div class="sal-section-title">💼 База</div>
+        <div class="sal-base-grid">
+          <div class="sal-base-row">
+            <span class="sal-base-label">Часове (от графика):</span>
+            <span id="finSalHours" class="sal-base-val mono">0</span>
+          </div>
+          <div class="sal-base-row">
+            <span class="sal-base-label">Ставка (лв./час):</span>
+            <input type="number" id="finSalRate" class="sal-rate-input"
+                   min="0" step="0.01" placeholder="0.00" oninput="calcFinalizeTotal()">
+          </div>
+          <div class="sal-base-row sal-base-result">
+            <span class="sal-base-label">База:</span>
+            <span id="finSalBase" class="sal-base-val mono pos">0.00 лв.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Добавки -->
+      <div class="sal-section">
+        <div class="sal-section-title">➕ Добавки</div>
+        <div class="sal-base-grid">
+          <div class="sal-base-row">
+            <span class="sal-base-label">Празнични часове (лв.):</span>
+            <input type="number" id="finSalHoliday" class="sal-rate-input"
+                   min="0" step="0.01" placeholder="0.00" oninput="calcFinalizeTotal()">
+          </div>
+          <div class="sal-base-row">
+            <span class="sal-base-label">Доплащане отпуска/болнични (лв.):</span>
+            <input type="number" id="finSalSickLeave" class="sal-rate-input"
+                   min="0" step="0.01" placeholder="0.00" oninput="calcFinalizeTotal()">
+          </div>
+          <div class="sal-base-row">
+            <span class="sal-base-label">Бонус от оборота (лв.):</span>
+            <input type="number" id="finSalShopBonus" class="sal-rate-input"
+                   min="0" step="0.01" placeholder="0.00" oninput="calcFinalizeTotal()">
+          </div>
+          <div class="sal-base-row">
+            <span class="sal-base-label">Личен бонус (лв.):</span>
+            <input type="number" id="finSalPersonalBonus" class="sal-rate-input"
+                   min="0" step="0.01" placeholder="0.00" oninput="calcFinalizeTotal()">
+          </div>
+        </div>
+      </div>
+
+      <!-- Брутно -->
+      <div class="sal-section sal-summary-section">
+        <div class="sal-summary-row sal-summary-final">
+          <span>ОБЩО БРУТНО:</span>
+          <span id="finSalGross" class="mono pos">0.00 лв.</span>
+        </div>
+      </div>
+
+      <!-- Плащане -->
+      <div class="sal-section">
+        <div class="sal-section-title">💳 Плащане</div>
+        <div class="sal-base-grid">
+          <div class="sal-base-row">
+            <span class="sal-base-label">Аванси (лв.):</span>
+            <input type="number" id="finSalAdvances" class="sal-rate-input"
+                   min="0" step="0.01" placeholder="0.00" oninput="calcFinalizeTotal()">
+          </div>
+          <div class="sal-base-row">
+            <span class="sal-base-label">По банков път (лв.):</span>
+            <input type="number" id="finSalBank" class="sal-rate-input"
+                   min="0" step="0.01" placeholder="0.00" oninput="calcFinalizeTotal()">
+          </div>
+          <div class="sal-base-row sal-base-result">
+            <span class="sal-base-label">Кеш / За плащане:</span>
+            <span id="finSalCash" class="sal-base-val mono">0.00 лв.</span>
+          </div>
+        </div>
+        <div id="finSalOverpaidWarn" class="hidden sal-warn">
+          ⚠️ Надплатено — авансите надвишават брутното!
+        </div>
+      </div>
+
+      <!-- Бележка -->
+      <div class="sal-section">
+        <div class="sal-section-title">📝 Бележка</div>
+        <textarea id="finSalNotes" class="sal-notes-input" rows="2"
+                  placeholder="Допълнителни бележки за фиша..."></textarea>
+      </div>
+
+    </div><!-- /sal-modal-body -->
+
+    <div class="dr-detail-footer">
+      <button class="btn-secondary" onclick="closeFinalizeSalModal()">Откажи</button>
+      <button class="btn-primary" onclick="saveFinalizeSalary()">
+        <i class="fa-solid fa-check-circle"></i> Запази / Финализирай
+      </button>
+    </div>
+
+  </div><!-- /sal-modal-panel -->
+</div>
+
 <!-- ── Work Hours Cell Edit Modal ───────────────── -->
 <div id="whCellModal" class="hidden">
   <div class="dr-detail-backdrop" onclick="closeWhCellModal()"></div>

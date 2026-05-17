@@ -3016,6 +3016,14 @@ body.light .wage-rate-input      { background: #fff; }
   transition: background .15s;
 }
 .sal-edit-btn:hover { background: var(--accent); color: #fff; }
+.sal-edit-btn:disabled { opacity: 0.38; cursor: not-allowed; border-color: var(--border2); color: var(--text3); }
+.sal-edit-btn:disabled:hover { background: transparent; color: var(--text3); }
+.sal-actions-cell { display: flex; gap: 5px; align-items: center; white-space: nowrap; }
+.sal-slip-btn { border-color: var(--green, #48bb78); color: var(--green, #48bb78); }
+.sal-slip-btn:hover { background: var(--green, #48bb78); color: #fff; }
+
+/* ── Finalize modal panel ────────────────────────────── */
+#finalizeSalModal { position: fixed; inset: 0; z-index: 999; }
 
 /* ── Salary modal panel ──────────────────────────────── */
 #salaryModal {

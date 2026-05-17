@@ -5329,6 +5329,9 @@ let _salBonuses    = [];
 let _salDeductions = [];
 let _salHistTab    = "month";
 let _salHistEmpId  = null;
+let _finSalEmpId   = null;
+let _finSalMonth   = null;
+let _finSalEmpData = null;
 let _salHistChart  = null;
 
 // ── Payroll tab entry ──────────────────────────────────────
@@ -6033,18 +6036,21 @@ async function loadSalHistByEmployee(empId) {
       const sal = finalByMonth[mo];
       if (sal) {
         // ── Финализиран ред ──
-        const bon = (sal.bonuses    || []).reduce((s,b)  => s + (b.amount||0), 0);
-        const ded = (sal.deductions || []).reduce((s,dd) => s + (dd.amount||0), 0);
+        const advStored = sal.advances ?? (sal.deductions || []).reduce((s,d) => s+(d.amount||0), 0);
+        const cash = sal.cashAmount ?? Math.max(0, (sal.totalGross||0) - (sal.bankAmount||0) - advStored);
+        const cashCls = cash < 0 ? "neg" : "pos";
         return `<tr>
           <td><strong>${formatMonth(mo)}</strong></td>
           <td class="mono">${sal.baseHours || 0}</td>
-          <td class="mono">${(sal.baseRate   || 0).toFixed(2)}</td>
-          <td class="mono">${(sal.baseAmount || 0).toFixed(2)}</td>
-          <td class="mono ${bon>0?"pos":""}">${bon>0?"+"+bon.toFixed(2):"—"}</td>
-          <td class="mono ${ded>0?"neg":""}">${ded>0?"−"+ded.toFixed(2):"—"}</td>
+          <td class="mono">${(sal.baseRate || 0).toFixed(2)}</td>
           <td class="mono pos"><strong>${(sal.totalGross||0).toFixed(2)} лв.</strong></td>
+          <td class="mono">${advStored > 0 ? advStored.toFixed(2) + " лв." : "—"}</td>
+          <td class="mono ${cashCls}">${cash.toFixed(2)} лв.</td>
           <td><span class="sal-status-badge sal-${sal.status}">${salStatusLabel(sal.status)}</span></td>
-          <td><button class="sal-edit-btn" onclick="exportSalarySlip('${sal.id}')">📄 Фиш</button></td>
+          <td class="sal-actions-cell">
+            <button class="sal-edit-btn" onclick="openFinalizeSalaryModal('${empId}','${mo}')">✏️ Ред.</button>
+            <button class="sal-edit-btn sal-slip-btn" onclick="exportSalarySlip('${sal.id}')">📄 Фиш</button>
+          </td>
         </tr>`;
       } else {
         // ── Preview ред (само изчислен) ──
@@ -6052,19 +6058,20 @@ async function loadSalHistByEmployee(empId) {
         const rate  = getHistoricalRate(emp, mo);
         const base  = hours * rate;
         const advs  = advByMonth[mo] || 0;
-        const net   = base - advs;
-        return `<tr style="opacity:0.72">
+        const cash  = base - advs;
+        const cashCls = cash < 0 ? "neg" : "";
+        return `<tr style="opacity:0.75">
           <td><strong>${formatMonth(mo)}</strong></td>
           <td class="mono">${hours}</td>
           <td class="mono">${rate.toFixed(2)}</td>
-          <td class="mono">${base.toFixed(2)}</td>
-          <td class="mono" style="color:var(--text3)">—</td>
-          <td class="mono ${advs>0?"neg":""}">${advs>0?"−"+advs.toFixed(2):"—"}</td>
-          <td class="mono">${net.toFixed(2)} лв.</td>
+          <td class="mono">${base.toFixed(2)} лв.</td>
+          <td class="mono">${advs > 0 ? advs.toFixed(2) + " лв." : "—"}</td>
+          <td class="mono ${cashCls}">${cash.toFixed(2)} лв.</td>
           <td><span class="sal-status-badge" style="background:var(--bg3);color:var(--text2);font-size:0.75rem">📊 Предварителен</span></td>
-          <td><button class="sal-edit-btn" onclick="finalizeSalary('${empId}','${mo}')">
-            Финализирай
-          </button></td>
+          <td class="sal-actions-cell">
+            <button class="sal-edit-btn" onclick="openFinalizeSalaryModal('${empId}','${mo}')">Финализирай</button>
+            <button class="sal-edit-btn" disabled title="Финализирай първо">📄 Фиш</button>
+          </td>
         </tr>`;
       }
     }).join("");
@@ -6073,8 +6080,8 @@ async function loadSalHistByEmployee(empId) {
       <div class="table-responsive" style="margin-top:12px">
       <table class="wh-wage-table">
         <thead><tr>
-          <th>Месец</th><th>Часове</th><th>Ставка</th><th>База</th>
-          <th>Бонуси</th><th>Аванси</th><th>Бруто / За плащане</th><th>Статус</th><th>—</th>
+          <th>Месец</th><th>Часове</th><th>Ставка</th><th>Брутно</th>
+          <th>Аванси</th><th>За кеш</th><th>Статус</th><th>—</th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table></div>`;
@@ -6084,16 +6091,18 @@ async function loadSalHistByEmployee(empId) {
   }
 }
 
-window.finalizeSalary = async function(empId, month) {
-  if (!confirm(`Финализирай заплата за ${formatMonth(month)}?\n\nЩе се създаде одобрен запис в Заплати.`)) return;
+// ── Finalize salary modal ──────────────────────────────────
+window.openFinalizeSalaryModal = async function(empId, month) {
+  _finSalEmpId = empId;
+  _finSalMonth = month;
   try {
     const [whSnap, advSnap, empDoc] = await Promise.all([
       getDocs(query(collection(db,"work_hours"), where("employeeId","==",empId))),
       getDocs(query(collection(db,"advances"),   where("employeeId","==",empId))),
       getDoc(doc(db,"employees",empId))
     ]);
-    const emp = empDoc.exists() ? { id: empDoc.id, ...empDoc.data() } : null;
-    if (!emp) { alert("Служителят не е намерен."); return; }
+    _finSalEmpData = empDoc.exists() ? { id: empDoc.id, ...empDoc.data() } : null;
+    if (!_finSalEmpData) { alert("Служителят не е намерен."); return; }
 
     let hours = 0;
     whSnap.docs.forEach(d => {
@@ -6102,46 +6111,173 @@ window.finalizeSalary = async function(empId, month) {
     });
 
     let totalAdv = 0;
-    const dedItems = [];
     advSnap.docs.forEach(d => {
       const r  = d.data();
       const mo = r.month || (r.date || "").slice(0, 7);
-      if (mo === month && r.amount) {
-        totalAdv += r.amount;
-        dedItems.push({ type: "Аванс", amount: r.amount, note: r.note || "" });
-      }
+      if (mo === month && r.amount) totalAdv += r.amount;
     });
 
-    const rate  = getHistoricalRate(emp, month);
-    const base  = hours * rate;
-    const gross = Math.max(0, base - totalAdv);
-    const now   = new Date().toISOString();
+    // Check if salary doc already exists — pre-fill with its values
+    const existSnap = await getDocs(query(
+      collection(db,"salaries"),
+      where("employeeId","==",empId),
+      where("month","==",month)
+    ));
+    const existing = existSnap.empty ? null : { id: existSnap.docs[0].id, ...existSnap.docs[0].data() };
 
-    await addDoc(collection(db,"salaries"), {
-      shopId:       emp.shopId,
-      employeeId:   empId,
-      employeeName: emp.name,
-      month,
-      baseHours:    hours,
-      baseRate:     rate,
-      baseAmount:   base,
-      bonuses:      [],
-      deductions:   dedItems,
-      totalGross:   gross,
-      bankAmount:   0,
-      notes:        "",
-      status:       "approved",
-      changeLog:    [{ by: currentUserId, at: now,
-        action: `Финализирана — ${hours}ч × ${rate} лв. − ${totalAdv.toFixed(2)} лв. аванси = ${gross.toFixed(2)} лв.` }],
-      createdAt:    now,
-      updatedAt:    now
-    });
+    const rate = existing?.baseRate ?? getHistoricalRate(_finSalEmpData, month);
+    const shopLabel = _finSalEmpData.shopId === "store1" ? "М1" : "М2";
 
-    await loadSalHistByEmployee(empId);
-  } catch (e) {
-    console.error("finalizeSalary:", e);
-    alert("Грешка: " + e.message);
+    document.getElementById("finSalTitle").textContent =
+      `Финализирай — ${_finSalEmpData.name} (${shopLabel}) — ${formatMonth(month)}`;
+
+    document.getElementById("finSalHours").textContent       = hours;
+    document.getElementById("finSalRate").value              = rate;
+    document.getElementById("finSalHoliday").value           = existing?.holidayAmount    || "";
+    document.getElementById("finSalSickLeave").value         = existing?.sickLeaveAmount  || "";
+    document.getElementById("finSalShopBonus").value         = existing?.shopBonusAmount  || "";
+    document.getElementById("finSalPersonalBonus").value     = existing?.personalBonusAmount || "";
+    document.getElementById("finSalAdvances").value          = existing ? (existing.advances ?? totalAdv) || "" : (totalAdv || "");
+    document.getElementById("finSalBank").value              = existing?.bankAmount        || "";
+    document.getElementById("finSalNotes").value             = existing?.notes             || "";
+
+    // Store existing docId for update
+    document.getElementById("finalizeSalModal").dataset.existingId = existing?.id || "";
+
+    calcFinalizeTotal();
+    document.getElementById("finalizeSalModal").classList.remove("hidden");
+  } catch (e) { alert("Грешка при зареждане: " + e.message); }
+};
+
+window.closeFinalizeSalModal = function() {
+  document.getElementById("finalizeSalModal")?.classList.add("hidden");
+  _finSalEmpId = null; _finSalMonth = null; _finSalEmpData = null;
+};
+
+window.calcFinalizeTotal = function() {
+  const hours     = parseFloat(document.getElementById("finSalHours")?.textContent || 0) || 0;
+  const rate      = parseFloat(document.getElementById("finSalRate")?.value      || 0) || 0;
+  const holiday   = parseFloat(document.getElementById("finSalHoliday")?.value   || 0) || 0;
+  const sickLeave = parseFloat(document.getElementById("finSalSickLeave")?.value || 0) || 0;
+  const shopBonus = parseFloat(document.getElementById("finSalShopBonus")?.value || 0) || 0;
+  const persBon   = parseFloat(document.getElementById("finSalPersonalBonus")?.value || 0) || 0;
+  const advances  = parseFloat(document.getElementById("finSalAdvances")?.value  || 0) || 0;
+  const bank      = parseFloat(document.getElementById("finSalBank")?.value      || 0) || 0;
+
+  const base  = hours * rate;
+  const gross = base + holiday + sickLeave + shopBonus + persBon;
+  const cash  = gross - advances - bank;
+
+  const setText = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
+  setText("finSalBase",  base.toFixed(2)  + " лв.");
+  setText("finSalGross", gross.toFixed(2) + " лв.");
+
+  const cashEl = document.getElementById("finSalCash");
+  if (cashEl) {
+    cashEl.textContent = cash.toFixed(2) + " лв.";
+    cashEl.style.color = cash < 0 ? "var(--red)" : "var(--green)";
   }
+  document.getElementById("finSalOverpaidWarn")?.classList.toggle("hidden", cash >= 0);
+};
+
+window.saveFinalizeSalary = async function() {
+  if (!_finSalEmpId || !_finSalMonth || !_finSalEmpData) return;
+
+  const hours     = parseFloat(document.getElementById("finSalHours")?.textContent || 0) || 0;
+  const rate      = parseFloat(document.getElementById("finSalRate")?.value      || 0) || 0;
+  const holiday   = parseFloat(document.getElementById("finSalHoliday")?.value   || 0) || 0;
+  const sickLeave = parseFloat(document.getElementById("finSalSickLeave")?.value || 0) || 0;
+  const shopBonus = parseFloat(document.getElementById("finSalShopBonus")?.value || 0) || 0;
+  const persBon   = parseFloat(document.getElementById("finSalPersonalBonus")?.value || 0) || 0;
+  const advances  = parseFloat(document.getElementById("finSalAdvances")?.value  || 0) || 0;
+  const bankAmount = parseFloat(document.getElementById("finSalBank")?.value     || 0) || 0;
+  const notes     = document.getElementById("finSalNotes")?.value?.trim() || "";
+  const existingId = document.getElementById("finalizeSalModal")?.dataset?.existingId || "";
+
+  const base       = hours * rate;
+  const totalGross = base + holiday + sickLeave + shopBonus + persBon;
+  const cashAmount = totalGross - advances - bankAmount;
+
+  const bonuses = [];
+  if (holiday)   bonuses.push({ type: "Празнични часове",          amount: holiday,   note: "" });
+  if (sickLeave) bonuses.push({ type: "Доплащане отпуска/болнични", amount: sickLeave, note: "" });
+  if (shopBonus) bonuses.push({ type: "Бонус от оборота",           amount: shopBonus, note: "" });
+  if (persBon)   bonuses.push({ type: "Личен бонус",                amount: persBon,   note: "" });
+
+  const deductions = advances > 0 ? [{ type: "Аванс", amount: advances, note: "" }] : [];
+
+  if (!confirm(`Финализирай заплата за ${_finSalEmpData.name}?\n\nБрутно: ${totalGross.toFixed(2)} лв.\nАванси: ${advances.toFixed(2)} лв.\nЗа кеш: ${cashAmount.toFixed(2)} лв.`)) return;
+
+  const now = new Date().toISOString();
+  const salData = {
+    shopId:              _finSalEmpData.shopId,
+    employeeId:          _finSalEmpId,
+    employeeName:        _finSalEmpData.name,
+    month:               _finSalMonth,
+    baseHours:           hours,
+    baseRate:            rate,
+    baseAmount:          base,
+    holidayAmount:       holiday,
+    sickLeaveAmount:     sickLeave,
+    shopBonusAmount:     shopBonus,
+    personalBonusAmount: persBon,
+    bonuses,
+    deductions,
+    totalGross,
+    advances,
+    bankAmount,
+    cashAmount,
+    notes,
+    status:    "approved",
+    updatedAt: now,
+    changeLog: [{ by: currentUserId, at: now,
+      action: `Финализирана — ${hours}ч × ${rate} = ${base.toFixed(2)} + добавки ${(totalGross-base).toFixed(2)} − аванси ${advances.toFixed(2)} = бруто ${totalGross.toFixed(2)} лв.` }]
+  };
+
+  try {
+    if (existingId) {
+      const snap = await getDoc(doc(db,"salaries",existingId));
+      const prevLog = snap.data()?.changeLog || [];
+      await updateDoc(doc(db,"salaries",existingId), { ...salData, changeLog: [...prevLog, salData.changeLog[0]] });
+    } else {
+      salData.createdAt = now;
+      await addDoc(collection(db,"salaries"), salData);
+    }
+
+    // Update employee rate if changed
+    const origRate = getHistoricalRate(_finSalEmpData, _finSalMonth);
+    if (rate !== origRate) {
+      const hist = _finSalEmpData.hourlyRateHistory ? [..._finSalEmpData.hourlyRateHistory] : [];
+      const idx  = hist.findIndex(h => h.month === _finSalMonth);
+      if (idx >= 0) hist[idx].rate = rate; else hist.push({ month: _finSalMonth, rate });
+      await updateDoc(doc(db,"employees",_finSalEmpId), { hourlyRate: rate, hourlyRateHistory: hist });
+    }
+
+    showStatusMsg("✅ Ведомостта е финализирана");
+    const empId = _finSalEmpId;
+    closeFinalizeSalModal();
+    await loadSalHistByEmployee(empId);
+  } catch (e) { alert("Грешка: " + e.message); }
+};
+
+window.openSalarySlipByEmp = async function(empId, month) {
+  try {
+    const snap = await getDocs(query(
+      collection(db,"salaries"),
+      where("employeeId","==",empId),
+      where("month","==",month)
+    ));
+    if (snap.empty) { alert("Първо финализирай ведомостта за " + formatMonth(month) + "."); return; }
+    const sal = { id: snap.docs[0].id, ...snap.docs[0].data() };
+    let empName = sal.employeeName || "";
+    if (!empName) {
+      const empSnap = await getDoc(doc(db,"employees",empId));
+      empName = empSnap.exists() ? empSnap.data().name : "Неизвестен";
+    }
+    const shopLabel = sal.shopId === "store1" ? "Магазин М1" : "Магазин М2";
+    const pdf = await generateSalarySlipPDF(sal, empName, shopLabel);
+    pdf.save(`фиш_${empName.replace(/\s+/g,"_")}_${month}.pdf`);
+  } catch (e) { alert("Грешка при генериране: " + e.message); }
 };
 
 // ── Salary slip PDF ────────────────────────────────────────
@@ -6216,8 +6352,10 @@ async function generateSalarySlipPDF(sal, empName, shopLabel) {
 
   divider();
 
-  // УДРЪЖКИ block (only if non-empty)
-  if ((sal.deductions || []).some(d => d.amount > 0)) {
+  // УДРЪЖКИ block — show advances + bank
+  const advAmt  = sal.advances ?? (sal.deductions || []).reduce((s,d) => s+(d.amount||0), 0);
+  const bankAmt = sal.bankAmount || 0;
+  if (advAmt > 0 || bankAmt > 0 || (sal.deductions || []).some(d => d.amount > 0)) {
     pdf.setFillColor(236, 240, 245);
     pdf.rect(ml, y, cw, 7, "F");
     pdf.setFont("DejaVu", "bold");
@@ -6226,24 +6364,37 @@ async function generateSalarySlipPDF(sal, empName, shopLabel) {
     y += 10;
     pdf.setFont("DejaVu", "normal");
     pdf.setTextColor(0, 0, 0);
-    (sal.deductions || []).forEach(d => {
-      if (!d.amount) return;
-      const label = d.note ? `${d.type} (${d.note})` : d.type;
-      pdf.text("  " + label, ml + 3, y);
-      pdf.text(`−${(d.amount).toFixed(2)} лв.`, mr - 3, y, { align: "right" });
+    if (advAmt > 0) {
+      pdf.text("  Аванси", ml + 3, y);
+      pdf.text(`−${advAmt.toFixed(2)} лв.`, mr - 3, y, { align: "right" });
       y += 7;
-    });
+    }
+    if (bankAmt > 0) {
+      pdf.text("  По банков път", ml + 3, y);
+      pdf.text(`−${bankAmt.toFixed(2)} лв.`, mr - 3, y, { align: "right" });
+      y += 7;
+    }
+    // additional deductions not covered by advances
+    if (!sal.advances) {
+      (sal.deductions || []).forEach(d => {
+        if (!d.amount || d.type === "Аванс") return;
+        const label = d.note ? `${d.type} (${d.note})` : d.type;
+        pdf.text("  " + label, ml + 3, y);
+        pdf.text(`−${(d.amount).toFixed(2)} лв.`, mr - 3, y, { align: "right" });
+        y += 7;
+      });
+    }
     divider();
   }
 
-  // ОБЩО
+  // ОБЩО БРУТНО
   y += 2;
   pdf.setFillColor(44, 62, 80);
   pdf.rect(ml, y, cw, 9, "F");
   pdf.setFont("DejaVu", "bold");
   pdf.setFontSize(11);
   pdf.setTextColor(255, 255, 255);
-  pdf.text("ОБЩО ЗА ПОЛУЧАВАНЕ:", ml + 4, y + 6.5);
+  pdf.text("ОБЩО БРУТНО:", ml + 4, y + 6.5);
   pdf.text(`${(sal.totalGross || 0).toFixed(2)} лв.`, mr - 4, y + 6.5, { align: "right" });
   y += 15;
 
@@ -6256,8 +6407,9 @@ async function generateSalarySlipPDF(sal, empName, shopLabel) {
   pdf.text("НАЧИН НА ИЗПЛАЩАНЕ", ml + 3, y + 5);
   y += 10;
 
-  const bankAmt = sal.bankAmount || 0;
-  const cashAmt = Math.max(0, (sal.totalGross || 0) - bankAmt);
+  const cashAmt = sal.cashAmount !== undefined
+    ? sal.cashAmount
+    : Math.max(0, (sal.totalGross || 0) - advAmt - bankAmt);
   const boxW = (cw - 8) / 2;
   pdf.setDrawColor(44, 62, 80);
   pdf.setLineWidth(0.4);
