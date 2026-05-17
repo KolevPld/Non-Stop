@@ -1,4 +1,4 @@
-import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+﻿import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
 import {
   getFirestore,
   enableIndexedDbPersistence,
@@ -5089,10 +5089,10 @@ function renderWageTable() {
             <input type="number" class="wage-rate-input" value="${rate.toFixed(2)}"
                    min="0" step="0.01" placeholder="0.00"
                    onchange="saveHourlyRate('${emp.id}', this.value)">
-            <span class="wage-rate-unit">лв./ч</span>
+            <span class="wage-rate-unit">€/ч</span>
           </div>
         </td>
-        <td class="mono ${salary > 0 ? "pos" : ""}">${salary > 0 ? salary.toFixed(2)+" лв." : "—"}</td>
+        <td class="mono ${salary > 0 ? "pos" : ""}">${salary > 0 ? salary.toFixed(2)+" €" : "—"}</td>
         <td></td>
       </tr>`;
   }).join("");
@@ -5102,7 +5102,7 @@ function renderWageTable() {
       <td colspan="2"><strong>Общо</strong></td>
       <td class="mono"><strong>${totalH}</strong></td>
       <td></td>
-      <td class="mono pos"><strong>${totalCost > 0 ? totalCost.toFixed(2)+" лв." : "—"}</strong></td>
+      <td class="mono pos"><strong>${totalCost > 0 ? totalCost.toFixed(2)+" €" : "—"}</strong></td>
       <td></td>
     </tr>`;
 }
@@ -5128,7 +5128,7 @@ function renderWageSummaryCards() {
     </div>
     <div class="wh-sum-card wh-sum-card-total">
       <div class="wh-sum-label">Разход заплати</div>
-      <div class="wh-sum-value">${cost > 0 ? cost.toFixed(2)+" лв." : "—"}</div>
+      <div class="wh-sum-value">${cost > 0 ? cost.toFixed(2)+" €" : "—"}</div>
     </div>`;
 }
 
@@ -5152,7 +5152,7 @@ function renderWageSummaryDetail() {
         </div>
         <div class="dr-detail-sum-final">
           <span>Заплати</span>
-          <span>${total > 0 ? total.toFixed(2)+" лв." : "—"}</span>
+          <span>${total > 0 ? total.toFixed(2)+" €" : "—"}</span>
         </div>
       </div>`;
   }).join("");
@@ -5211,7 +5211,7 @@ async function loadWageHistory() {
             <tr>
               <td>${formatMonth(r.mo)}</td>
               <td class="mono">${r.totalH} ч</td>
-              <td class="mono ${r.totalC > 0 ? "pos" : ""}">${r.totalC > 0 ? r.totalC.toFixed(2)+" лв." : "—"}</td>
+              <td class="mono ${r.totalC > 0 ? "pos" : ""}">${r.totalC > 0 ? r.totalC.toFixed(2)+" €" : "—"}</td>
             </tr>`).join("")}
         </tbody>
       </table>`;
@@ -5284,7 +5284,7 @@ window.exportWagePdf = function() {
     <thead>
       <tr>
         <th>Служител</th><th>Маг.</th><th>Часове</th>
-        <th>Ставка (лв./ч)</th><th>Сума (лв.)</th><th>Подпис</th>
+        <th>Ставка (€/ч)</th><th>Сума (€)</th><th>Подпис</th>
       </tr>
     </thead>
     <tbody>${tableRows}</tbody>
@@ -5470,7 +5470,7 @@ window.generatePayroll = async function() {
         bankAmount:   0,
         notes:        "",
         status:       "draft",
-        changeLog:    [{ by: currentUserId, at: now, action: `Генерирана ведомост — ${r.hours}ч × ${rate} лв. = ${base.toFixed(2)} лв.` }],
+        changeLog:    [{ by: currentUserId, at: now, action: `Генерирана ведомост — ${r.hours}ч × ${rate} € = ${base.toFixed(2)} €` }],
         createdAt:    now,
         updatedAt:    now
       });
@@ -5632,11 +5632,11 @@ function calcSalaryTotal() {
   const gross  = base + bonTot - dedTot;
 
   const set = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
-  set("salCalcBase",        base.toFixed(2)   + " лв.");
-  set("salCalcBaseInline",  base.toFixed(2)   + " лв.");
-  set("salCalcBonuses",    "+" + bonTot.toFixed(2)  + " лв.");
-  set("salCalcDeductions", "−" + dedTot.toFixed(2)  + " лв.");
-  set("salCalcGross",       gross.toFixed(2)  + " лв.");
+  set("salCalcBase",        base.toFixed(2)   + " €");
+  set("salCalcBaseInline",  base.toFixed(2)   + " €");
+  set("salCalcBonuses",    "+" + bonTot.toFixed(2)  + " €");
+  set("salCalcDeductions", "−" + dedTot.toFixed(2)  + " €");
+  set("salCalcGross",       gross.toFixed(2)  + " €");
 
   const grossEl = document.getElementById("salCalcGross");
   if (grossEl) grossEl.style.color = gross < 0 ? "var(--red)" : "var(--green)";
@@ -5647,7 +5647,7 @@ function calcSalaryTotal() {
   if (bankAmtEl && cashAmtEl) {
     const bankAmt = parseFloat(bankAmtEl.value || 0) || 0;
     const cashAmt = Math.max(0, gross - bankAmt);
-    cashAmtEl.textContent = cashAmt.toFixed(2) + " лв.";
+    cashAmtEl.textContent = cashAmt.toFixed(2) + " €";
   }
 
   return { base, bonTot, dedTot, gross };
@@ -5656,7 +5656,7 @@ function calcSalaryTotal() {
 // ── Save salary (draft) ────────────────────────────────────
 window.saveSalary = async function() {
   const { base, bonTot, dedTot, gross } = calcSalaryTotal();
-  if (gross < 0 && !confirm(`⚠️ Брутната заплата е отрицателна (${gross.toFixed(2)} лв.).\nСигурен ли си?`)) return;
+  if (gross < 0 && !confirm(`⚠️ Брутната заплата е отрицателна (${gross.toFixed(2)} €).\nСигурен ли си?`)) return;
 
   const empId = document.getElementById("salaryModal")?.dataset?.empId;
   const rec   = _salRecords.find(r => r.emp.id === empId);
@@ -5682,14 +5682,14 @@ window.saveSalary = async function() {
     status:       "draft",
     updatedAt:    now
   };
-  const logEntry = { by: currentUserId, at: now, action: `Редакция: бруто ${gross.toFixed(2)} лв. (бонуси +${bonTot.toFixed(2)}, удръжки −${dedTot.toFixed(2)})` };
+  const logEntry = { by: currentUserId, at: now, action: `Редакция: бруто ${gross.toFixed(2)} € (бонуси +${bonTot.toFixed(2)}, удръжки −${dedTot.toFixed(2)})` };
   try {
     if (_salEditId) {
       const snap = await getDoc(doc(db,"salaries",_salEditId));
       const log  = snap.data()?.changeLog || [];
       await updateDoc(doc(db,"salaries",_salEditId), { ...data, changeLog: [...log, logEntry] });
     } else {
-      data.changeLog = [{ by: currentUserId, at: now, action: `Ръчно създадена — бруто ${gross.toFixed(2)} лв.` }, logEntry];
+      data.changeLog = [{ by: currentUserId, at: now, action: `Ръчно създадена — бруто ${gross.toFixed(2)} €` }, logEntry];
       data.createdAt = now;
       const ref  = await addDoc(collection(db,"salaries"), data);
       _salEditId = ref.id;
@@ -5721,7 +5721,7 @@ window.markSalaryPaid = async function() {
   if (method === null) return;
   const payMethod = ["Кеш","Банка","Карта"].includes(method.trim()) ? method.trim() : "Кеш";
 
-  if (!confirm(`✅ Маркирай заплатата на ${rec.emp.name} (${gross.toFixed(2)} лв.) като ПЛАТЕНА?\nМетод: ${payMethod}`)) return;
+  if (!confirm(`✅ Маркирай заплатата на ${rec.emp.name} (${gross.toFixed(2)} €) като ПЛАТЕНА?\nМетод: ${payMethod}`)) return;
 
   const rate       = parseFloat(document.getElementById("salBaseRate")?.value || 0);
   const bankAmount = parseFloat(document.getElementById("salBankAmount")?.value || 0) || 0;
@@ -5764,7 +5764,7 @@ window.markSalaryPaid = async function() {
       linkedTransactionId: txRef.id,
       updatedAt:           now
     };
-    const logEntry = { by: currentUserId, at: now, action: `Маркирана като платена. Метод: ${payMethod}. Бруто: ${gross.toFixed(2)} лв.` };
+    const logEntry = { by: currentUserId, at: now, action: `Маркирана като платена. Метод: ${payMethod}. Бруто: ${gross.toFixed(2)} €` };
 
     if (_salEditId) {
       const snap = await getDoc(doc(db,"salaries",_salEditId));
@@ -5851,7 +5851,7 @@ window.exportPayrollPdf = function() {
     <th>База</th><th>Бонуси</th><th>Удръжки</th><th>Бруто</th><th>Подпис</th>
   </tr></thead><tbody>${rows}</tbody>
   <tfoot><tr class="tot"><td colspan="8"><strong>ОБЩО</strong></td>
-    <td><strong>${grand.toFixed(2)} лв.</strong></td><td></td></tr></tfoot></table>
+    <td><strong>${grand.toFixed(2)} €</strong></td><td></td></tr></tfoot></table>
   <p class="note">Заплатите са изчислени от часовете × ставка ± бонуси/удръжки. Осигуровките и данъците се изчисляват отделно.</p>
   <div class="sig">
     <div><div class="sl">Изготвил: ___________</div></div>
@@ -5866,7 +5866,7 @@ window.exportPayrollPdf = function() {
 // ── Export payroll Excel ───────────────────────────────────
 window.exportPayrollExcel = function() {
   if (!window.XLSX) { alert("XLSX не е зареден."); return; }
-  const header = ["№","Служител","Магазин","Часове","Ставка лв/ч","База","Бонуси","Удръжки","Бруто","Статус"];
+  const header = ["№","Служител","Магазин","Часове","Ставка €/ч","База","Бонуси","Удръжки","Бруто","Статус"];
   let no = 1;
   const rows = _salRecords.filter(r => r.emp.active).map(r => {
     const { emp, hours, salary } = r;
@@ -6215,9 +6215,9 @@ window.savePayrollRow = async function(idx) {
       const snap = await getDoc(doc(db,"salaries",row.docId));
       const log  = snap.data()?.changeLog || [];
       await updateDoc(doc(db,"salaries",row.docId),
-        { ...data, changeLog: [...log, { by: currentUserId, at: now, action: `Обновена: бруто ${gross.toFixed(2)} лв.` }] });
+        { ...data, changeLog: [...log, { by: currentUserId, at: now, action: `Обновена: бруто ${gross.toFixed(2)} €` }] });
     } else {
-      data.changeLog = [{ by: currentUserId, at: now, action: `Запазена: бруто ${gross.toFixed(2)} лв.` }];
+      data.changeLog = [{ by: currentUserId, at: now, action: `Запазена: бруто ${gross.toFixed(2)} €` }];
       data.createdAt = now;
       const ref  = await addDoc(collection(db,"salaries"), data);
       row.docId  = ref.id;
@@ -6326,9 +6326,9 @@ async function loadSalHistByEmployee(empId) {
           <td><strong>${formatMonth(mo)}</strong></td>
           <td class="mono">${sal.baseHours || 0}</td>
           <td class="mono">${(sal.baseRate || 0).toFixed(2)}</td>
-          <td class="mono pos"><strong>${(sal.totalGross||0).toFixed(2)} лв.</strong></td>
-          <td class="mono">${advStored > 0 ? advStored.toFixed(2) + " лв." : "—"}</td>
-          <td class="mono ${cashCls}">${cash.toFixed(2)} лв.</td>
+          <td class="mono pos"><strong>${(sal.totalGross||0).toFixed(2)} €</strong></td>
+          <td class="mono">${advStored > 0 ? advStored.toFixed(2) + " €" : "—"}</td>
+          <td class="mono ${cashCls}">${cash.toFixed(2)} €</td>
           <td><span class="sal-status-badge sal-${sal.status}">${salStatusLabel(sal.status)}</span></td>
           <td class="sal-actions-cell">
             <button class="sal-edit-btn" onclick="openFinalizeSalaryModal('${empId}','${mo}')">✏️ Ред.</button>
@@ -6347,9 +6347,9 @@ async function loadSalHistByEmployee(empId) {
           <td><strong>${formatMonth(mo)}</strong></td>
           <td class="mono">${hours}</td>
           <td class="mono">${rate.toFixed(2)}</td>
-          <td class="mono">${base.toFixed(2)} лв.</td>
-          <td class="mono">${advs > 0 ? advs.toFixed(2) + " лв." : "—"}</td>
-          <td class="mono ${cashCls}">${cash.toFixed(2)} лв.</td>
+          <td class="mono">${base.toFixed(2)} €</td>
+          <td class="mono">${advs > 0 ? advs.toFixed(2) + " €" : "—"}</td>
+          <td class="mono ${cashCls}">${cash.toFixed(2)} €</td>
           <td><span class="sal-status-badge" style="background:var(--bg3);color:var(--text2);font-size:0.75rem">📊 Предварителен</span></td>
           <td class="sal-actions-cell">
             <button class="sal-edit-btn" onclick="openFinalizeSalaryModal('${empId}','${mo}')">Финализирай</button>
@@ -6452,12 +6452,12 @@ window.calcFinalizeTotal = function() {
   const cash  = gross - advances - bank;
 
   const setText = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
-  setText("finSalBase",  base.toFixed(2)  + " лв.");
-  setText("finSalGross", gross.toFixed(2) + " лв.");
+  setText("finSalBase",  base.toFixed(2)  + " €");
+  setText("finSalGross", gross.toFixed(2) + " €");
 
   const cashEl = document.getElementById("finSalCash");
   if (cashEl) {
-    cashEl.textContent = cash.toFixed(2) + " лв.";
+    cashEl.textContent = cash.toFixed(2) + " €";
     cashEl.style.color = cash < 0 ? "var(--red)" : "var(--green)";
   }
   document.getElementById("finSalOverpaidWarn")?.classList.toggle("hidden", cash >= 0);
@@ -6489,7 +6489,7 @@ window.saveFinalizeSalary = async function() {
 
   const deductions = advances > 0 ? [{ type: "Аванс", amount: advances, note: "" }] : [];
 
-  if (!confirm(`Финализирай заплата за ${_finSalEmpData.name}?\n\nБрутно: ${totalGross.toFixed(2)} лв.\nАванси: ${advances.toFixed(2)} лв.\nЗа кеш: ${cashAmount.toFixed(2)} лв.`)) return;
+  if (!confirm(`Финализирай заплата за ${_finSalEmpData.name}?\n\nБрутно: ${totalGross.toFixed(2)} €\nАванси: ${advances.toFixed(2)} €\nЗа кеш: ${cashAmount.toFixed(2)} €`)) return;
 
   const now = new Date().toISOString();
   const salData = {
@@ -6514,7 +6514,7 @@ window.saveFinalizeSalary = async function() {
     status:    "approved",
     updatedAt: now,
     changeLog: [{ by: currentUserId, at: now,
-      action: `Финализирана — ${hours}ч × ${rate} = ${base.toFixed(2)} + добавки ${(totalGross-base).toFixed(2)} − аванси ${advances.toFixed(2)} = бруто ${totalGross.toFixed(2)} лв.` }]
+      action: `Финализирана — ${hours}ч × ${rate} = ${base.toFixed(2)} + добавки ${(totalGross-base).toFixed(2)} − аванси ${advances.toFixed(2)} = бруто ${totalGross.toFixed(2)} €` }]
   };
 
   try {
@@ -6620,16 +6620,16 @@ async function generateSalarySlipPDF(sal, empName, shopLabel) {
 
   pdf.setFont("DejaVu", "normal");
   pdf.setTextColor(0, 0, 0);
-  const baseLabel = `Основна заплата (${sal.baseHours || 0} ч × ${(sal.baseRate || 0).toFixed(2)} лв.)`;
+  const baseLabel = `Основна заплата (${sal.baseHours || 0} ч × ${(sal.baseRate || 0).toFixed(2)} €)`;
   pdf.text(baseLabel, ml + 3, y);
-  pdf.text(`${(sal.baseAmount || 0).toFixed(2)} лв.`, mr - 3, y, { align: "right" });
+  pdf.text(`${(sal.baseAmount || 0).toFixed(2)} €`, mr - 3, y, { align: "right" });
   y += 7;
 
   (sal.bonuses || []).forEach(b => {
     if (!b.amount) return;
     const label = b.note ? `${b.type} (${b.note})` : b.type;
     pdf.text("  " + label, ml + 3, y);
-    pdf.text(`+${(b.amount).toFixed(2)} лв.`, mr - 3, y, { align: "right" });
+    pdf.text(`+${(b.amount).toFixed(2)} €`, mr - 3, y, { align: "right" });
     y += 7;
   });
 
@@ -6649,12 +6649,12 @@ async function generateSalarySlipPDF(sal, empName, shopLabel) {
     pdf.setTextColor(0, 0, 0);
     if (advAmt > 0) {
       pdf.text("  Аванси", ml + 3, y);
-      pdf.text(`−${advAmt.toFixed(2)} лв.`, mr - 3, y, { align: "right" });
+      pdf.text(`−${advAmt.toFixed(2)} €`, mr - 3, y, { align: "right" });
       y += 7;
     }
     if (bankAmt > 0) {
       pdf.text("  По банков път", ml + 3, y);
-      pdf.text(`−${bankAmt.toFixed(2)} лв.`, mr - 3, y, { align: "right" });
+      pdf.text(`−${bankAmt.toFixed(2)} €`, mr - 3, y, { align: "right" });
       y += 7;
     }
     // additional deductions not covered by advances
@@ -6663,7 +6663,7 @@ async function generateSalarySlipPDF(sal, empName, shopLabel) {
         if (!d.amount || d.type === "Аванс") return;
         const label = d.note ? `${d.type} (${d.note})` : d.type;
         pdf.text("  " + label, ml + 3, y);
-        pdf.text(`−${(d.amount).toFixed(2)} лв.`, mr - 3, y, { align: "right" });
+        pdf.text(`−${(d.amount).toFixed(2)} €`, mr - 3, y, { align: "right" });
         y += 7;
       });
     }
@@ -6678,7 +6678,7 @@ async function generateSalarySlipPDF(sal, empName, shopLabel) {
   pdf.setFontSize(11);
   pdf.setTextColor(255, 255, 255);
   pdf.text("ОБЩО БРУТНО:", ml + 4, y + 6.5);
-  pdf.text(`${(sal.totalGross || 0).toFixed(2)} лв.`, mr - 4, y + 6.5, { align: "right" });
+  pdf.text(`${(sal.totalGross || 0).toFixed(2)} €`, mr - 4, y + 6.5, { align: "right" });
   y += 15;
 
   // НАЧИН НА ИЗПЛАЩАНЕ
@@ -6704,7 +6704,7 @@ async function generateSalarySlipPDF(sal, empName, shopLabel) {
   pdf.setFont("DejaVu", "normal");
   pdf.setTextColor(0, 0, 0);
   pdf.setFontSize(11);
-  pdf.text(`${cashAmt.toFixed(2)} лв.`, ml + 4, y + 13);
+  pdf.text(`${cashAmt.toFixed(2)} €`, ml + 4, y + 13);
 
   const bx = ml + boxW + 8;
   pdf.roundedRect(bx, y, boxW, 16, 2, 2);
@@ -6715,7 +6715,7 @@ async function generateSalarySlipPDF(sal, empName, shopLabel) {
   pdf.setFont("DejaVu", "normal");
   pdf.setTextColor(0, 0, 0);
   pdf.setFontSize(11);
-  pdf.text(bankAmt > 0 ? `${bankAmt.toFixed(2)} лв.` : "—", bx + 4, y + 13);
+  pdf.text(bankAmt > 0 ? `${bankAmt.toFixed(2)} €` : "—", bx + 4, y + 13);
   y += 22;
 
   // Notes
@@ -6813,15 +6813,15 @@ async function loadSalHistAnalysis() {
       <div class="wh-sum-cards" style="margin-bottom:16px">
         <div class="wh-sum-card">
           <div class="wh-sum-label">М1 — Общо заплати</div>
-          <div class="wh-sum-value">${totS1.toFixed(0)} лв.</div>
+          <div class="wh-sum-value">${totS1.toFixed(0)} €</div>
         </div>
         <div class="wh-sum-card">
           <div class="wh-sum-label">М2 — Общо заплати</div>
-          <div class="wh-sum-value">${totS2.toFixed(0)} лв.</div>
+          <div class="wh-sum-value">${totS2.toFixed(0)} €</div>
         </div>
         <div class="wh-sum-card wh-sum-card-total">
           <div class="wh-sum-label">Средно/месец</div>
-          <div class="wh-sum-value">${avgMon} лв.</div>
+          <div class="wh-sum-value">${avgMon} €</div>
         </div>
       </div>
       <div class="sal-chart-wrap card dr-card">
@@ -6997,7 +6997,7 @@ function _mrDiffSpan(diff, lowerIsBetter) {
   const col = up ? '#4caf50' : '#f44336';
   const arrow = diff > 0 ? '▲' : diff < 0 ? '▼' : '●';
   const sign = diff > 0 ? '+' : '';
-  return `<span style="color:${col}">${arrow} ${sign}${_mrFmt(diff)} лв.</span>`;
+  return `<span style="color:${col}">${arrow} ${sign}${_mrFmt(diff)} €</span>`;
 }
 
 function _mrRender(d) {
@@ -7016,31 +7016,31 @@ function _mrRender(d) {
 <div class="wr-compare-row" style="grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;display:grid;">
 
   <div class="wr-compare-card">
-    <div class="wr-compare-label">Оборот (лв.)</div>
+    <div class="wr-compare-label">Оборот (€)</div>
     <div class="wr-compare-val">${_mrFmt(d.totalRevenue)}</div>
     ${d.prevMonth ? `<div class="wr-compare-diff">${_mrDiffSpan((d.totalRevenue||0)-(d.prevMonth.totalRevenue||0), false)}</div>` : ''}
   </div>
 
   <div class="wr-compare-card">
-    <div class="wr-compare-label">Стока (лв.)</div>
+    <div class="wr-compare-label">Стока (€)</div>
     <div class="wr-compare-val">${_mrFmt(d.totalGoods)}</div>
     ${d.prevMonth ? `<div class="wr-compare-diff">${_mrDiffSpan((d.totalGoods||0)-(d.prevMonth.totalGoods||0), true)}</div>` : ''}
   </div>
 
   <div class="wr-compare-card">
-    <div class="wr-compare-label">Нетна (лв.)</div>
+    <div class="wr-compare-label">Нетна (€)</div>
     <div class="wr-compare-val">${_mrFmt(d.netRevenue)}</div>
     ${d.prevMonth ? `<div class="wr-compare-diff">${_mrDiffSpan((d.netRevenue||0)-(d.prevMonth.netRevenue||0), false)}</div>` : ''}
   </div>
 
   <div class="wr-compare-card">
-    <div class="wr-compare-label">Каса Кеш (лв.)</div>
+    <div class="wr-compare-label">Каса Кеш (€)</div>
     <div class="wr-compare-val">${_mrFmt(d.cashBalance)}</div>
     ${d.prevMonth ? `<div class="wr-compare-diff">${_mrDiffSpan((d.cashBalance||0)-(d.prevMonth.cashBalance||0), false)}</div>` : ''}
   </div>
 
   <div class="wr-compare-card">
-    <div class="wr-compare-label">Каса Банка (лв.)</div>
+    <div class="wr-compare-label">Каса Банка (€)</div>
     <div class="wr-compare-val">${_mrFmt(d.bankBalance)}</div>
     ${d.prevMonth ? `<div class="wr-compare-diff">${_mrDiffSpan((d.bankBalance||0)-(d.prevMonth.bankBalance||0), false)}</div>` : ''}
   </div>
@@ -7061,12 +7061,12 @@ function _mrRender(d) {
   </div>
 
   <div class="wr-compare-card">
-    <div class="wr-compare-label">Заплати (лв.)</div>
+    <div class="wr-compare-label">Заплати (€)</div>
     <div class="wr-compare-val">${_mrFmt(d.totalSalaries)}</div>
   </div>
 
   <div class="wr-compare-card">
-    <div class="wr-compare-label">Аванси (лв.)</div>
+    <div class="wr-compare-label">Аванси (€)</div>
     <div class="wr-compare-val">${_mrFmt(d.totalAdvances)}</div>
   </div>
 
@@ -7077,7 +7077,7 @@ ${d.topSuppliers && d.topSuppliers.length ? `
 <table class="wr-table" style="width:100%;border-collapse:collapse;">
   <thead><tr>
     <th style="text-align:left;padding:4px 8px;background:var(--bg2)">Доставчик</th>
-    <th style="text-align:right;padding:4px 8px;background:var(--bg2)">Сума (лв.)</th>
+    <th style="text-align:right;padding:4px 8px;background:var(--bg2)">Сума (€)</th>
   </tr></thead>
   <tbody>
     ${d.topSuppliers.map(s => `<tr>
@@ -7134,7 +7134,7 @@ function _mrRenderInto(el, d, monthVal) {
     const up  = lowerIsBetter ? abs < 0 : abs > 0;
     const col = abs === 0 ? 'var(--text2)' : up ? '#4caf50' : '#f44336';
     const arr = abs > 0 ? '▲' : abs < 0 ? '▼' : '●';
-    return '<span style="color:' + col + ';font-size:0.8rem">' + arr + (abs > 0 ? '+' : '') + _mrFmt(abs) + ' лв.</span>';
+    return '<span style="color:' + col + ';font-size:0.8rem">' + arr + (abs > 0 ? '+' : '') + _mrFmt(abs) + ' €</span>';
   };
   const pctTxt = (pct, lowerIsBetter) => {
     if (pct === undefined || pct === null) return '';
@@ -7149,9 +7149,9 @@ function _mrRenderInto(el, d, monthVal) {
     const lbl = sid === 'store1' ? 'Магазин 1' : 'Магазин 2';
     return '<div class="wr-compare-card">'
       + '<div class="wr-compare-label" style="font-weight:600">' + lbl + '</div>'
-      + '<div style="font-size:0.85rem;color:var(--text2)">Оборот: <b>' + _mrFmt(ps.turnover) + '</b> лв.</div>'
-      + '<div style="font-size:0.85rem;color:var(--text2)">Стока: <b>' + _mrFmt(ps.stoka) + '</b> лв.</div>'
-      + '<div style="font-size:0.85rem;color:var(--text2)">Нетна: <b>' + _mrFmt(ps.netProfit) + '</b> лв.</div>'
+      + '<div style="font-size:0.85rem;color:var(--text2)">Оборот: <b>' + _mrFmt(ps.turnover) + '</b> €</div>'
+      + '<div style="font-size:0.85rem;color:var(--text2)">Стока: <b>' + _mrFmt(ps.stoka) + '</b> €</div>'
+      + '<div style="font-size:0.85rem;color:var(--text2)">Нетна: <b>' + _mrFmt(ps.netProfit) + '</b> €</div>'
       + '<div style="font-size:0.85rem;color:var(--text2)">Дни: <b>' + (ps.closedDays ?? '—') + '</b></div>'
       + '</div>';
   }).join('') : '';
@@ -7163,17 +7163,17 @@ function _mrRenderInto(el, d, monthVal) {
 
     + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;margin-bottom:14px;">'
 
-    + '<div class="wr-compare-card"><div class="wr-compare-label">Оборот (лв.)</div>'
+    + '<div class="wr-compare-card"><div class="wr-compare-label">Оборот (€)</div>'
     + '<div class="wr-compare-val">' + _mrFmt(d.totalTurnover) + '</div>'
     + (cmp ? '<div class="wr-compare-diff">' + diffAbs(cmp.turnover && cmp.turnover.abs, false) + pctTxt(cmp.turnover && cmp.turnover.pct, false) + '</div>' : '')
     + '</div>'
 
-    + '<div class="wr-compare-card"><div class="wr-compare-label">Стока (лв.)</div>'
+    + '<div class="wr-compare-card"><div class="wr-compare-label">Стока (€)</div>'
     + '<div class="wr-compare-val">' + _mrFmt(d.totalStoka) + '</div>'
     + (cmp ? '<div class="wr-compare-diff">' + diffAbs(cmp.stoka && cmp.stoka.abs, true) + pctTxt(cmp.stoka && cmp.stoka.pct, true) + '</div>' : '')
     + '</div>'
 
-    + '<div class="wr-compare-card"><div class="wr-compare-label">Нетна печалба (лв.)</div>'
+    + '<div class="wr-compare-card"><div class="wr-compare-label">Нетна печалба (€)</div>'
     + '<div class="wr-compare-val">' + _mrFmt(d.netProfit) + '</div>'
     + (cmp ? '<div class="wr-compare-diff">' + diffAbs(cmp.netProfit && cmp.netProfit.abs, false) + pctTxt(cmp.netProfit && cmp.netProfit.pct, false) + '</div>' : '')
     + '</div>'
@@ -7183,19 +7183,19 @@ function _mrRenderInto(el, d, monthVal) {
     + (cmp ? '<div class="wr-compare-diff">' + diffAbs(cmp.closedDays && cmp.closedDays.abs, false) + '</div>' : '')
     + '</div>'
 
-    + '<div class="wr-compare-card"><div class="wr-compare-label">Заплати (лв.)</div>'
+    + '<div class="wr-compare-card"><div class="wr-compare-label">Заплати (€)</div>'
     + '<div class="wr-compare-val">' + _mrFmt(d.totalSalary) + '</div></div>'
 
-    + '<div class="wr-compare-card"><div class="wr-compare-label">Аванси (лв.)</div>'
+    + '<div class="wr-compare-card"><div class="wr-compare-label">Аванси (€)</div>'
     + '<div class="wr-compare-val">' + _mrFmt(d.totalAdvances) + '</div></div>'
 
-    + '<div class="wr-compare-card"><div class="wr-compare-label">Оставени за зареждане (лв.)</div>'
+    + '<div class="wr-compare-card"><div class="wr-compare-label">Оставени за зареждане (€)</div>'
     + '<div class="wr-compare-val">' + _mrFmt(d.totalLeftForStock) + '</div></div>'
 
-    + '<div class="wr-compare-card"><div class="wr-compare-label">ДДС дължим (лв.)</div>'
+    + '<div class="wr-compare-card"><div class="wr-compare-label">ДДС дължим (€)</div>'
     + '<div class="wr-compare-val">' + _mrFmt(d.vatDue) + '</div></div>'
 
-    + '<div class="wr-compare-card"><div class="wr-compare-label">Корп. данък (лв.)</div>'
+    + '<div class="wr-compare-card"><div class="wr-compare-label">Корп. данък (€)</div>'
     + '<div class="wr-compare-val">' + _mrFmt(d.corpTax) + '</div></div>'
 
     + '</div>'
@@ -7204,11 +7204,11 @@ function _mrRenderInto(el, d, monthVal) {
       + (d.bestDay ? '<div class="wr-compare-card" style="flex:1;min-width:150px">'
         + '<div class="wr-compare-label">Най-добър ден</div>'
         + '<div class="wr-compare-val" style="font-size:1rem">' + d.bestDay.date + '</div>'
-        + '<div style="color:var(--text2);font-size:0.85rem">' + _mrFmt(d.bestDay.turnover) + ' лв.</div></div>' : '')
+        + '<div style="color:var(--text2);font-size:0.85rem">' + _mrFmt(d.bestDay.turnover) + ' €</div></div>' : '')
       + (d.worstDay ? '<div class="wr-compare-card" style="flex:1;min-width:150px">'
         + '<div class="wr-compare-label">Най-слаб ден</div>'
         + '<div class="wr-compare-val" style="font-size:1rem">' + d.worstDay.date + '</div>'
-        + '<div style="color:var(--text2);font-size:0.85rem">' + _mrFmt(d.worstDay.turnover) + ' лв.</div></div>' : '')
+        + '<div style="color:var(--text2);font-size:0.85rem">' + _mrFmt(d.worstDay.turnover) + ' €</div></div>' : '')
       + '</div>' : '')
 
     + (perShopHtml ? '<h4 style="margin:0 0 8px;color:var(--text1)">По магазин</h4>'
@@ -7218,8 +7218,8 @@ function _mrRenderInto(el, d, monthVal) {
     + (cmp && cmp.prevTotals ? '<div style="font-size:0.82rem;color:var(--text2);margin-top:4px;">Сравнение спрямо '
       + _mrMonthNames[(cmp.prevMonth || 1) - 1] + ' ' + cmp.prevYear
       + ' — оборот: ' + _mrFmt(cmp.prevTotals.turnover)
-      + ' лв., стока: ' + _mrFmt(cmp.prevTotals.stoka)
-      + ' лв., нетна: ' + _mrFmt(cmp.prevTotals.netProfit) + ' лв.</div>' : '');
+      + ' €, стока: ' + _mrFmt(cmp.prevTotals.stoka)
+      + ' €, нетна: ' + _mrFmt(cmp.prevTotals.netProfit) + ' €</div>' : '');
 }
 
 window.loadMonthlyReport = loadMonthlyReport;
@@ -7288,17 +7288,17 @@ window.exportMonthlyPDF = async function() {
   yPos += 8;
 
   const rows = [
-    ['Оборот (лв.)',                _mrFmt(d.totalTurnover)],
-    ['  в т.ч. Кеш (лв.)',         _mrFmt(d.totalCash)],
-    ['  в т.ч. ПОС (лв.)',         _mrFmt(d.totalPos)],
-    ['Стока (лв.)',                 _mrFmt(d.totalStoka)],
-    ['Нетна печалба (лв.)',        _mrFmt(d.netProfit)],
-    ['Заплати (лв.)',               _mrFmt(d.totalSalary)],
-    ['Аванси (лв.)',                _mrFmt(d.totalAdvances)],
-    ['Оставени за зареждане (лв.)', _mrFmt(d.totalLeftForStock)],
-    ['Странични приходи (лв.)',     _mrFmt(d.totalSideInc)],
-    ['ДДС дължим (лв.)',            _mrFmt(d.vatDue)],
-    ['Корп. данък (лв.)',           _mrFmt(d.corpTax)],
+    ['Оборот (€)',                _mrFmt(d.totalTurnover)],
+    ['  в т.ч. Кеш (€)',         _mrFmt(d.totalCash)],
+    ['  в т.ч. ПОС (€)',         _mrFmt(d.totalPos)],
+    ['Стока (€)',                 _mrFmt(d.totalStoka)],
+    ['Нетна печалба (€)',        _mrFmt(d.netProfit)],
+    ['Заплати (€)',               _mrFmt(d.totalSalary)],
+    ['Аванси (€)',                _mrFmt(d.totalAdvances)],
+    ['Оставени за зареждане (€)', _mrFmt(d.totalLeftForStock)],
+    ['Странични приходи (€)',     _mrFmt(d.totalSideInc)],
+    ['ДДС дължим (€)',            _mrFmt(d.vatDue)],
+    ['Корп. данък (€)',           _mrFmt(d.corpTax)],
     ['Затворени дни',               String(d.closedDaysCount ?? '—')],
     ['  Магазин 1',                 String(d.closedDaysByShop && d.closedDaysByShop.store1 != null ? d.closedDaysByShop.store1 : '—')],
     ['  Магазин 2',                 String(d.closedDaysByShop && d.closedDaysByShop.store2 != null ? d.closedDaysByShop.store2 : '—')],
@@ -7342,8 +7342,8 @@ window.exportMonthlyPDF = async function() {
   // Най-добър/слаб ден
   if (d.bestDay || d.worstDay) {
     const dayRows = [];
-    if (d.bestDay)  dayRows.push(['Най-добър ден',  d.bestDay.date,  _mrFmt(d.bestDay.turnover)  + ' лв.']);
-    if (d.worstDay) dayRows.push(['Най-слаб ден',   d.worstDay.date, _mrFmt(d.worstDay.turnover) + ' лв.']);
+    if (d.bestDay)  dayRows.push(['Най-добър ден',  d.bestDay.date,  _mrFmt(d.bestDay.turnover)  + ' €']);
+    if (d.worstDay) dayRows.push(['Най-слаб ден',   d.worstDay.date, _mrFmt(d.worstDay.turnover) + ' €']);
     pdf.autoTable({
       startY: yPos,
       body: dayRows,

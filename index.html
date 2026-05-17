@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="bg">
 <head>
   <meta charset="UTF-8" />
@@ -1339,13 +1339,13 @@
             <span id="salBaseHours" class="sal-base-val mono">0</span>
           </div>
           <div class="sal-base-row">
-            <span class="sal-base-label">Ставка (лв./час):</span>
+            <span class="sal-base-label">Ставка (€/час):</span>
             <input type="number" id="salBaseRate" class="sal-rate-input"
                    min="0" step="0.01" placeholder="0.00" oninput="calcSalaryTotal()">
           </div>
           <div class="sal-base-row sal-base-result">
             <span class="sal-base-label">База:</span>
-            <span id="salCalcBaseInline" class="sal-base-val mono pos">0.00 лв.</span>
+            <span id="salCalcBaseInline" class="sal-base-val mono pos">0.00 €</span>
           </div>
         </div>
       </div>
@@ -1372,20 +1372,20 @@
       <div class="sal-section sal-summary-section">
         <div class="sal-summary-row">
           <span>База:</span>
-          <span id="salCalcBase" class="mono">0.00 лв.</span>
+          <span id="salCalcBase" class="mono">0.00 €</span>
         </div>
         <div class="sal-summary-row">
           <span>Плюсове:</span>
-          <span id="salCalcBonuses" class="mono pos">+0.00 лв.</span>
+          <span id="salCalcBonuses" class="mono pos">+0.00 €</span>
         </div>
         <div class="sal-summary-row">
           <span>Удръжки:</span>
-          <span id="salCalcDeductions" class="mono neg">-0.00 лв.</span>
+          <span id="salCalcDeductions" class="mono neg">-0.00 €</span>
         </div>
         <div class="sal-summary-divider"></div>
         <div class="sal-summary-row sal-summary-final">
           <span>БРУТНА ЗАПЛАТА:</span>
-          <span id="salCalcGross" class="mono">0.00 лв.</span>
+          <span id="salCalcGross" class="mono">0.00 €</span>
         </div>
         <div id="salNegativeWarn" class="hidden sal-warn">
           ⚠️ Вниание: брутната заплата е отрицателна!
@@ -1397,13 +1397,13 @@
         <div class="sal-section-title">💳 Начин на изплащане</div>
         <div class="sal-base-grid">
           <div class="sal-base-row">
-            <span class="sal-base-label">По банков път (лв.):</span>
+            <span class="sal-base-label">По банков път (€):</span>
             <input type="number" id="salBankAmount" class="sal-rate-input"
                    min="0" step="0.01" placeholder="0.00" oninput="calcSalaryTotal()">
           </div>
           <div class="sal-base-row">
-            <span class="sal-base-label">В брой (лв.):</span>
-            <span id="salCashAmount" class="sal-base-val mono">0.00 лв.</span>
+            <span class="sal-base-label">В брой (€):</span>
+            <span id="salCashAmount" class="sal-base-val mono">0.00 €</span>
           </div>
         </div>
       </div>
@@ -1463,13 +1463,13 @@
             <span id="finSalHours" class="sal-base-val mono">0</span>
           </div>
           <div class="sal-base-row">
-            <span class="sal-base-label">Ставка (лв./час):</span>
+            <span class="sal-base-label">Ставка (€/час):</span>
             <input type="number" id="finSalRate" class="sal-rate-input"
                    min="0" step="0.01" placeholder="0.00" oninput="calcFinalizeTotal()">
           </div>
           <div class="sal-base-row sal-base-result">
             <span class="sal-base-label">База:</span>
-            <span id="finSalBase" class="sal-base-val mono pos">0.00 лв.</span>
+            <span id="finSalBase" class="sal-base-val mono pos">0.00 €</span>
           </div>
         </div>
       </div>
@@ -1479,22 +1479,22 @@
         <div class="sal-section-title">➕ Добавки</div>
         <div class="sal-base-grid">
           <div class="sal-base-row">
-            <span class="sal-base-label">Празнични часове (лв.):</span>
+            <span class="sal-base-label">Празнични часове (€):</span>
             <input type="number" id="finSalHoliday" class="sal-rate-input"
                    min="0" step="0.01" placeholder="0.00" oninput="calcFinalizeTotal()">
           </div>
           <div class="sal-base-row">
-            <span class="sal-base-label">Доплащане отпуска/болнични (лв.):</span>
+            <span class="sal-base-label">Доплащане отпуска/болнични (€):</span>
             <input type="number" id="finSalSickLeave" class="sal-rate-input"
                    min="0" step="0.01" placeholder="0.00" oninput="calcFinalizeTotal()">
           </div>
           <div class="sal-base-row">
-            <span class="sal-base-label">Бонус от оборота (лв.):</span>
+            <span class="sal-base-label">Бонус от оборота (€):</span>
             <input type="number" id="finSalShopBonus" class="sal-rate-input"
                    min="0" step="0.01" placeholder="0.00" oninput="calcFinalizeTotal()">
           </div>
           <div class="sal-base-row">
-            <span class="sal-base-label">Личен бонус (лв.):</span>
+            <span class="sal-base-label">Личен бонус (€):</span>
             <input type="number" id="finSalPersonalBonus" class="sal-rate-input"
                    min="0" step="0.01" placeholder="0.00" oninput="calcFinalizeTotal()">
           </div>
@@ -1505,7 +1505,7 @@
       <div class="sal-section sal-summary-section">
         <div class="sal-summary-row sal-summary-final">
           <span>ОБЩО БРУТНО:</span>
-          <span id="finSalGross" class="mono pos">0.00 лв.</span>
+          <span id="finSalGross" class="mono pos">0.00 €</span>
         </div>
       </div>
 
@@ -1514,18 +1514,18 @@
         <div class="sal-section-title">💳 Плащане</div>
         <div class="sal-base-grid">
           <div class="sal-base-row">
-            <span class="sal-base-label">Аванси (лв.):</span>
+            <span class="sal-base-label">Аванси (€):</span>
             <input type="number" id="finSalAdvances" class="sal-rate-input"
                    min="0" step="0.01" placeholder="0.00" oninput="calcFinalizeTotal()">
           </div>
           <div class="sal-base-row">
-            <span class="sal-base-label">По банков път (лв.):</span>
+            <span class="sal-base-label">По банков път (€):</span>
             <input type="number" id="finSalBank" class="sal-rate-input"
                    min="0" step="0.01" placeholder="0.00" oninput="calcFinalizeTotal()">
           </div>
           <div class="sal-base-row sal-base-result">
             <span class="sal-base-label">Кеш / За плащане:</span>
-            <span id="finSalCash" class="sal-base-val mono">0.00 лв.</span>
+            <span id="finSalCash" class="sal-base-val mono">0.00 €</span>
           </div>
         </div>
         <div id="finSalOverpaidWarn" class="hidden sal-warn">
