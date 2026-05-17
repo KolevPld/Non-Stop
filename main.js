@@ -5961,33 +5961,156 @@ async function loadSalHistByEmployee(empId) {
   if (!el) return;
   el.innerHTML = `<div class="tasks-empty">Зареждане...</div>`;
   try {
-    const snap = await getDocs(query(collection(db,"salaries"), where("employeeId","==",empId)));
-    if (snap.empty) { el.innerHTML = `<div class="tasks-empty">Няма записи</div>`; return; }
-    const salDocs = snap.docs.slice().sort((a,b) => b.data().month.localeCompare(a.data().month));
+    const [salSnap, whSnap, advSnap, empDoc] = await Promise.all([
+      getDocs(query(collection(db,"salaries"),   where("employeeId","==",empId))),
+      getDocs(query(collection(db,"work_hours"), where("employeeId","==",empId))),
+      getDocs(query(collection(db,"advances"),   where("employeeId","==",empId))),
+      getDoc(doc(db,"employees",empId))
+    ]);
+    const emp = empDoc.exists() ? { id: empDoc.id, ...empDoc.data() } : null;
+
+    // Финализирани заплати по месец
+    const finalByMonth = {};
+    salSnap.docs.forEach(d => { const r = d.data(); finalByMonth[r.month] = { id: d.id, ...r }; });
+
+    // Часове по месец (от work_hours)
+    const hoursByMonth = {};
+    whSnap.docs.forEach(d => {
+      const r  = d.data();
+      const mo = (r.date || "").slice(0, 7);
+      if (mo) hoursByMonth[mo] = (hoursByMonth[mo] || 0) + (r.hours || 0);
+    });
+
+    // Аванси по месец
+    const advByMonth = {};
+    advSnap.docs.forEach(d => {
+      const r  = d.data();
+      const mo = r.month || (r.date || "").slice(0, 7);
+      if (mo) advByMonth[mo] = (advByMonth[mo] || 0) + (r.amount || 0);
+    });
+
+    // Обединяваме всички месеци
+    const allMonths = [...new Set([
+      ...Object.keys(finalByMonth),
+      ...Object.keys(hoursByMonth)
+    ])].sort().reverse();
+
+    if (!allMonths.length) {
+      el.innerHTML = `<div class="tasks-empty">Няма записани часове или заплати за този служител.</div>`;
+      return;
+    }
+
+    const rows = allMonths.map(mo => {
+      const sal = finalByMonth[mo];
+      if (sal) {
+        // ── Финализиран ред ──
+        const bon = (sal.bonuses    || []).reduce((s,b)  => s + (b.amount||0), 0);
+        const ded = (sal.deductions || []).reduce((s,dd) => s + (dd.amount||0), 0);
+        return `<tr>
+          <td><strong>${formatMonth(mo)}</strong></td>
+          <td class="mono">${sal.baseHours || 0}</td>
+          <td class="mono">${(sal.baseRate   || 0).toFixed(2)}</td>
+          <td class="mono">${(sal.baseAmount || 0).toFixed(2)}</td>
+          <td class="mono ${bon>0?"pos":""}">${bon>0?"+"+bon.toFixed(2):"—"}</td>
+          <td class="mono ${ded>0?"neg":""}">${ded>0?"−"+ded.toFixed(2):"—"}</td>
+          <td class="mono pos"><strong>${(sal.totalGross||0).toFixed(2)} лв.</strong></td>
+          <td><span class="sal-status-badge sal-${sal.status}">${salStatusLabel(sal.status)}</span></td>
+          <td style="color:var(--text3)">—</td>
+        </tr>`;
+      } else {
+        // ── Preview ред (само изчислен) ──
+        const hours = hoursByMonth[mo] || 0;
+        const rate  = getHistoricalRate(emp, mo);
+        const base  = hours * rate;
+        const advs  = advByMonth[mo] || 0;
+        const net   = base - advs;
+        return `<tr style="opacity:0.72">
+          <td><strong>${formatMonth(mo)}</strong></td>
+          <td class="mono">${hours}</td>
+          <td class="mono">${rate.toFixed(2)}</td>
+          <td class="mono">${base.toFixed(2)}</td>
+          <td class="mono" style="color:var(--text3)">—</td>
+          <td class="mono ${advs>0?"neg":""}">${advs>0?"−"+advs.toFixed(2):"—"}</td>
+          <td class="mono">${net.toFixed(2)} лв.</td>
+          <td><span class="sal-status-badge" style="background:var(--bg3);color:var(--text2);font-size:0.75rem">📊 Предварителен</span></td>
+          <td><button class="sal-edit-btn" onclick="finalizeSalary('${empId}','${mo}')">
+            Финализирай
+          </button></td>
+        </tr>`;
+      }
+    }).join("");
+
     el.innerHTML = `
       <div class="table-responsive" style="margin-top:12px">
       <table class="wh-wage-table">
         <thead><tr>
-          <th>Месец</th><th>Часове</th><th>База</th>
-          <th>Бонуси</th><th>Удръжки</th><th>Бруто</th><th>Статус</th>
+          <th>Месец</th><th>Часове</th><th>Ставка</th><th>База</th>
+          <th>Бонуси</th><th>Аванси</th><th>Бруто / За плащане</th><th>Статус</th><th>—</th>
         </tr></thead>
-        <tbody>${salDocs.map(d => {
-          const r   = d.data();
-          const bon = (r.bonuses||[]).reduce((s,b)=>s+(b.amount||0),0);
-          const ded = (r.deductions||[]).reduce((s,dd)=>s+(dd.amount||0),0);
-          return `<tr>
-            <td>${formatMonth(r.month)}</td>
-            <td class="mono">${r.baseHours||0}</td>
-            <td class="mono">${(r.baseAmount||0).toFixed(2)}</td>
-            <td class="mono ${bon>0?"pos":""}">${bon>0?"+"+bon.toFixed(2):"—"}</td>
-            <td class="mono ${ded>0?"neg":""}">${ded>0?"−"+ded.toFixed(2):"—"}</td>
-            <td class="mono pos">${(r.totalGross||0).toFixed(2)} лв.</td>
-            <td><span class="sal-status-badge sal-${r.status}">${salStatusLabel(r.status)}</span></td>
-          </tr>`;
-        }).join("")}</tbody>
+        <tbody>${rows}</tbody>
       </table></div>`;
-  } catch (e) { el.innerHTML = `<div class="tasks-empty">Грешка</div>`; }
+  } catch (e) {
+    console.error("loadSalHistByEmployee:", e);
+    el.innerHTML = `<div class="tasks-empty">Грешка при зареждане</div>`;
+  }
 }
+
+window.finalizeSalary = async function(empId, month) {
+  if (!confirm(`Финализирай заплата за ${formatMonth(month)}?\n\nЩе се създаде одобрен запис в Заплати.`)) return;
+  try {
+    const [whSnap, advSnap, empDoc] = await Promise.all([
+      getDocs(query(collection(db,"work_hours"), where("employeeId","==",empId))),
+      getDocs(query(collection(db,"advances"),   where("employeeId","==",empId))),
+      getDoc(doc(db,"employees",empId))
+    ]);
+    const emp = empDoc.exists() ? { id: empDoc.id, ...empDoc.data() } : null;
+    if (!emp) { alert("Служителят не е намерен."); return; }
+
+    let hours = 0;
+    whSnap.docs.forEach(d => {
+      const r = d.data();
+      if ((r.date || "").slice(0,7) === month) hours += (r.hours || 0);
+    });
+
+    let totalAdv = 0;
+    const dedItems = [];
+    advSnap.docs.forEach(d => {
+      const r  = d.data();
+      const mo = r.month || (r.date || "").slice(0, 7);
+      if (mo === month && r.amount) {
+        totalAdv += r.amount;
+        dedItems.push({ type: "Аванс", amount: r.amount, note: r.note || "" });
+      }
+    });
+
+    const rate  = getHistoricalRate(emp, month);
+    const base  = hours * rate;
+    const gross = Math.max(0, base - totalAdv);
+    const now   = new Date().toISOString();
+
+    await addDoc(collection(db,"salaries"), {
+      shopId:     emp.shopId,
+      employeeId: empId,
+      month,
+      baseHours:  hours,
+      baseRate:   rate,
+      baseAmount: base,
+      bonuses:    [],
+      deductions: dedItems,
+      totalGross: gross,
+      status:     "approved",
+      changeLog:  [{ by: currentUserId, at: now,
+        action: `Финализирана — ${hours}ч × ${rate} лв. − ${totalAdv.toFixed(2)} лв. аванси = ${gross.toFixed(2)} лв.` }],
+      createdAt:  now,
+      updatedAt:  now
+    });
+
+    await loadSalHistByEmployee(empId);
+  } catch (e) {
+    console.error("finalizeSalary:", e);
+    alert("Грешка: " + e.message);
+  }
+};
 
 async function loadSalHistAnalysis() {
   const el = document.getElementById("salHistAnalysisContent");
