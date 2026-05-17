@@ -92,17 +92,34 @@ async function initFCM() {
         ua: navigator.userAgent.slice(0, 200),
         updatedAt: new Date().toISOString()
       }, { merge: true });
+
+      // Изтрий остарели токени за същия потребител (различни от текущия).
+      // Накопяват се при промяна на браузъра/ОС и причиняват дубликати.
+      try {
+        const oldSnap = await getDocs(query(collection(db, 'fcmTokens'), where('userId', '==', currentUserId)));
+        const toDelete = oldSnap.docs.filter(d => d.data().token !== token);
+        await Promise.all(toDelete.map(d => deleteDoc(d.ref)));
+        if (toDelete.length) console.log('[FCM] Cleaned up', toDelete.length, 'stale token(s).');
+      } catch (e) {
+        console.warn('[FCM] Token cleanup failed:', e);
+      }
+
       console.log('[FCM] Token saved to Firestore.');
     }
 
     onMessage(_messaging, (payload) => {
       console.log('[FCM] Foreground message:', payload);
       const title = payload.notification?.title || '🏪 Нон Стоп';
+      // tag идва от Cloud Function data.tag — браузърът замества стара нотификация
+      // вместо да показва дубликат
+      const tag   = payload.data?.tag || payload.data?.taskId || 'ns-notif';
       const opts  = {
         body: payload.notification?.body || '',
         icon: '/icon-192.png',
         badge: '/icon-192.png',
-        requireInteraction: true
+        requireInteraction: true,
+        tag,
+        renotify: false
       };
       showAppNotification(title, opts);
     });
@@ -2221,59 +2238,10 @@ async function showAppNotification(title, options = {}) {
   catch (e) { console.error('Notification failed:', e); return false; }
 }
 
-// ── Напомняния за бележки — polling на всяка минута ──────────
-// Следим кои вече са изпратени (в рамките на тази сесия + localStorage)
-const _firedReminders = new Set(
-  JSON.parse(localStorage.getItem('ns_fired_reminders') || '[]')
-);
-
-function _reminderKey(t) {
-  return `${t.firestoreId}|${t.reminderDate}|${t.reminderTime}`;
-}
-
-function checkTaskReminders() {
-  if (!('Notification' in window) || Notification.permission !== 'granted') return;
-  const now   = new Date();
-  const nowYM = now.toISOString().slice(0, 10);        // "YYYY-MM-DD"
-  const nowHM = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-
-  _tasks.forEach(t => {
-    if (t.done || !t.reminderDate || !t.reminderTime) return;
-    const key = _reminderKey(t);
-    if (_firedReminders.has(key)) return;
-
-    if (t.reminderDate === nowYM && t.reminderTime === nowHM) {
-      showAppNotification('📝 Нон Стоп — Бележка', {
-        body: t.text,
-        icon: 'icon-192.png',
-        badge: 'icon-192.png',
-        tag:  key,
-        requireInteraction: true
-      });
-      _firedReminders.add(key);
-      // Запази само последните 200 ключа за да не расте без край
-      const arr = [..._firedReminders].slice(-200);
-      localStorage.setItem('ns_fired_reminders', JSON.stringify(arr));
-      console.log('📝 Reminder fired:', t.text);
-    }
-  });
-}
-
-// Стартирай polling веднага при зареждане + на всяка минута
-// (синхронизиран с началото на следващата минута за точност)
-function startReminderPolling() {
-  checkTaskReminders();
-  const now   = new Date();
-  const msToNextMinute = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
-  setTimeout(() => {
-    checkTaskReminders();
-    setInterval(checkTaskReminders, 60_000);
-  }, msToNextMinute);
-}
-startReminderPolling();
-
-// scheduleTaskReminders остава като no-op за съвместимост
-function scheduleTaskReminders() { checkTaskReminders(); }
+// ── Напомняния: само FCM (Cloud Function sendTaskReminders) ───
+// Client-side polling премахнат — дублираше нотификациите.
+// scheduleTaskReminders остава no-op за обратна съвместимост.
+function scheduleTaskReminders() {}
 
 // ── Тест: изпрати известие за първата бележка с напомняне ────
 window.testTaskReminder = function() {

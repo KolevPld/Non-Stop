@@ -92,17 +92,24 @@ exports.sendTaskReminders = onSchedule(
       if (task.done) continue;
       if (task.fcmSentAt) continue;
 
+      const notifTag = 'task-' + taskDoc.id;
       const message = {
         notification: {
           title: '📝 Нон Стоп — Бележка',
           body:  task.text || '(без текст)'
         },
+        // data payload достига до onMessage handler-а (foreground)
+        data: { tag: notifTag, taskId: taskDoc.id },
         webpush: {
           fcmOptions: { link: '/' },
           notification: {
             icon: '/icon-192.png',
             badge: '/icon-192.png',
-            requireInteraction: true
+            requireInteraction: true,
+            // tag дедуплицира нотификации на ниво браузър —
+            // ако пристигнат 2 push-а с един и същ tag, показва се само 1
+            tag: notifTag,
+            renotify: false
           }
         },
         tokens
