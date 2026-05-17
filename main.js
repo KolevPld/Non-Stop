@@ -5454,19 +5454,22 @@ window.generatePayroll = async function() {
       const base = r.hours * rate;
       const now  = new Date().toISOString();
       await addDoc(collection(db,"salaries"), {
-        shopId:     r.emp.shopId,
-        employeeId: r.emp.id,
-        month:      _salMonth,
-        baseHours:  r.hours,
-        baseRate:   rate,
-        baseAmount: base,
-        bonuses:    [],
-        deductions: [],
-        totalGross: base,
-        status:     "draft",
-        changeLog:  [{ by: currentUserId, at: now, action: `Генерирана ведомост — ${r.hours}ч × ${rate} лв. = ${base.toFixed(2)} лв.` }],
-        createdAt:  now,
-        updatedAt:  now
+        shopId:       r.emp.shopId,
+        employeeId:   r.emp.id,
+        employeeName: r.emp.name,
+        month:        _salMonth,
+        baseHours:    r.hours,
+        baseRate:     rate,
+        baseAmount:   base,
+        bonuses:      [],
+        deductions:   [],
+        totalGross:   base,
+        bankAmount:   0,
+        notes:        "",
+        status:       "draft",
+        changeLog:    [{ by: currentUserId, at: now, action: `Генерирана ведомост — ${r.hours}ч × ${rate} лв. = ${base.toFixed(2)} лв.` }],
+        createdAt:    now,
+        updatedAt:    now
       });
       created++;
     }
@@ -5520,6 +5523,11 @@ window.openSalaryModal = async function(empId) {
   const rateEl = document.getElementById("salBaseRate");
   if (rateEl) { rateEl.value = rate; rateEl.disabled = paid; }
 
+  const bankEl = document.getElementById("salBankAmount");
+  if (bankEl) { bankEl.value = salary?.bankAmount || ""; bankEl.disabled = paid; }
+  const notesEl = document.getElementById("salNotes");
+  if (notesEl) { notesEl.value = salary?.notes || ""; notesEl.disabled = paid; }
+
   renderBonusList(paid);
   renderDeductionList(paid);
   calcSalaryTotal();
@@ -5535,6 +5543,8 @@ window.openSalaryModal = async function(empId) {
   if (saveBtn) saveBtn.disabled      = paid;
   if (addBon)  addBon.disabled       = paid;
   if (addDed)  addDed.disabled       = paid;
+  if (bankEl)  bankEl.disabled       = paid;
+  if (notesEl) notesEl.disabled      = paid;
 
   // Change log
   const logEl = document.getElementById("salChangeLog");
@@ -5628,6 +5638,15 @@ function calcSalaryTotal() {
   const grossEl = document.getElementById("salCalcGross");
   if (grossEl) grossEl.style.color = gross < 0 ? "var(--red)" : "var(--green)";
   document.getElementById("salNegativeWarn")?.classList.toggle("hidden", gross >= 0);
+
+  const bankAmtEl = document.getElementById("salBankAmount");
+  const cashAmtEl = document.getElementById("salCashAmount");
+  if (bankAmtEl && cashAmtEl) {
+    const bankAmt = parseFloat(bankAmtEl.value || 0) || 0;
+    const cashAmt = Math.max(0, gross - bankAmt);
+    cashAmtEl.textContent = cashAmt.toFixed(2) + " лв.";
+  }
+
   return { base, bonTot, dedTot, gross };
 }
 
@@ -5640,20 +5659,25 @@ window.saveSalary = async function() {
   const rec   = _salRecords.find(r => r.emp.id === empId);
   if (!rec) return;
 
-  const rate = parseFloat(document.getElementById("salBaseRate")?.value || 0);
+  const rate       = parseFloat(document.getElementById("salBaseRate")?.value || 0);
+  const bankAmount = parseFloat(document.getElementById("salBankAmount")?.value || 0) || 0;
+  const notes      = document.getElementById("salNotes")?.value?.trim() || "";
   const now  = new Date().toISOString();
   const data = {
-    shopId:     rec.emp.shopId,
-    employeeId: empId,
-    month:      _salMonth,
-    baseHours:  rec.hours,
-    baseRate:   rate,
-    baseAmount: base,
-    bonuses:    _salBonuses,
-    deductions: _salDeductions,
-    totalGross: gross,
-    status:     "draft",
-    updatedAt:  now
+    shopId:       rec.emp.shopId,
+    employeeId:   empId,
+    employeeName: rec.emp.name,
+    month:        _salMonth,
+    baseHours:    rec.hours,
+    baseRate:     rate,
+    baseAmount:   base,
+    bonuses:      _salBonuses,
+    deductions:   _salDeductions,
+    totalGross:   gross,
+    bankAmount,
+    notes,
+    status:       "draft",
+    updatedAt:    now
   };
   const logEntry = { by: currentUserId, at: now, action: `Редакция: бруто ${gross.toFixed(2)} лв. (бонуси +${bonTot.toFixed(2)}, удръжки −${dedTot.toFixed(2)})` };
   try {
@@ -5696,7 +5720,9 @@ window.markSalaryPaid = async function() {
 
   if (!confirm(`✅ Маркирай заплатата на ${rec.emp.name} (${gross.toFixed(2)} лв.) като ПЛАТЕНА?\nМетод: ${payMethod}`)) return;
 
-  const rate = parseFloat(document.getElementById("salBaseRate")?.value || 0);
+  const rate       = parseFloat(document.getElementById("salBaseRate")?.value || 0);
+  const bankAmount = parseFloat(document.getElementById("salBankAmount")?.value || 0) || 0;
+  const notes      = document.getElementById("salNotes")?.value?.trim() || "";
   const now  = new Date().toISOString();
   const storeNum = rec.emp.shopId === "store1" ? "1" : "2";
 
@@ -5718,6 +5744,7 @@ window.markSalaryPaid = async function() {
     const salData = {
       shopId:              rec.emp.shopId,
       employeeId:          empId,
+      employeeName:        rec.emp.name,
       month:               _salMonth,
       baseHours:           rec.hours,
       baseRate:            rate,
@@ -5725,6 +5752,8 @@ window.markSalaryPaid = async function() {
       bonuses:             _salBonuses,
       deductions:          _salDeductions,
       totalGross:          gross,
+      bankAmount,
+      notes,
       status:              "paid",
       paidAt:              now,
       paidBy:              currentUserId,
@@ -6015,7 +6044,7 @@ async function loadSalHistByEmployee(empId) {
           <td class="mono ${ded>0?"neg":""}">${ded>0?"−"+ded.toFixed(2):"—"}</td>
           <td class="mono pos"><strong>${(sal.totalGross||0).toFixed(2)} лв.</strong></td>
           <td><span class="sal-status-badge sal-${sal.status}">${salStatusLabel(sal.status)}</span></td>
-          <td style="color:var(--text3)">—</td>
+          <td><button class="sal-edit-btn" onclick="exportSalarySlip('${sal.id}')">📄 Фиш</button></td>
         </tr>`;
       } else {
         // ── Preview ред (само изчислен) ──
@@ -6089,20 +6118,23 @@ window.finalizeSalary = async function(empId, month) {
     const now   = new Date().toISOString();
 
     await addDoc(collection(db,"salaries"), {
-      shopId:     emp.shopId,
-      employeeId: empId,
+      shopId:       emp.shopId,
+      employeeId:   empId,
+      employeeName: emp.name,
       month,
-      baseHours:  hours,
-      baseRate:   rate,
-      baseAmount: base,
-      bonuses:    [],
-      deductions: dedItems,
-      totalGross: gross,
-      status:     "approved",
-      changeLog:  [{ by: currentUserId, at: now,
+      baseHours:    hours,
+      baseRate:     rate,
+      baseAmount:   base,
+      bonuses:      [],
+      deductions:   dedItems,
+      totalGross:   gross,
+      bankAmount:   0,
+      notes:        "",
+      status:       "approved",
+      changeLog:    [{ by: currentUserId, at: now,
         action: `Финализирана — ${hours}ч × ${rate} лв. − ${totalAdv.toFixed(2)} лв. аванси = ${gross.toFixed(2)} лв.` }],
-      createdAt:  now,
-      updatedAt:  now
+      createdAt:    now,
+      updatedAt:    now
     });
 
     await loadSalHistByEmployee(empId);
@@ -6110,6 +6142,209 @@ window.finalizeSalary = async function(empId, month) {
     console.error("finalizeSalary:", e);
     alert("Грешка: " + e.message);
   }
+};
+
+// ── Salary slip PDF ────────────────────────────────────────
+async function generateSalarySlipPDF(sal, empName, shopLabel) {
+  await _loadRobotoFont();
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+
+  pdf.addFileToVFS("DejaVuSans.ttf", _robotoRegular);
+  pdf.addFileToVFS("DejaVuSans-Bold.ttf", _robotoBold);
+  pdf.addFont("DejaVuSans.ttf", "DejaVu", "normal");
+  pdf.addFont("DejaVuSans-Bold.ttf", "DejaVu", "bold");
+
+  const ml = 15, mr = 195, cw = mr - ml;
+  let y = 15;
+
+  // Header
+  pdf.setFillColor(44, 62, 80);
+  pdf.rect(ml, y, cw, 22, "F");
+  pdf.setFont("DejaVu", "bold");
+  pdf.setFontSize(14);
+  pdf.setTextColor(255, 255, 255);
+  pdf.text("НОН СТОП ООД — " + shopLabel, ml + cw / 2, y + 8, { align: "center" });
+  pdf.setFontSize(11);
+  pdf.text("ФИШ ЗА ЗАПЛАТА — " + (formatMonth(sal.month) || sal.month).toUpperCase(), ml + cw / 2, y + 16, { align: "center" });
+  y += 28;
+
+  // Employee info
+  pdf.setTextColor(0, 0, 0);
+  pdf.setFont("DejaVu", "normal");
+  pdf.setFontSize(10);
+  pdf.text("Служител:", ml, y);
+  pdf.setFont("DejaVu", "bold");
+  pdf.text(empName, ml + 25, y);
+  pdf.setFont("DejaVu", "normal");
+  const [ym, mm] = (sal.month || "2026-01").split("-").map(Number);
+  const lastDay = new Date(ym, mm, 0).getDate();
+  const mmStr = String(mm).padStart(2, "0");
+  pdf.text(`Период: 01.${mmStr}.${ym} — ${lastDay}.${mmStr}.${ym}`, mr, y, { align: "right" });
+  y += 10;
+
+  const divider = () => {
+    pdf.setDrawColor(180, 180, 180);
+    pdf.setLineWidth(0.3);
+    pdf.line(ml, y, mr, y);
+    y += 5;
+  };
+
+  // НАЧИСЛЕНИЯ block
+  pdf.setFillColor(236, 240, 245);
+  pdf.rect(ml, y, cw, 7, "F");
+  pdf.setFont("DejaVu", "bold");
+  pdf.setFontSize(10);
+  pdf.setTextColor(44, 62, 80);
+  pdf.text("НАЧИСЛЕНИЯ", ml + 3, y + 5);
+  y += 10;
+
+  pdf.setFont("DejaVu", "normal");
+  pdf.setTextColor(0, 0, 0);
+  const baseLabel = `Основна заплата (${sal.baseHours || 0} ч × ${(sal.baseRate || 0).toFixed(2)} лв.)`;
+  pdf.text(baseLabel, ml + 3, y);
+  pdf.text(`${(sal.baseAmount || 0).toFixed(2)} лв.`, mr - 3, y, { align: "right" });
+  y += 7;
+
+  (sal.bonuses || []).forEach(b => {
+    if (!b.amount) return;
+    const label = b.note ? `${b.type} (${b.note})` : b.type;
+    pdf.text("  " + label, ml + 3, y);
+    pdf.text(`+${(b.amount).toFixed(2)} лв.`, mr - 3, y, { align: "right" });
+    y += 7;
+  });
+
+  divider();
+
+  // УДРЪЖКИ block (only if non-empty)
+  if ((sal.deductions || []).some(d => d.amount > 0)) {
+    pdf.setFillColor(236, 240, 245);
+    pdf.rect(ml, y, cw, 7, "F");
+    pdf.setFont("DejaVu", "bold");
+    pdf.setTextColor(44, 62, 80);
+    pdf.text("УДРЪЖКИ", ml + 3, y + 5);
+    y += 10;
+    pdf.setFont("DejaVu", "normal");
+    pdf.setTextColor(0, 0, 0);
+    (sal.deductions || []).forEach(d => {
+      if (!d.amount) return;
+      const label = d.note ? `${d.type} (${d.note})` : d.type;
+      pdf.text("  " + label, ml + 3, y);
+      pdf.text(`−${(d.amount).toFixed(2)} лв.`, mr - 3, y, { align: "right" });
+      y += 7;
+    });
+    divider();
+  }
+
+  // ОБЩО
+  y += 2;
+  pdf.setFillColor(44, 62, 80);
+  pdf.rect(ml, y, cw, 9, "F");
+  pdf.setFont("DejaVu", "bold");
+  pdf.setFontSize(11);
+  pdf.setTextColor(255, 255, 255);
+  pdf.text("ОБЩО ЗА ПОЛУЧАВАНЕ:", ml + 4, y + 6.5);
+  pdf.text(`${(sal.totalGross || 0).toFixed(2)} лв.`, mr - 4, y + 6.5, { align: "right" });
+  y += 15;
+
+  // НАЧИН НА ИЗПЛАЩАНЕ
+  pdf.setFillColor(236, 240, 245);
+  pdf.rect(ml, y, cw, 7, "F");
+  pdf.setFont("DejaVu", "bold");
+  pdf.setFontSize(10);
+  pdf.setTextColor(44, 62, 80);
+  pdf.text("НАЧИН НА ИЗПЛАЩАНЕ", ml + 3, y + 5);
+  y += 10;
+
+  const bankAmt = sal.bankAmount || 0;
+  const cashAmt = Math.max(0, (sal.totalGross || 0) - bankAmt);
+  const boxW = (cw - 8) / 2;
+  pdf.setDrawColor(44, 62, 80);
+  pdf.setLineWidth(0.4);
+  pdf.roundedRect(ml, y, boxW, 16, 2, 2);
+  pdf.setFont("DejaVu", "bold");
+  pdf.setTextColor(44, 62, 80);
+  pdf.setFontSize(9);
+  pdf.text("В БРОЙ:", ml + 4, y + 6);
+  pdf.setFont("DejaVu", "normal");
+  pdf.setTextColor(0, 0, 0);
+  pdf.setFontSize(11);
+  pdf.text(`${cashAmt.toFixed(2)} лв.`, ml + 4, y + 13);
+
+  const bx = ml + boxW + 8;
+  pdf.roundedRect(bx, y, boxW, 16, 2, 2);
+  pdf.setFont("DejaVu", "bold");
+  pdf.setTextColor(44, 62, 80);
+  pdf.setFontSize(9);
+  pdf.text("ПО БАНКОВ ПЪТ:", bx + 4, y + 6);
+  pdf.setFont("DejaVu", "normal");
+  pdf.setTextColor(0, 0, 0);
+  pdf.setFontSize(11);
+  pdf.text(bankAmt > 0 ? `${bankAmt.toFixed(2)} лв.` : "—", bx + 4, y + 13);
+  y += 22;
+
+  // Notes
+  if (sal.notes) {
+    pdf.setFontSize(9);
+    pdf.setTextColor(100, 100, 100);
+    pdf.text("Бележки: " + sal.notes, ml, y);
+    y += 8;
+  }
+
+  // Signature
+  y = Math.max(y + 10, 235);
+  pdf.setFontSize(9);
+  pdf.setTextColor(0, 0, 0);
+  pdf.setFont("DejaVu", "normal");
+  pdf.setDrawColor(0, 0, 0);
+  pdf.setLineWidth(0.3);
+  pdf.line(ml, y + 8, ml + 70, y + 8);
+  pdf.text("Подпис на служителя", ml, y + 13);
+  pdf.text("Дата: ______________________", mr - 3, y + 13, { align: "right" });
+
+  // Footer
+  pdf.setFontSize(8);
+  pdf.setTextColor(150, 150, 150);
+  pdf.text(`Генериран: ${new Date().toLocaleDateString("bg-BG")} | Нон Стоп ООД`, 105, 288, { align: "center" });
+
+  return pdf;
+}
+
+window.exportSalarySlip = async function(salId) {
+  try {
+    const snap = await getDoc(doc(db, "salaries", salId));
+    if (!snap.exists()) { alert("Записът не е намерен."); return; }
+    const sal = { id: snap.id, ...snap.data() };
+
+    let empName = sal.employeeName || "";
+    if (!empName && sal.employeeId) {
+      const empSnap = await getDoc(doc(db, "employees", sal.employeeId));
+      empName = empSnap.exists() ? empSnap.data().name : "Неизвестен";
+    }
+
+    const shopLabel = sal.shopId === "store1" ? "Магазин М1" : "Магазин М2";
+    const pdf = await generateSalarySlipPDF(sal, empName, shopLabel);
+    const safeName = empName.replace(/\s+/g, "_");
+    pdf.save(`фиш_${safeName}_${sal.month}.pdf`);
+  } catch (e) { alert("Грешка при генериране на фиш: " + e.message); }
+};
+
+window.exportAllSalarySlips = async function() {
+  const withSalary = (_salRecords || []).filter(r => r.emp.active && r.salary);
+  if (!withSalary.length) { alert("Няма генерирани заплати за " + formatMonth(_salMonth) + "."); return; }
+  if (!confirm(`Генерирай ${withSalary.length} фиша за ${formatMonth(_salMonth)}?\n\nВсеки фиш ще се изтегли като отделен PDF файл.`)) return;
+  try {
+    let count = 0;
+    for (const r of withSalary) {
+      const shopLabel = r.emp.shopId === "store1" ? "Магазин М1" : "Магазин М2";
+      const empName   = r.salary.employeeName || r.emp.name;
+      const pdf = await generateSalarySlipPDF(r.salary, empName, shopLabel);
+      const safeName = (r.emp.name || "emp").replace(/\s+/g, "_");
+      pdf.save(`фиш_${safeName}_${_salMonth}.pdf`);
+      count++;
+    }
+    showStatusMsg(`✅ Генерирани ${count} фиша за ${formatMonth(_salMonth)}`);
+  } catch (e) { alert("Грешка: " + e.message); }
 };
 
 async function loadSalHistAnalysis() {

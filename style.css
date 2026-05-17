@@ -3101,6 +3101,16 @@ body.light .wage-rate-input      { background: #fff; }
   outline: none; border-color: var(--accent);
   box-shadow: 0 0 0 2px rgba(99,179,237,.18);
 }
+.sal-notes-input {
+  width: 100%; background: var(--bg2); border: 1px solid var(--border2);
+  color: var(--text); border-radius: 7px; padding: 8px 10px;
+  font-size: .9rem; font-family: inherit; resize: vertical; box-sizing: border-box;
+}
+.sal-notes-input:focus {
+  outline: none; border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(99,179,237,.18);
+}
+.sal-notes-input:disabled { opacity: 0.6; cursor: not-allowed; }
 
 /* ── Bonus / Deduction list ──────────────────────────── */
 .sal-item-list { display: flex; flex-direction: column; gap: 6px; }

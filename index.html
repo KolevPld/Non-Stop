@@ -770,6 +770,9 @@
         <button class="btn-secondary wh-tool-btn" onclick="exportPayrollExcel()">
           <i class="fa-solid fa-file-excel"></i> Excel
         </button>
+        <button class="btn-secondary wh-tool-btn" onclick="exportAllSalarySlips()">
+          <i class="fa-solid fa-file-pdf"></i> Всички фишове
+        </button>
       </div>
 
       <!-- Таблица -->
@@ -1387,6 +1390,29 @@
         <div id="salNegativeWarn" class="hidden sal-warn">
           ⚠️ Вниание: брутната заплата е отрицателна!
         </div>
+      </div>
+
+      <!-- Секция 5: Начин на изплащане -->
+      <div class="sal-section">
+        <div class="sal-section-title">💳 Начин на изплащане</div>
+        <div class="sal-base-grid">
+          <div class="sal-base-row">
+            <span class="sal-base-label">По банков път (лв.):</span>
+            <input type="number" id="salBankAmount" class="sal-rate-input"
+                   min="0" step="0.01" placeholder="0.00" oninput="calcSalaryTotal()">
+          </div>
+          <div class="sal-base-row">
+            <span class="sal-base-label">В брой (лв.):</span>
+            <span id="salCashAmount" class="sal-base-val mono">0.00 лв.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Секция 6: Бележки -->
+      <div class="sal-section">
+        <div class="sal-section-title">📝 Бележки</div>
+        <textarea id="salNotes" class="sal-notes-input" rows="2"
+                  placeholder="Допълнителни бележки за фиша..."></textarea>
       </div>
 
       <!-- История на промени -->
