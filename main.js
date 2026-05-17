@@ -5924,63 +5924,346 @@ window.salSetHistTab = function(tab) {
   if (tab === "analysis") loadSalHistAnalysis();
 };
 
+// ── Payroll worksheet state ────────────────────────────────
+let _salHistMonth = "";
+let _salHistStore = "all";
+let _payrollRows  = []; // [{emp, docId, hours, sAmount, holiday, sickLeave, shopBonus, persBon, advances, bank, notes}]
+
 async function loadSalHistByMonth() {
   const el = document.getElementById("salHistMonthContent");
   if (!el) return;
+  if (!_salHistMonth) _salHistMonth = new Date().toISOString().slice(0, 7);
   el.innerHTML = `<div class="tasks-empty">Зареждане...</div>`;
   try {
-    const [s1, s2] = await Promise.all([
-      getDocs(query(collection(db,"salaries"), where("shopId","==","store1"))),
-      getDocs(query(collection(db,"salaries"), where("shopId","==","store2")))
+    const [e1, e2, s1, s2, wh1, wh2, advSnap] = await Promise.all([
+      getDocs(query(collection(db,"employees"), where("shopId","==","store1"), where("active","==",true))),
+      getDocs(query(collection(db,"employees"), where("shopId","==","store2"), where("active","==",true))),
+      getDocs(query(collection(db,"salaries"),  where("shopId","==","store1"), where("month","==",_salHistMonth))),
+      getDocs(query(collection(db,"salaries"),  where("shopId","==","store2"), where("month","==",_salHistMonth))),
+      getDocs(query(collection(db,"work_hours"), where("shopId","==","store1"))),
+      getDocs(query(collection(db,"work_hours"), where("shopId","==","store2"))),
+      getDocs(query(collection(db,"advances"),  where("month","==",_salHistMonth)))
     ]);
-    const byMonth = {};
-    [...s1.docs, ...s2.docs].forEach(d => {
+
+    // Build lookup maps
+    const salByEmp = {};
+    [...s1.docs, ...s2.docs].forEach(d => { salByEmp[d.data().employeeId] = { id: d.id, ...d.data() }; });
+
+    const hoursByEmp = {};
+    [...wh1.docs, ...wh2.docs]
+      .filter(d => (d.data().date || "").startsWith(_salHistMonth))
+      .forEach(d => {
+        const r = d.data();
+        hoursByEmp[r.employeeId] = (hoursByEmp[r.employeeId] || 0) + (r.hours || 0);
+      });
+
+    const advByEmp = {};
+    advSnap.docs.forEach(d => {
       const r = d.data();
-      if (!byMonth[r.month]) byMonth[r.month] = { m1:0, m2:0, count:0, paid:0 };
-      byMonth[r.month].count++;
-      if (r.status==="paid") byMonth[r.month].paid++;
-      if (r.shopId==="store1") byMonth[r.month].m1 += (r.totalGross||0);
-      else                     byMonth[r.month].m2 += (r.totalGross||0);
+      if (r.employeeId) advByEmp[r.employeeId] = (advByEmp[r.employeeId] || 0) + (r.amount || 0);
     });
-    const months = Object.keys(byMonth).sort().reverse();
-    if (!months.length) { el.innerHTML = `<div class="tasks-empty">Няма записи</div>`; return; }
-    el.innerHTML = `
-      <div class="table-responsive">
-      <table class="wh-wage-table">
-        <thead><tr>
-          <th>Месец</th><th>М1 заплати</th><th>М2 заплати</th>
-          <th>Общо</th><th>Платени</th><th>—</th>
-        </tr></thead>
-        <tbody>${months.map(mo => {
-          const d   = byMonth[mo];
-          const tot = d.m1 + d.m2;
-          const pct = d.count ? Math.round(d.paid/d.count*100) : 0;
-          return `<tr>
-            <td><strong>${formatMonth(mo)}</strong></td>
-            <td class="mono">${d.m1>0?d.m1.toFixed(2)+" лв.":"—"}</td>
-            <td class="mono">${d.m2>0?d.m2.toFixed(2)+" лв.":"—"}</td>
-            <td class="mono pos">${tot>0?tot.toFixed(2)+" лв.":"—"}</td>
-            <td>
-              <div class="sal-progress-wrap">
-                <div class="sal-progress-bar" style="width:${pct}%"></div>
-              </div>
-              <div class="sal-progress-labels"><span>${pct}% платени</span></div>
-            </td>
-            <td><button class="sal-hist-view-btn" onclick="viewPayrollMonth('${mo}')">Виж ведомост</button></td>
-          </tr>`;
-        }).join("")}</tbody>
-      </table></div>`;
-  } catch (e) { el.innerHTML = `<div class="tasks-empty">Грешка при зареждане</div>`; }
+
+    const allEmps = [
+      ...e1.docs.map(d => ({ id: d.id, ...d.data() })),
+      ...e2.docs.map(d => ({ id: d.id, ...d.data() }))
+    ].sort((a, b) => (a.name || "").localeCompare(b.name || "", "bg"));
+
+    _payrollRows = allEmps.map(emp => {
+      const sal  = salByEmp[emp.id] || null;
+      const h    = sal?.baseHours ?? (hoursByEmp[emp.id] || 0);
+      const rate = sal?.baseRate  ?? (emp.hourlyRate || 0);
+      return {
+        emp,
+        docId:     sal?.id || null,
+        hours:     h,
+        sAmount:   sal?.baseAmount          ?? (h * rate),
+        holiday:   sal?.holidayAmount       || 0,
+        sickLeave: sal?.sickLeaveAmount     || 0,
+        shopBonus: sal?.shopBonusAmount     || 0,
+        persBon:   sal?.personalBonusAmount || 0,
+        advances:  sal?.advances            ?? (advByEmp[emp.id] || 0),
+        bank:      sal?.bankAmount          || 0,
+        notes:     sal?.notes              || "",
+      };
+    });
+
+    renderPayrollHistTable(el);
+  } catch (e) {
+    console.error("loadSalHistByMonth:", e);
+    el.innerHTML = `<div class="tasks-empty">Грешка при зареждане</div>`;
+  }
 }
 
-window.viewPayrollMonth = function(month) {
-  _salMonth = month;
-  showScreen("workhours");
-  wageSetTab("payroll");
-  const inp = document.getElementById("salMonthPicker");
-  if (inp) inp.value = month;
-  const lbl = document.getElementById("salMonthLabel");
-  if (lbl) lbl.textContent = formatMonth(month);
+function renderPayrollHistTable(el) {
+  // Generate month picker options (last 18 months)
+  const now = new Date();
+  const monthOpts = Array.from({ length: 18 }, (_, i) => {
+    const d   = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const val = d.toISOString().slice(0, 7);
+    return `<option value="${val}" ${val === _salHistMonth ? "selected" : ""}>${formatMonth(val)}</option>`;
+  }).join("");
+
+  // Filter rows by store
+  const visRows = _salHistStore === "all"
+    ? _payrollRows
+    : _payrollRows.filter(r => r.emp.shopId === _salHistStore);
+
+  let no = 1;
+  const rowsHtml = visRows.map((r, vi) => {
+    const idx = _payrollRows.indexOf(r);
+    const { emp, docId, hours, sAmount, holiday, sickLeave, shopBonus, persBon, advances, bank } = r;
+    const gross  = sAmount + holiday + sickLeave + shopBonus + persBon;
+    const cash   = gross - advances - bank;
+    const kb     = gross - advances;
+    const store  = emp.shopId === "store1" ? "М1" : "М2";
+    const hasVal = hours > 0 || sAmount > 0;
+    const stHtml = !hasVal ? `<span style="color:var(--text3)">—</span>`
+      : docId ? `<span class="pw-saved-dot" title="Запазено">✓</span>`
+               : `<span class="pw-pending-dot" title="Не е запазено">⏳</span>`;
+    const fv = v => v > 0 ? v.toFixed(2) : "";
+    return `<tr data-idx="${idx}" data-store="${emp.shopId}" class="${!hasVal?"pw-empty-row":""}">
+      <td class="pw-no">${no++}</td>
+      <td class="pw-name">${escHtml(emp.name)}</td>
+      <td class="pw-store">${store}</td>
+      <td><input id="pw_h_${idx}"   class="pw-input" type="number" min="0" step="0.5"   value="${hours||""}"           oninput="onPayrollInput(${idx},'h')"></td>
+      <td><input id="pw_s_${idx}"   class="pw-input" type="number" min="0" step="0.01"  value="${sAmount>0?sAmount.toFixed(2):""}"  oninput="onPayrollInput(${idx},'')"></td>
+      <td><input id="pw_hd_${idx}"  class="pw-input" type="number" min="0" step="0.01"  value="${fv(holiday)}"         oninput="onPayrollInput(${idx},'')"></td>
+      <td><input id="pw_sl_${idx}"  class="pw-input" type="number" min="0" step="0.01"  value="${fv(sickLeave)}"       oninput="onPayrollInput(${idx},'')"></td>
+      <td><input id="pw_sb_${idx}"  class="pw-input" type="number" min="0" step="0.01"  value="${fv(shopBonus)}"       oninput="onPayrollInput(${idx},'')"></td>
+      <td><input id="pw_pb_${idx}"  class="pw-input" type="number" min="0" step="0.01"  value="${fv(persBon)}"         oninput="onPayrollInput(${idx},'')"></td>
+      <td class="pw-calc" id="pw_gross_${idx}">${gross>0?gross.toFixed(2):"—"}</td>
+      <td><input id="pw_adv_${idx}" class="pw-input" type="number" min="0" step="0.01"  value="${fv(advances)}"        oninput="onPayrollInput(${idx},'')"></td>
+      <td><input id="pw_bk_${idx}"  class="pw-input" type="number" min="0" step="0.01"  value="${fv(bank)}"            oninput="onPayrollInput(${idx},'')"></td>
+      <td class="pw-calc ${cash<0?"neg":""}" id="pw_cash_${idx}">${gross>0?cash.toFixed(2):"—"}</td>
+      <td class="pw-calc" id="pw_kb_${idx}">${gross>0?kb.toFixed(2):"—"}</td>
+      <td class="pw-status" id="pw_st_${idx}">${stHtml}</td>
+      <td class="pw-actions">
+        <button class="pw-btn" onclick="savePayrollRow(${idx})" title="Запази">💾</button>
+        <button class="pw-btn" onclick="genPayrollSlip(${idx})" title="Фиш" ${!docId?"disabled":""}>📄</button>
+      </td>
+    </tr>`;
+  }).join("");
+
+  el.innerHTML = `
+    <div class="pw-toolbar">
+      <select class="pw-month-sel" onchange="salHistMonthChange(this.value)">${monthOpts}</select>
+      <select class="pw-month-sel" onchange="salHistStoreChange(this.value)">
+        <option value="all"    ${_salHistStore==="all"   ?"selected":""}>Всички</option>
+        <option value="store1" ${_salHistStore==="store1"?"selected":""}>М1</option>
+        <option value="store2" ${_salHistStore==="store2"?"selected":""}>М2</option>
+      </select>
+      <button class="btn-secondary pw-all-btn" onclick="exportAllHistSlips()">
+        <i class="fa-solid fa-file-pdf"></i> Всички фишове
+      </button>
+    </div>
+    <div class="pw-sheet-title">💼 ВЕДОМОСТ ЗА ЗАПЛАТИ — ${formatMonth(_salHistMonth).toUpperCase()}</div>
+    <div class="pw-table-wrap">
+    <table class="pw-table">
+      <thead><tr>
+        <th>№</th><th>ИМЕ</th><th>МАГ</th>
+        <th>ЧАСОВЕ</th><th>СУМА</th>
+        <th>ПРАЗН.</th><th>ДОПЛАЩ.</th><th>БОНУС</th><th>ЛИЧЕН</th>
+        <th>БРУТНО</th>
+        <th>АВАНСИ</th><th>БАНКА</th><th>КЕШ</th><th>К+Б</th>
+        <th>✓</th><th>—</th>
+      </tr></thead>
+      <tbody>${rowsHtml}</tbody>
+      <tfoot id="pw-tfoot"></tfoot>
+    </table></div>`;
+
+  updatePayrollTotals();
+}
+
+window.salHistMonthChange = function(val) {
+  _salHistMonth = val;
+  loadSalHistByMonth();
+};
+
+window.salHistStoreChange = function(val) {
+  _salHistStore = val;
+  const el = document.getElementById("salHistMonthContent");
+  if (el && _payrollRows.length) renderPayrollHistTable(el);
+};
+
+window.onPayrollInput = function(idx, field) {
+  const row = _payrollRows[idx];
+  if (!row) return;
+  const get = id => parseFloat(document.getElementById(id)?.value) || 0;
+
+  // Auto-update СУМА when ЧАСОВЕ changes
+  if (field === 'h') {
+    const h    = get(`pw_h_${idx}`);
+    const rate = row.emp.hourlyRate || 0;
+    const auto = +(h * rate).toFixed(2);
+    const sEl  = document.getElementById(`pw_s_${idx}`);
+    if (sEl) sEl.value = auto > 0 ? auto : "";
+    row.hours   = h;
+    row.sAmount = auto;
+  }
+
+  // Sync stored values from inputs
+  row.hours     = get(`pw_h_${idx}`);
+  row.sAmount   = get(`pw_s_${idx}`);
+  row.holiday   = get(`pw_hd_${idx}`);
+  row.sickLeave = get(`pw_sl_${idx}`);
+  row.shopBonus = get(`pw_sb_${idx}`);
+  row.persBon   = get(`pw_pb_${idx}`);
+  row.advances  = get(`pw_adv_${idx}`);
+  row.bank      = get(`pw_bk_${idx}`);
+
+  const gross = row.sAmount + row.holiday + row.sickLeave + row.shopBonus + row.persBon;
+  const cash  = gross - row.advances - row.bank;
+  const kb    = gross - row.advances;
+  const hasVal = row.hours > 0 || row.sAmount > 0;
+
+  const setCell = (id, val, extra) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = hasVal ? val.toFixed(2) : "—";
+    if (extra !== undefined) el.className = `pw-calc${extra ? " " + extra : ""}`;
+  };
+  setCell(`pw_gross_${idx}`, gross);
+  setCell(`pw_cash_${idx}`,  cash, cash < 0 ? "neg" : "");
+  setCell(`pw_kb_${idx}`,    kb);
+
+  const stEl = document.getElementById(`pw_st_${idx}`);
+  if (stEl) stEl.innerHTML = !hasVal ? `<span style="color:var(--text3)">—</span>`
+    : row.docId ? `<span class="pw-saved-dot">✓</span>`
+                : `<span class="pw-pending-dot">⏳</span>`;
+
+  updatePayrollTotals();
+};
+
+function updatePayrollTotals() {
+  const tfoot = document.getElementById("pw-tfoot");
+  if (!tfoot) return;
+  const sum = arr => arr.reduce((acc, r) => {
+    const g = r.sAmount + r.holiday + r.sickLeave + r.shopBonus + r.persBon;
+    return {
+      h:    acc.h    + r.hours,
+      s:    acc.s    + r.sAmount,
+      hd:   acc.hd   + r.holiday,
+      sl:   acc.sl   + r.sickLeave,
+      sb:   acc.sb   + r.shopBonus,
+      pb:   acc.pb   + r.persBon,
+      g:    acc.g    + g,
+      adv:  acc.adv  + r.advances,
+      bk:   acc.bk   + r.bank,
+      cash: acc.cash + (g - r.advances - r.bank),
+      kb:   acc.kb   + (g - r.advances)
+    };
+  }, { h:0, s:0, hd:0, sl:0, sb:0, pb:0, g:0, adv:0, bk:0, cash:0, kb:0 });
+
+  const f   = n => n !== 0 ? n.toFixed(2) : "—";
+  const row = (lbl, cls, t) => `<tr class="${cls}">
+    <td colspan="3" class="pw-total-lbl">${lbl}</td>
+    <td class="pw-calc">${t.h||"—"}</td><td class="pw-calc">${f(t.s)}</td>
+    <td class="pw-calc">${f(t.hd)}</td><td class="pw-calc">${f(t.sl)}</td>
+    <td class="pw-calc">${f(t.sb)}</td><td class="pw-calc">${f(t.pb)}</td>
+    <td class="pw-calc"><strong>${f(t.g)}</strong></td>
+    <td class="pw-calc">${f(t.adv)}</td><td class="pw-calc">${f(t.bk)}</td>
+    <td class="pw-calc ${t.cash<0?"neg":""}">${f(t.cash)}</td>
+    <td class="pw-calc">${f(t.kb)}</td>
+    <td colspan="2"></td></tr>`;
+
+  const all = sum(_payrollRows);
+  const m1  = sum(_payrollRows.filter(r => r.emp.shopId === "store1"));
+  const m2  = sum(_payrollRows.filter(r => r.emp.shopId === "store2"));
+  tfoot.innerHTML = row("ОБЩО", "pw-total-row", all)
+    + row("▶ Магазин 1", "pw-sub-row", m1)
+    + row("▶ Магазин 2", "pw-sub-row", m2);
+}
+
+window.savePayrollRow = async function(idx) {
+  const row = _payrollRows[idx];
+  if (!row) return;
+  const gross = row.sAmount + row.holiday + row.sickLeave + row.shopBonus + row.persBon;
+  const cash  = gross - row.advances - row.bank;
+  const bonuses = [
+    row.holiday   && { type: "Празнични часове",          amount: row.holiday,   note: "" },
+    row.sickLeave && { type: "Доплащане отпуска/болнични", amount: row.sickLeave, note: "" },
+    row.shopBonus && { type: "Бонус от оборота",           amount: row.shopBonus, note: "" },
+    row.persBon   && { type: "Личен бонус",                amount: row.persBon,   note: "" },
+  ].filter(Boolean);
+  const deductions = row.advances > 0 ? [{ type: "Аванс", amount: row.advances, note: "" }] : [];
+  const now = new Date().toISOString();
+  const data = {
+    shopId:              row.emp.shopId,
+    employeeId:          row.emp.id,
+    employeeName:        row.emp.name,
+    month:               _salHistMonth,
+    baseHours:           row.hours,
+    baseRate:            row.emp.hourlyRate || 0,
+    baseAmount:          row.sAmount,
+    holidayAmount:       row.holiday,
+    sickLeaveAmount:     row.sickLeave,
+    shopBonusAmount:     row.shopBonus,
+    personalBonusAmount: row.persBon,
+    bonuses, deductions,
+    totalGross:          gross,
+    advances:            row.advances,
+    bankAmount:          row.bank,
+    cashAmount:          cash,
+    notes:               row.notes || "",
+    status:              "approved",
+    updatedAt:           now,
+  };
+  const saveBtn = document.querySelector(`tr[data-idx="${idx}"] .pw-btn`);
+  try {
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = "⏳"; }
+    if (row.docId) {
+      const snap = await getDoc(doc(db,"salaries",row.docId));
+      const log  = snap.data()?.changeLog || [];
+      await updateDoc(doc(db,"salaries",row.docId),
+        { ...data, changeLog: [...log, { by: currentUserId, at: now, action: `Обновена: бруто ${gross.toFixed(2)} лв.` }] });
+    } else {
+      data.changeLog = [{ by: currentUserId, at: now, action: `Запазена: бруто ${gross.toFixed(2)} лв.` }];
+      data.createdAt = now;
+      const ref  = await addDoc(collection(db,"salaries"), data);
+      row.docId  = ref.id;
+    }
+    // Enable slip button and update status
+    const stEl   = document.getElementById(`pw_st_${idx}`);
+    if (stEl) stEl.innerHTML = `<span class="pw-saved-dot" title="Запазено">✓</span>`;
+    const slipBtn = document.querySelectorAll(`tr[data-idx="${idx}"] .pw-btn`)[1];
+    if (slipBtn) slipBtn.disabled = false;
+    showStatusMsg(`✅ ${row.emp.name} — запазено`);
+  } catch (e) { alert("Грешка: " + e.message); }
+  finally {
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = "💾"; }
+  }
+};
+
+window.genPayrollSlip = async function(idx) {
+  const row = _payrollRows[idx];
+  if (!row?.docId) { alert("Запази реда първо (💾)."); return; }
+  try {
+    const snap = await getDoc(doc(db,"salaries",row.docId));
+    if (!snap.exists()) { alert("Документът не е намерен."); return; }
+    const sal = { id: snap.id, ...snap.data() };
+    const shopLabel = sal.shopId === "store1" ? "Магазин М1" : "Магазин М2";
+    const pdf = await generateSalarySlipPDF(sal, sal.employeeName || row.emp.name, shopLabel);
+    pdf.save(`фиш_${(sal.employeeName || row.emp.name).replace(/\s+/g,"_")}_${_salHistMonth}.pdf`);
+  } catch (e) { alert("Грешка: " + e.message); }
+};
+
+window.exportAllHistSlips = async function() {
+  const saved = _payrollRows.filter(r => r.docId);
+  if (!saved.length) { alert("Няма запазени редове за " + formatMonth(_salHistMonth) + "."); return; }
+  if (!confirm(`Изтегли ${saved.length} фиша за ${formatMonth(_salHistMonth)}?`)) return;
+  let count = 0;
+  try {
+    for (const r of saved) {
+      const snap = await getDoc(doc(db,"salaries",r.docId));
+      if (!snap.exists()) continue;
+      const sal = { id: snap.id, ...snap.data() };
+      const shopLabel = sal.shopId === "store1" ? "Магазин М1" : "Магазин М2";
+      const pdf = await generateSalarySlipPDF(sal, sal.employeeName || r.emp.name, shopLabel);
+      pdf.save(`фиш_${(sal.employeeName || r.emp.name).replace(/\s+/g,"_")}_${_salHistMonth}.pdf`);
+      count++;
+    }
+    showStatusMsg(`✅ Изтеглени ${count} фиша за ${formatMonth(_salHistMonth)}`);
+  } catch (e) { alert("Грешка: " + e.message); }
 };
 
 window.salHistEmpChange = async function(empId) {

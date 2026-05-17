@@ -3251,6 +3251,66 @@ body.light .wage-rate-input      { background: #fff; }
 }
 .sal-hist-view-btn:hover { border-color: var(--accent); color: var(--accent); }
 
+/* ════════════════════════════════════════════════════════════
+   PAYROLL WORKSHEET (Excel-style По месец tab)
+   ════════════════════════════════════════════════════════════ */
+.pw-toolbar {
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  padding: 10px 0 8px;
+}
+.pw-month-sel {
+  background: var(--bg2); border: 1px solid var(--border2); color: var(--text);
+  border-radius: 6px; padding: 5px 10px; font-size: .82rem; cursor: pointer;
+}
+.pw-all-btn { font-size: .82rem; padding: 5px 12px; }
+.pw-sheet-title {
+  font-size: .95rem; font-weight: 700; color: var(--text); letter-spacing: .03em;
+  margin-bottom: 8px; padding: 6px 0;
+}
+.pw-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.pw-table {
+  width: 100%; border-collapse: collapse; font-size: .78rem;
+  min-width: 980px; table-layout: fixed;
+}
+.pw-table colgroup { display: none; }
+.pw-table thead th {
+  background: #2c3e50; color: #fff; padding: 6px 4px; text-align: center;
+  font-size: .72rem; white-space: nowrap; font-weight: 600;
+  position: sticky; top: 0; z-index: 2;
+}
+.pw-table tbody td {
+  padding: 2px 3px; border-bottom: 1px solid var(--border2); vertical-align: middle;
+}
+.pw-table tbody tr:hover { background: var(--bg2); }
+.pw-table tbody tr.pw-empty-row { opacity: 0.5; }
+.pw-no    { text-align: center; color: var(--text3); width: 26px; font-size: .7rem; }
+.pw-name  { font-weight: 500; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pw-store { text-align: center; color: var(--text2); font-size: .75rem; }
+.pw-input {
+  width: 100%; background: transparent; border: none;
+  border-bottom: 1px solid transparent; color: var(--text);
+  font-size: .78rem; padding: 3px 2px; text-align: right;
+  min-width: 54px; box-sizing: border-box; font-family: inherit;
+}
+.pw-input:focus {
+  outline: none; border-bottom-color: var(--accent);
+  background: rgba(99,179,237,.07);
+}
+.pw-calc  { text-align: right; font-variant-numeric: tabular-nums; padding-right: 5px; }
+.pw-status { text-align: center; font-size: 1rem; width: 30px; }
+.pw-actions { text-align: center; white-space: nowrap; width: 54px; }
+.pw-btn {
+  background: none; border: none; cursor: pointer; font-size: .9rem;
+  padding: 2px 3px; border-radius: 4px; line-height: 1;
+}
+.pw-btn:hover { background: var(--bg3); }
+.pw-btn:disabled { opacity: 0.28; cursor: not-allowed; }
+.pw-saved-dot    { color: #48bb78; font-weight: 700; }
+.pw-pending-dot  { color: #ed8936; }
+.pw-total-row td { background: var(--bg2); font-weight: 700; border-top: 2px solid var(--border); }
+.pw-sub-row td   { background: var(--bg2); color: var(--text2); border-top: 1px dashed var(--border2); }
+.pw-total-lbl    { text-align: left; padding-left: 6px; font-size: .78rem; }
+
 /* ── Employee selector ───────────────────────────────── */
 .sal-emp-sel {
   width: 100%; background: var(--bg2); border: 1px solid var(--border2);
