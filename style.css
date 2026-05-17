@@ -3316,14 +3316,22 @@ body.light .wage-rate-input      { background: #fff; }
 .pw-store { text-align: center; color: var(--text2); font-size: .75rem; min-width: 36px; }
 
 /* ── Input cells ─────────────────────────────────────── */
-.pw-table td:has(.pw-input) { padding: 3px; }
+.pw-table td:has(.pw-input) { padding: 2px; }
+
+/* Hide number input spinners globally in payroll table */
+.pw-table input[type="number"] { -moz-appearance: textfield; }
+.pw-table input[type="number"]::-webkit-outer-spin-button,
+.pw-table input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none; margin: 0;
+}
+
 .pw-input {
-  display: block; width: 100%; min-width: 82px; box-sizing: border-box;
+  display: block; width: 100%; min-width: 90px; box-sizing: border-box;
   background: var(--bg2); border: 1px solid var(--border2);
   border-radius: 4px; color: var(--text);
   font-size: .8rem; font-family: inherit;
   font-variant-numeric: tabular-nums;
-  padding: 5px 7px; text-align: right;
+  padding: 4px 6px; text-align: right; margin: 1px;
   transition: border-color .15s, box-shadow .15s;
 }
 .pw-input:focus {
@@ -3335,7 +3343,8 @@ body.light .wage-rate-input      { background: #fff; }
 /* ── Read-only calculated cells ──────────────────────── */
 .pw-calc {
   text-align: right; font-variant-numeric: tabular-nums;
-  font-weight: 600; padding-right: 8px; min-width: 78px;
+  font-weight: 600; padding-right: 8px; min-width: 85px;
+  white-space: nowrap;
 }
 
 /* ── Status + Actions ────────────────────────────────── */
