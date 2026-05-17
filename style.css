@@ -3267,49 +3267,105 @@ body.light .wage-rate-input      { background: #fff; }
   font-size: .95rem; font-weight: 700; color: var(--text); letter-spacing: .03em;
   margin-bottom: 8px; padding: 6px 0;
 }
-.pw-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* ── Table wrapper — always scrollable ───────────────── */
+.pw-table-wrap {
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--border2); border-radius: 8px;
+}
+
+/* ── Table ───────────────────────────────────────────── */
 .pw-table {
-  width: 100%; border-collapse: collapse; font-size: .78rem;
-  min-width: 980px; table-layout: fixed;
+  width: 100%; border-collapse: collapse; font-size: .8rem;
+  min-width: 1200px; table-layout: auto;
 }
-.pw-table colgroup { display: none; }
+
+/* ── Header ──────────────────────────────────────────── */
 .pw-table thead th {
-  background: #2c3e50; color: #fff; padding: 6px 4px; text-align: center;
-  font-size: .72rem; white-space: nowrap; font-weight: 600;
-  position: sticky; top: 0; z-index: 2;
+  background: #2c3e50; color: #fff; padding: 7px 6px; text-align: center;
+  font-size: .71rem; white-space: nowrap; font-weight: 600;
+  position: sticky; top: 0; z-index: 4;
 }
+/* Sticky first two header cells */
+.pw-table thead th:nth-child(1) { position: sticky; top: 0; left: 0;   z-index: 5; }
+.pw-table thead th:nth-child(2) { position: sticky; top: 0; left: 32px; z-index: 5; }
+
+/* ── Body cells ──────────────────────────────────────── */
 .pw-table tbody td {
-  padding: 2px 3px; border-bottom: 1px solid var(--border2); vertical-align: middle;
+  padding: 3px 4px; border-bottom: 1px solid var(--border2); vertical-align: middle;
+  white-space: nowrap;
 }
-.pw-table tbody tr:hover { background: var(--bg2); }
-.pw-table tbody tr.pw-empty-row { opacity: 0.5; }
-.pw-no    { text-align: center; color: var(--text3); width: 26px; font-size: .7rem; }
-.pw-name  { font-weight: 500; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pw-store { text-align: center; color: var(--text2); font-size: .75rem; }
+.pw-table tbody tr:hover td { background: var(--bg2); }
+.pw-table tbody tr:hover .pw-no,
+.pw-table tbody tr:hover .pw-name { background: var(--bg2); }
+.pw-table tbody tr.pw-empty-row { opacity: 0.45; }
+
+/* ── Sticky first two body columns ───────────────────── */
+.pw-no {
+  position: sticky; left: 0; z-index: 1;
+  background: var(--bg); text-align: center; color: var(--text3);
+  font-size: .7rem; min-width: 32px;
+}
+.pw-name {
+  position: sticky; left: 32px; z-index: 1;
+  background: var(--bg); font-weight: 500;
+  min-width: 120px; max-width: 160px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.pw-store { text-align: center; color: var(--text2); font-size: .75rem; min-width: 36px; }
+
+/* ── Input cells ─────────────────────────────────────── */
+.pw-table td:has(.pw-input) { padding: 3px; }
 .pw-input {
-  width: 100%; background: transparent; border: none;
-  border-bottom: 1px solid transparent; color: var(--text);
-  font-size: .78rem; padding: 3px 2px; text-align: right;
-  min-width: 54px; box-sizing: border-box; font-family: inherit;
+  display: block; width: 100%; min-width: 82px; box-sizing: border-box;
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 4px; color: var(--text);
+  font-size: .8rem; font-family: inherit;
+  font-variant-numeric: tabular-nums;
+  padding: 5px 7px; text-align: right;
+  transition: border-color .15s, box-shadow .15s;
 }
 .pw-input:focus {
-  outline: none; border-bottom-color: var(--accent);
-  background: rgba(99,179,237,.07);
+  outline: none; border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(99,179,237,.18);
+  background: var(--bg);
 }
-.pw-calc  { text-align: right; font-variant-numeric: tabular-nums; padding-right: 5px; }
-.pw-status { text-align: center; font-size: 1rem; width: 30px; }
-.pw-actions { text-align: center; white-space: nowrap; width: 54px; }
+
+/* ── Read-only calculated cells ──────────────────────── */
+.pw-calc {
+  text-align: right; font-variant-numeric: tabular-nums;
+  font-weight: 600; padding-right: 8px; min-width: 78px;
+}
+
+/* ── Status + Actions ────────────────────────────────── */
+.pw-status  { text-align: center; font-size: 1rem; min-width: 32px; }
+.pw-actions { text-align: center; white-space: nowrap; min-width: 58px; }
 .pw-btn {
-  background: none; border: none; cursor: pointer; font-size: .9rem;
-  padding: 2px 3px; border-radius: 4px; line-height: 1;
+  background: none; border: 1px solid transparent; cursor: pointer;
+  font-size: .9rem; padding: 4px 6px; border-radius: 5px; line-height: 1;
+  transition: background .15s, border-color .15s;
 }
-.pw-btn:hover { background: var(--bg3); }
-.pw-btn:disabled { opacity: 0.28; cursor: not-allowed; }
-.pw-saved-dot    { color: #48bb78; font-weight: 700; }
-.pw-pending-dot  { color: #ed8936; }
-.pw-total-row td { background: var(--bg2); font-weight: 700; border-top: 2px solid var(--border); }
-.pw-sub-row td   { background: var(--bg2); color: var(--text2); border-top: 1px dashed var(--border2); }
-.pw-total-lbl    { text-align: left; padding-left: 6px; font-size: .78rem; }
+.pw-btn:hover:not(:disabled) { background: var(--bg3); border-color: var(--border2); }
+.pw-btn:disabled { opacity: 0.25; cursor: not-allowed; }
+.pw-saved-dot   { color: #48bb78; font-weight: 700; }
+.pw-pending-dot { color: #ed8936; }
+
+/* ── Footer totals ───────────────────────────────────── */
+.pw-total-row td {
+  background: var(--bg2); font-weight: 700;
+  border-top: 2px solid var(--border); padding: 7px 6px;
+}
+.pw-sub-row td {
+  background: var(--bg2); color: var(--text2);
+  border-top: 1px dashed var(--border2); padding: 5px 6px;
+}
+.pw-total-lbl { text-align: left; font-size: .78rem; padding-left: 6px; }
+
+/* ── Mobile: ensure sticky bg is solid ──────────────── */
+@media (max-width: 768px) {
+  .pw-table { min-width: 1200px; }
+}
 
 /* ── Employee selector ───────────────────────────────── */
 .sal-emp-sel {
@@ -3359,6 +3415,13 @@ body.light .sal-emp-hist-table th { background: #f0f2f5; }
 body.light .sal-chart-wrap       { background: #fff; border-color: #dde1e7; }
 body.light #screen-salaries      { background: #f6f8fa; }
 body.light .sal-log-entry        { background: #f0f2f5; }
+body.light .pw-no,
+body.light .pw-name   { background: #f6f8fa; }
+body.light .pw-table tbody tr:hover .pw-no,
+body.light .pw-table tbody tr:hover .pw-name { background: #edf1f5; }
+body.light .pw-total-row td,
+body.light .pw-sub-row td { background: #f0f2f5; }
+body.light .pw-input  { background: #fff; border-color: #ccd3db; }
 
 /* ════════════════════════════════════════════════════════════
    DESKTOP LAYOUT — min-width: 1024px
