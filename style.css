@@ -1888,13 +1888,20 @@ body.admin .table-responsive.admin-only { display: block; }
   padding: 3px 2px; vertical-align: middle; text-align: center;
 }
 .dr-table-narrow th:nth-child(1),
-.dr-table-narrow td:nth-child(1) { width: 30px; min-width: 30px; }
+.dr-table-narrow td:nth-child(1) { width: 24px; min-width: 22px; }
 .dr-table-narrow th:nth-child(2),
-.dr-table-narrow td:nth-child(2) { text-align: left; min-width: 140px; }
+.dr-table-narrow td:nth-child(2) { text-align: left; }
 .dr-table-narrow th:nth-child(3),
-.dr-table-narrow td:nth-child(3) { width: 100px; max-width: 100px; }
+.dr-table-narrow td:nth-child(3) { width: 75px; max-width: 75px; }
 .dr-table-narrow th:nth-child(4),
-.dr-table-narrow td:nth-child(4) { width: 90px; max-width: 90px; text-align: right; }
+.dr-table-narrow td:nth-child(4) { text-align: right; }
+
+/* ── Смени — числови колони (cols 4-8): дясно подравняване ─ */
+.dr-table-shifts th:nth-child(n+4),
+.dr-table-shifts td:nth-child(n+4) { text-align: right; }
+.dr-table-shifts .dr-input[type="number"] {
+  text-align: right; font-variant-numeric: tabular-nums;
+}
 
 .dr-num {
   color: var(--text3); font-size: .7rem;
@@ -1907,15 +1914,23 @@ body.admin .table-responsive.admin-only { display: block; }
   background: var(--bg3); color: var(--text);
   border-radius: 6px; padding: 5px 4px;
   font-size: .8rem; font-family: var(--font);
-  text-align: left; transition: var(--transition);
+  text-align: left;
+  transition: border-color .15s ease, background-color .15s ease;
   -webkit-appearance: none;
 }
 .dr-input.mono { text-align: right; font-family: var(--mono); }
 .dr-input:focus { outline: none; border-color: var(--green); background: var(--bg2); }
 .dr-input:disabled { opacity: .5; cursor: not-allowed; }
-.dr-input[type="number"] { width: 68px; }
-.dr-table-narrow .dr-input[type="number"] { width: 80px; }
-.dr-method-sel { width: 96px; max-width: 100px; min-width: 82px; padding: 2px 3px; font-size: .78rem; cursor: pointer; }
+.dr-input[type="number"] {
+  width: 68px;
+  -webkit-appearance: none; -moz-appearance: textfield; appearance: none;
+}
+.dr-input[type="number"]::-webkit-inner-spin-button,
+.dr-input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.dr-table-narrow .dr-input[type="number"] {
+  text-align: right; font-variant-numeric: tabular-nums;
+}
+.dr-method-sel { width: 73px; max-width: 75px; min-width: 64px; padding: 2px 4px; font-size: 13px; cursor: pointer; }
 .dr-sum-breakdown {
   display: flex; gap: 10px; flex-wrap: wrap;
   font-size: .75rem; color: var(--text2); padding: 0 4px 6px;
@@ -3557,22 +3572,36 @@ body.light .pw-input  { background: #fff; border-color: #ccd3db; }
 
   /* ── Таблица "Смени" — column widths ────────────── */
   #drLeft .dr-table-shifts th:nth-child(1),
-  #drLeft .dr-table-shifts td:nth-child(1) { width: 80px; }   /* Смяна */
+  #drLeft .dr-table-shifts td:nth-child(1) { width: 80px; }           /* Смяна */
   #drLeft .dr-table-shifts th:nth-child(2),
-  #drLeft .dr-table-shifts td:nth-child(2) { width: 96px; }   /* Час */
+  #drLeft .dr-table-shifts td:nth-child(2) { width: 96px; }           /* Час */
   #drLeft .dr-table-shifts th:nth-child(3),
-  #drLeft .dr-table-shifts td:nth-child(3) { width: 220px; }  /* Оператор */
+  #drLeft .dr-table-shifts td:nth-child(3) { width: 180px; }          /* Оператор */
   #drLeft .dr-table-shifts th:nth-child(4),
-  #drLeft .dr-table-shifts td:nth-child(4) { width: 120px; }  /* Оборот */
+  #drLeft .dr-table-shifts td:nth-child(4) { width: 130px; text-align: right; }  /* Оборот */
+  #drLeft .dr-table-shifts th:nth-child(5),
+  #drLeft .dr-table-shifts td:nth-child(5) { width: 130px; text-align: right; }  /* Кеш */
+  #drLeft .dr-table-shifts th:nth-child(6),
+  #drLeft .dr-table-shifts td:nth-child(6) { width: 130px; text-align: right; }  /* POS */
+  #drLeft .dr-table-shifts th:nth-child(7),
+  #drLeft .dr-table-shifts td:nth-child(7) { width: 120px; text-align: right; }  /* + */
+  #drLeft .dr-table-shifts th:nth-child(8),
+  #drLeft .dr-table-shifts td:nth-child(8) { width: 120px; text-align: right; }  /* − */
+  #drLeft .dr-table-shifts .dr-input[type="number"] {
+    text-align: right; font-variant-numeric: tabular-nums; padding-right: 12px;
+  }
 
   /* ── Narrow таблици (Стоки / Други) — 4 колони: # | Текст | Метод | Сума ── */
   #drLeft .dr-table-narrow th:nth-child(1),
   #drLeft .dr-table-narrow td:nth-child(1) { width: 40px; }
   #drLeft .dr-table-narrow th:nth-child(3),
-  #drLeft .dr-table-narrow td:nth-child(3) { width: 120px; max-width: 120px; }
+  #drLeft .dr-table-narrow td:nth-child(3) { width: 110px; max-width: 110px; }
   #drLeft .dr-table-narrow th:nth-child(4),
-  #drLeft .dr-table-narrow td:nth-child(4) { width: 120px; text-align: right; }
-  #drLeft .dr-table-narrow .dr-input[type="number"] { text-align: right; }
+  #drLeft .dr-table-narrow td:nth-child(4) { width: 140px; min-width: 120px; text-align: right; }
+  #drLeft .dr-table-narrow .dr-input[type="number"] {
+    width: 100%; min-width: 0; text-align: right;
+    padding: 12px 12px 12px 4px; font-variant-numeric: tabular-nums;
+  }
   #drLeft .dr-table-narrow .dr-method-sel { width: 100%; font-size: 1rem; padding: 10px 4px; min-height: 48px; }
 
   /* ── Странични приходи (4 колони) ───────────────── */
