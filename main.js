@@ -2911,13 +2911,11 @@ function renderDrSideIncomeTable() {
     <tr>
       <td class="dr-num">${i + 1}</td>
       <td><input type="text" class="dr-input" placeholder="Описание" data-side="${i}" data-field="desc"></td>
-      <td>
-        <select class="dr-input" data-side="${i}" data-field="method">
-          <option value="">—</option>
-          <option value="Кеш">Кеш</option>
-          <option value="Карта">Карта</option>
-        </select>
-      </td>
+      <td><select class="dr-input dr-method-sel" data-side="${i}" data-field="method" oninput="drCalc()">
+        <option value="Кеш">💵 Кеш</option>
+        <option value="Карта">💳 Карта</option>
+        <option value="Банков превод">🏦 Банков</option>
+      </select></td>
       <td><input type="number" class="dr-input mono" step="0.01" placeholder="0.00" data-side="${i}" data-field="amount" oninput="drCalc()"></td>
     </tr>`).join("");
 }
@@ -2988,7 +2986,7 @@ function collectDrData() {
 
   const sideIncomes = Array.from({ length: DR_SIDE_INCOMES }, (_, i) => ({
     description: drField("side", i, "desc")   || "",
-    method:      drField("side", i, "method") || "",
+    method:      drField("side", i, "method") || "Кеш",
     amount:      parseFloat(drField("side", i, "amount")) || 0
   })).filter(s => s.description || s.amount > 0);
 
@@ -3017,9 +3015,12 @@ function collectDrData() {
   const cardExpenseTotal     = r2(cardGoodsExpense + cardOtherExpense);
   const bankExpenseTotal     = r2(bankGoodsExpense + bankOtherExpense);
   const totalSideIncomes     = r2(sideIncomes.reduce((s, si) => s + si.amount, 0));
-  const totalSideIncomesCash = r2(sideIncomes.filter(si => si.method === "Кеш").reduce((s, si) => s + si.amount, 0));
+  const cashSideIncomes      = r2(sideIncomes.filter(si => (si.method || "Кеш") !== "Карта" && (si.method || "Кеш") !== "Банков превод").reduce((s, si) => s + si.amount, 0));
+  const cardSideIncomes      = r2(sideIncomes.filter(si => si.method === "Карта").reduce((s, si) => s + si.amount, 0));
+  const bankSideIncomes      = r2(sideIncomes.filter(si => si.method === "Банков превод").reduce((s, si) => s + si.amount, 0));
+  const totalSideIncomesCash = cashSideIncomes;
   const totalAdvances        = r2(advances.reduce((s, a) => s + a.amount, 0));
-  const endCash = r2(startCash + totalCashIncome + totalSideIncomesCash - cashExpenseTotal - totalAdvances);
+  const endCash = r2(startCash + totalCashIncome + cashSideIncomes - cashExpenseTotal - totalAdvances);
 
   return {
     shopId: _drShopId, date, startCash, shifts,
@@ -3029,7 +3030,9 @@ function collectDrData() {
     cashGoodsExpense, cashOtherExpense, cashExpenseTotal,
     cardGoodsExpense, cardOtherExpense, cardExpenseTotal,
     bankGoodsExpense, bankOtherExpense, bankExpenseTotal,
-    totalSideIncomes, totalSideIncomesCash, totalAdvances, endCash
+    totalSideIncomes, totalSideIncomesCash,
+    cashSideIncomes, cardSideIncomes, bankSideIncomes,
+    totalAdvances, endCash
   };
 }
 
@@ -3075,6 +3078,19 @@ window.drCalc = function() {
   setText("drSumSideIncome", (d.totalSideIncomes || 0).toFixed(2) + " €");
   setText("drSumExpenses",   r2(d.totalGoodsExpense + d.totalOtherExpense).toFixed(2) + " €");
   setText("drSumAdvances",   (d.totalAdvances    || 0).toFixed(2) + " €");
+
+  const hasNonCashSide = (d.cardSideIncomes || 0) > 0 || (d.bankSideIncomes || 0) > 0;
+  const sideBrkDiv = document.getElementById("drSumSideBreakdown");
+  if (sideBrkDiv) {
+    if (hasNonCashSide) {
+      setText("drSumSideCash", (d.cashSideIncomes || 0).toFixed(2) + " €");
+      setText("drSumSideCard", (d.cardSideIncomes || 0).toFixed(2) + " €");
+      setText("drSumSideBank", (d.bankSideIncomes || 0).toFixed(2) + " €");
+      sideBrkDiv.classList.remove("hidden");
+    } else {
+      sideBrkDiv.classList.add("hidden");
+    }
+  }
 
   const hasNonCash = (d.cardExpenseTotal || 0) > 0 || (d.bankExpenseTotal || 0) > 0;
   const brkDiv = document.getElementById("drSumExpensesBreakdown");
@@ -3200,7 +3216,7 @@ function populateDrForm(data) {
   for (let i = 0; i < DR_SIDE_INCOMES; i++) {
     const s = sides[i] || {};
     setDrField("side", i, "desc",   s.description || "");
-    setDrField("side", i, "method", s.method      || "");
+    setDrField("side", i, "method", s.method      || "Кеш");
     setDrField("side", i, "amount", s.amount > 0 ? s.amount : "");
   }
 
@@ -3504,6 +3520,9 @@ async function persistReport(status) {
     bankOtherExpense:    data.bankOtherExpense   || 0,
     bankExpenseTotal:    data.bankExpenseTotal   || 0,
     totalSideIncomes:    data.totalSideIncomes,
+    cashSideIncomes:     data.cashSideIncomes  || 0,
+    cardSideIncomes:     data.cardSideIncomes  || 0,
+    bankSideIncomes:     data.bankSideIncomes  || 0,
     totalAdvances:       data.totalAdvances,
     endCash:             data.endCash,
     createdBy:    isNew ? currentUserId    : (_drData?.createdBy    || currentUserId),
@@ -3615,7 +3634,7 @@ async function createMainRecordsFromDr(report) {
 
   for (const si of (report.sideIncomes || [])) {
     if (!si.amount) continue;
-    const siMethod = si.method === "Карта" ? "Карта" : "Кеш";
+    const siMethod = si.method === "Карта" ? "Карта" : si.method === "Банков превод" ? "Банков превод" : "Кеш";
     const ref = await addDoc(collection(db, "records"), {
       date: report.date, type: "Приход", method: siMethod,
       amount: si.amount, store, category: "Друг приход",
@@ -3697,7 +3716,9 @@ async function saveClosedReportEdits() {
     cashGoodsExpense: data.cashGoodsExpense || 0, cashOtherExpense: data.cashOtherExpense || 0, cashExpenseTotal: data.cashExpenseTotal || 0,
     cardGoodsExpense: data.cardGoodsExpense || 0, cardOtherExpense: data.cardOtherExpense || 0, cardExpenseTotal: data.cardExpenseTotal || 0,
     bankGoodsExpense: data.bankGoodsExpense || 0, bankOtherExpense: data.bankOtherExpense || 0, bankExpenseTotal: data.bankExpenseTotal || 0,
-    totalSideIncomes: data.totalSideIncomes, totalAdvances: data.totalAdvances,
+    totalSideIncomes: data.totalSideIncomes,
+    cashSideIncomes: data.cashSideIncomes || 0, cardSideIncomes: data.cardSideIncomes || 0, bankSideIncomes: data.bankSideIncomes || 0,
+    totalAdvances: data.totalAdvances,
     endCash: _drData.endCash,
     createdBy: _drData.createdBy, createdAt: _drData.createdAt,
     lastModifiedBy: currentUserId, lastModifiedAt: now,
