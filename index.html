@@ -727,7 +727,6 @@
     <!-- Tabs -->
     <div class="wh-owner-tabs">
       <button class="wage-tab active" data-tab="month"   onclick="wageSetTab('month')">По месец</button>
-      <button class="wage-tab"        data-tab="payroll" onclick="wageSetTab('payroll')">💰 Ведомост</button>
       <button class="wage-tab"        data-tab="summary" onclick="wageSetTab('summary')">Обобщение</button>
       <button class="wage-tab"        data-tab="history" onclick="wageSetTab('history')">История</button>
     </div>
@@ -748,50 +747,6 @@
         </table>
       </div>
     </div>
-
-    <!-- Tab: Ведомост -->
-    <div id="wageTabPayroll" class="hidden">
-
-      <!-- Месец + действия -->
-      <div class="wh-owner-month-nav" style="margin-top:10px;">
-        <button class="wh-month-btn" onclick="salChangeMonth(-1)">&#8249;</button>
-        <span id="salMonthLabel" class="wh-month-label">—</span>
-        <button class="wh-month-btn" onclick="salChangeMonth(1)">&#8250;</button>
-        <input type="month" id="salMonthPicker" class="wh-month-input" onchange="salMonthInput()">
-      </div>
-
-      <div class="wh-toolbar">
-        <button class="btn-primary wh-tool-btn" id="genPayrollBtn" onclick="generatePayroll()">
-          <i class="fa-solid fa-bolt"></i> Генерирай ведомост
-        </button>
-        <button class="btn-secondary wh-tool-btn" onclick="exportPayrollPdf()">
-          <i class="fa-solid fa-print"></i> PDF
-        </button>
-        <button class="btn-secondary wh-tool-btn" onclick="exportPayrollExcel()">
-          <i class="fa-solid fa-file-excel"></i> Excel
-        </button>
-        <button class="btn-secondary wh-tool-btn" onclick="exportAllSalarySlips()">
-          <i class="fa-solid fa-file-pdf"></i> Всички фишове
-        </button>
-      </div>
-
-      <!-- Таблица -->
-      <div class="table-responsive">
-        <table class="wh-wage-table sal-payroll-table">
-          <thead>
-            <tr>
-              <th>Служител</th><th>Маг.</th><th>Часове</th><th>Ставка</th>
-              <th>База</th><th>Бонуси</th><th>Удръжки</th><th>Бруто</th>
-              <th>Статус</th><th>—</th>
-            </tr>
-          </thead>
-          <tbody id="payrollTableBody">
-            <tr><td colspan="10" class="tasks-empty">Зареждане...</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-    </div><!-- /wageTabPayroll -->
 
     <!-- Tab: Обобщение -->
     <div id="wageTabSummary" class="hidden">
@@ -1316,130 +1271,6 @@
       </button>
     </div>
   </div>
-</div>
-
-<!-- ── Salary Edit Modal ────────────────────────── -->
-<div id="salaryModal" class="hidden">
-  <div class="dr-detail-backdrop" onclick="closeSalaryModal()"></div>
-  <div class="sal-modal-panel">
-
-    <div class="dr-detail-header">
-      <span id="salModalTitle" class="dr-detail-title-text">Заплата</span>
-      <button class="dr-detail-close" onclick="closeSalaryModal()">✖</button>
-    </div>
-
-    <div class="sal-modal-body">
-
-      <!-- Секция 1: База -->
-      <div class="sal-section">
-        <div class="sal-section-title">💼 База</div>
-        <div class="sal-base-grid">
-          <div class="sal-base-row">
-            <span class="sal-base-label">Часове (от графика):</span>
-            <span id="salBaseHours" class="sal-base-val mono">0</span>
-          </div>
-          <div class="sal-base-row">
-            <span class="sal-base-label">Ставка (€/час):</span>
-            <input type="number" id="salBaseRate" class="sal-rate-input"
-                   min="0" step="0.01" placeholder="0.00" oninput="calcSalaryTotal()">
-          </div>
-          <div class="sal-base-row sal-base-result">
-            <span class="sal-base-label">База:</span>
-            <span id="salCalcBaseInline" class="sal-base-val mono pos">0.00 €</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Секция 2: Плюсове -->
-      <div class="sal-section">
-        <div class="sal-section-title">➕ Плюсове (бонуси)</div>
-        <div id="salBonusList"></div>
-        <button class="btn-secondary sal-add-btn" id="salAddBonusBtn" onclick="addBonus()">
-          <i class="fa-solid fa-plus"></i> Добави плюс
-        </button>
-      </div>
-
-      <!-- Секция 3: Минуси -->
-      <div class="sal-section">
-        <div class="sal-section-title">➖ Удръжки</div>
-        <div id="salDeductionList"></div>
-        <button class="btn-secondary sal-add-btn" id="salAddDedBtn" onclick="addDeduction()">
-          <i class="fa-solid fa-plus"></i> Добави удръжка
-        </button>
-      </div>
-
-      <!-- Секция 4: Обобщение -->
-      <div class="sal-section sal-summary-section">
-        <div class="sal-summary-row">
-          <span>База:</span>
-          <span id="salCalcBase" class="mono">0.00 €</span>
-        </div>
-        <div class="sal-summary-row">
-          <span>Плюсове:</span>
-          <span id="salCalcBonuses" class="mono pos">+0.00 €</span>
-        </div>
-        <div class="sal-summary-row">
-          <span>Удръжки:</span>
-          <span id="salCalcDeductions" class="mono neg">-0.00 €</span>
-        </div>
-        <div class="sal-summary-divider"></div>
-        <div class="sal-summary-row sal-summary-final">
-          <span>БРУТНА ЗАПЛАТА:</span>
-          <span id="salCalcGross" class="mono">0.00 €</span>
-        </div>
-        <div id="salNegativeWarn" class="hidden sal-warn">
-          ⚠️ Вниание: брутната заплата е отрицателна!
-        </div>
-      </div>
-
-      <!-- Секция 5: Начин на изплащане -->
-      <div class="sal-section">
-        <div class="sal-section-title">💳 Начин на изплащане</div>
-        <div class="sal-base-grid">
-          <div class="sal-base-row">
-            <span class="sal-base-label">По банков път (€):</span>
-            <input type="number" id="salBankAmount" class="sal-rate-input"
-                   min="0" step="0.01" placeholder="0.00" oninput="calcSalaryTotal()">
-          </div>
-          <div class="sal-base-row">
-            <span class="sal-base-label">В брой (€):</span>
-            <span id="salCashAmount" class="sal-base-val mono">0.00 €</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Секция 6: Бележки -->
-      <div class="sal-section">
-        <div class="sal-section-title">📝 Бележки</div>
-        <textarea id="salNotes" class="sal-notes-input" rows="2"
-                  placeholder="Допълнителни бележки за фиша..."></textarea>
-      </div>
-
-      <!-- История на промени -->
-      <div class="sal-section">
-        <div class="sal-section-title sal-log-toggle" onclick="document.getElementById('salChangeLog').classList.toggle('hidden')">
-          📋 История на промените <span class="sal-log-arrow">▾</span>
-        </div>
-        <div id="salChangeLog" class="hidden"></div>
-      </div>
-
-    </div><!-- /sal-modal-body -->
-
-    <div class="dr-detail-footer">
-      <button id="salReopenBtn" class="btn-amber" onclick="reopenSalaryForEdit()"
-              style="margin-right:auto;display:none">
-        <i class="fa-solid fa-lock-open"></i> Отвори за редакция
-      </button>
-      <button class="btn-secondary" onclick="closeSalaryModal()">Откажи</button>
-      <button id="salSaveBtn" class="btn-secondary" onclick="saveSalary()">
-        <i class="fa-solid fa-floppy-disk"></i> Запази
-      </button>
-      <button id="salMarkPaidBtn" class="btn-primary" onclick="markSalaryPaid()">
-        <i class="fa-solid fa-check-circle"></i> Маркирай платена
-      </button>
-    </div>
-
-  </div><!-- /sal-modal-panel -->
 </div>
 
 <!-- ── Finalize Salary Modal ────────────────────── -->

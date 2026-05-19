@@ -2982,23 +2982,6 @@ body.light .wage-rate-input      { background: #fff; }
    MODULE 5 — ВЕДОМОСТ И ЗАПЛАТИ
    ════════════════════════════════════════════════════════ */
 
-/* ── Payroll table (inside wage tab) ─────────────────── */
-.sal-payroll-table {
-  width: 100%; border-collapse: collapse; font-size: .85rem;
-}
-.sal-payroll-table th {
-  background: var(--bg3); color: var(--text2); padding: 9px 10px;
-  font-size: .73rem; text-transform: uppercase; letter-spacing: .04em;
-  border-bottom: 1px solid var(--border2); text-align: left; white-space: nowrap;
-}
-.sal-payroll-table td {
-  padding: 9px 10px; border-bottom: 1px solid var(--border);
-  color: var(--text); vertical-align: middle;
-}
-.sal-payroll-table tr:last-child td { border-bottom: none; }
-.sal-payroll-table tr:hover td     { background: var(--bg3); }
-.sal-payroll-table .text-right     { text-align: right; }
-
 /* ── Status badges ───────────────────────────────────── */
 .sal-status-badge {
   display: inline-block; padding: 3px 9px; border-radius: 12px;
@@ -3025,13 +3008,6 @@ body.light .wage-rate-input      { background: #fff; }
 /* ── Finalize modal panel ────────────────────────────── */
 #finalizeSalModal { position: fixed; inset: 0; z-index: 999; }
 
-/* ── Salary modal panel ──────────────────────────────── */
-#salaryModal {
-  position: fixed; inset: 0; z-index: 1100;
-  display: flex; align-items: flex-end; justify-content: center;
-}
-#salaryModal.hidden { display: none; }
-
 .sal-modal-panel {
   position: relative; width: 100%; max-width: 520px;
   max-height: 90dvh; overflow: hidden;
@@ -3045,7 +3021,6 @@ body.light .wage-rate-input      { background: #fff; }
     border-radius: 14px; max-height: 88dvh;
     margin: auto; align-self: center;
   }
-  #salaryModal { align-items: center; }
 }
 
 .sal-modal-header {
@@ -3416,7 +3391,6 @@ body.light .sal-item-row select,
 body.light .sal-item-row input   { background: #fff; border-color: #ccd3db; }
 body.light .sal-draft            { background: #deedf7; color: #1a6fa0; border-color: #aacde8; }
 body.light .sal-paid             { background: #d6f0e2; color: #1a6a44; border-color: #a0d8bc; }
-body.light .sal-payroll-table th { background: #f0f2f5; }
 body.light .sal-month-card       { background: #fff; border-color: #dde1e7; }
 body.light .sal-progress-wrap    { background: #e4e8ee; }
 body.light .sal-emp-sel          { background: #fff; border-color: #ccd3db; }
@@ -3479,8 +3453,6 @@ body.light .pw-input  { background: #fff; border-color: #ccd3db; }
   /* ── Modals: max-width + backdrop blur ────────────── */
   /* drDetailModal layout is handled by #drDetailModal rules above */
   .sal-modal-panel      { max-width: 660px; border-radius: 14px; }
-  #salaryModal          { align-items: center; }
-  #salaryModal .dr-detail-backdrop { backdrop-filter: blur(5px); }
 
   /* ── whCellModal panel on desktop ────────────────── */
   .wh-cell-panel .dr-detail-panel { max-width: 480px; border-radius: 14px; }
