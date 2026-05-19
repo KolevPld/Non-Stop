@@ -1887,8 +1887,14 @@ body.admin .table-responsive.admin-only { display: block; }
 .dr-table td {
   padding: 3px 2px; vertical-align: middle; text-align: center;
 }
+.dr-table-narrow th:nth-child(1),
+.dr-table-narrow td:nth-child(1) { width: 30px; min-width: 30px; }
 .dr-table-narrow th:nth-child(2),
-.dr-table-narrow td:nth-child(2) { text-align: left; }
+.dr-table-narrow td:nth-child(2) { text-align: left; min-width: 140px; }
+.dr-table-narrow th:nth-child(3),
+.dr-table-narrow td:nth-child(3) { width: 100px; max-width: 100px; }
+.dr-table-narrow th:nth-child(4),
+.dr-table-narrow td:nth-child(4) { width: 90px; max-width: 90px; text-align: right; }
 
 .dr-num {
   color: var(--text3); font-size: .7rem;
@@ -1909,6 +1915,13 @@ body.admin .table-responsive.admin-only { display: block; }
 .dr-input:disabled { opacity: .5; cursor: not-allowed; }
 .dr-input[type="number"] { width: 68px; }
 .dr-table-narrow .dr-input[type="number"] { width: 80px; }
+.dr-method-sel { width: 96px; max-width: 100px; min-width: 82px; padding: 2px 3px; font-size: .78rem; cursor: pointer; }
+.dr-sum-breakdown {
+  display: flex; gap: 10px; flex-wrap: wrap;
+  font-size: .75rem; color: var(--text2); padding: 0 4px 6px;
+  justify-content: flex-end;
+}
+.dr-sum-breakdown.hidden { display: none; }
 
 /* ── Total Row ──────────────────────────────────── */
 .dr-total-row {
@@ -3552,12 +3565,15 @@ body.light .pw-input  { background: #fff; border-color: #ccd3db; }
   #drLeft .dr-table-shifts th:nth-child(4),
   #drLeft .dr-table-shifts td:nth-child(4) { width: 120px; }  /* Оборот */
 
-  /* ── Narrow таблици (Стоки / Други) ────────────── */
+  /* ── Narrow таблици (Стоки / Други) — 4 колони: # | Текст | Метод | Сума ── */
   #drLeft .dr-table-narrow th:nth-child(1),
   #drLeft .dr-table-narrow td:nth-child(1) { width: 40px; }
   #drLeft .dr-table-narrow th:nth-child(3),
-  #drLeft .dr-table-narrow td:nth-child(3) { width: 160px; text-align: right; }
+  #drLeft .dr-table-narrow td:nth-child(3) { width: 120px; max-width: 120px; }
+  #drLeft .dr-table-narrow th:nth-child(4),
+  #drLeft .dr-table-narrow td:nth-child(4) { width: 120px; text-align: right; }
   #drLeft .dr-table-narrow .dr-input[type="number"] { text-align: right; }
+  #drLeft .dr-table-narrow .dr-method-sel { width: 100%; font-size: 1rem; padding: 10px 4px; min-height: 48px; }
 
   /* ── Странични приходи (4 колони) ───────────────── */
   #drLeft .dr-table-side th:nth-child(1),
