@@ -56,7 +56,7 @@ exports.resetUserPassword = functions.onCall(
 
 
 // ── FCM trigger при ново напомняне ─────────────────────
-const { onDocumentCreated, onDocumentUpdated } = require('firebase-functions/v2/firestore');
+const { onDocumentCreated, onDocumentUpdated, onDocumentWritten } = require('firebase-functions/v2/firestore');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const logger = require('firebase-functions/logger');
 
@@ -757,5 +757,104 @@ exports.generateMonthlyReportManual = onCall(
       logger.error('generateMonthlyReportManual error', err);
       throw new HttpsError('internal', err.message || String(err));
     }
+  }
+);
+
+
+// ── Overtime alerts при запис на work_hours ─────────────
+exports.overtimeAlerts = onDocumentWritten(
+  { document: 'work_hours/{docId}', region: 'us-central1' },
+  async (event) => {
+    const after = event.data?.after?.data();
+    if (!after) return; // document deleted
+
+    const empId = after.employeeId;
+    const date  = after.date; // YYYY-MM-DD
+    if (!empId || !date) return;
+
+    const monthPrefix = date.slice(0, 7); // YYYY-MM
+    const [year, month] = monthPrefix.split('-');
+
+    const db = admin.firestore();
+
+    // Sum all hours for this employee for this month
+    const snap = await db.collection('work_hours')
+      .where('employeeId', '==', empId)
+      .where('date', '>=', `${monthPrefix}-01`)
+      .where('date', '<=', `${monthPrefix}-31`)
+      .get();
+
+    let totalHours = 0;
+    snap.forEach(d => { totalHours += Number(d.data().hours || 0); });
+
+    // Load employee name
+    const empDoc = await db.collection('employees').doc(empId).get();
+    if (!empDoc.exists) return;
+    const empData  = empDoc.data();
+    const empName  = empData.name || 'Служител';
+    const shopId   = empData.shopId || '';
+    const shopName = shopId === 'store1' ? 'М1' : (shopId === 'store2' ? 'М2' : '');
+
+    // Anti-spam check
+    const alertDocId = `${empId}_${monthPrefix}`;
+    const alertRef   = db.collection('overtime_alerts').doc(alertDocId);
+    const alertSnap  = await alertRef.get();
+    const sent       = alertSnap.exists ? alertSnap.data() : { sent180: false, sent200: false };
+
+    let triggered = null;
+    if (totalHours >= 200 && !sent.sent200) {
+      triggered = { level: 'critical', threshold: 200 };
+    } else if (totalHours >= 180 && !sent.sent180) {
+      triggered = { level: 'warning', threshold: 180 };
+    }
+    if (!triggered) return;
+
+    // Get owner FCM tokens
+    const usersSnap = await db.collection('users').where('role', '==', 'owner').get();
+    const ownerIds  = usersSnap.docs.map(d => d.id);
+    if (!ownerIds.length) return;
+
+    const allTokens = [];
+    for (let i = 0; i < ownerIds.length; i += 10) {
+      const chunk = ownerIds.slice(i, i + 10);
+      const tSnap = await db.collection('fcmTokens').where('userId', 'in', chunk).get();
+      tSnap.forEach(d => { const t = d.data().token; if (t) allTokens.push(t); });
+    }
+    if (!allTokens.length) {
+      logger.warn('overtimeAlerts: no owner FCM tokens');
+    } else {
+      const icon  = triggered.level === 'critical' ? '🔴' : '🟠';
+      const title = `${icon} Overtime — ${empName} (${shopName})`;
+      const body  = `${empName} достигна ${totalHours.toFixed(1)}ч за ${monthPrefix} (праг: ${triggered.threshold}ч)`;
+
+      const resp = await admin.messaging().sendEachForMulticast({
+        notification: { title, body },
+        webpush: {
+          fcmOptions: { link: '/' },
+          notification: {
+            icon: '/icon-192.png',
+            badge: '/icon-192.png',
+            requireInteraction: true,
+            tag: `overtime-${empId}-${monthPrefix}-${triggered.threshold}`
+          }
+        },
+        tokens: allTokens
+      });
+      logger.info('overtimeAlerts FCM sent', {
+        empId, empName, totalHours, threshold: triggered.threshold,
+        success: resp.successCount, failure: resp.failureCount
+      });
+    }
+
+    // Mark threshold as sent (merge so both flags accumulate)
+    await alertRef.set({
+      employeeId:  empId,
+      employeeName: empName,
+      year, month,
+      totalHours,
+      sent180: triggered.threshold === 180 ? true : (sent.sent180 || false),
+      sent200: triggered.threshold === 200 ? true : (sent.sent200 || false),
+      lastTriggeredAt: admin.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
   }
 );

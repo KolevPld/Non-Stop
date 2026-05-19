@@ -6021,9 +6021,12 @@ function renderPayrollHistTable(el) {
       : docId ? `<span class="pw-saved-dot" title="Запазено">✓</span>`
                : `<span class="pw-pending-dot" title="Не е запазено">⏳</span>`;
     const fv = v => v > 0 ? v.toFixed(2) : "";
-    return `<tr data-idx="${idx}" data-store="${emp.shopId}" class="${!hasVal?"pw-empty-row":""}">
+    const otClass = hours >= 200 ? "row-ot-critical" : hours >= 180 ? "row-ot-warning" : "";
+    const otIcon  = hours >= 200 ? " 🔴" : hours >= 180 ? " 🟠" : "";
+    const trClass = [!hasVal ? "pw-empty-row" : "", otClass].filter(Boolean).join(" ");
+    return `<tr data-idx="${idx}" data-store="${emp.shopId}" class="${trClass}">
       <td class="pw-no">${no++}</td>
-      <td class="pw-name">${escHtml(emp.name)}</td>
+      <td class="pw-name">${escHtml(emp.name)}${otIcon}</td>
       <td class="pw-store">${store}</td>
       <td><input id="pw_h_${idx}"   class="pw-input" type="number" min="0" step="0.5"   value="${hours||""}"           oninput="onPayrollInput(${idx},'h')"></td>
       <td><input id="pw_s_${idx}"   class="pw-input" type="number" min="0" step="0.01"  value="${sAmount>0?sAmount.toFixed(2):""}"  oninput="onPayrollInput(${idx},'')"></td>
@@ -6069,7 +6072,8 @@ function renderPayrollHistTable(el) {
       </tr></thead>
       <tbody>${rowsHtml}</tbody>
       <tfoot id="pw-tfoot"></tfoot>
-    </table></div>`;
+    </table></div>
+    <div class="pw-ot-legend">🟠 &ge; 180ч &nbsp;&nbsp; 🔴 &ge; 200ч</div>`;
 
   updatePayrollTotals();
 }

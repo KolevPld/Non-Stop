@@ -3432,6 +3432,22 @@ body.light .pw-total-row td,
 body.light .pw-sub-row td { background: #f0f2f5; }
 body.light .pw-input  { background: #fff; border-color: #ccd3db; }
 
+/* ── Overtime row indicators ─────────────────────────── */
+.pw-table tbody tr.row-ot-warning td { background: rgba(255,167,38,.15); }
+.pw-table tbody tr.row-ot-warning:hover td { background: rgba(255,167,38,.25); }
+.pw-table tbody tr.row-ot-critical td { background: rgba(244,67,54,.18); }
+.pw-table tbody tr.row-ot-critical:hover td { background: rgba(244,67,54,.28); }
+/* sticky columns keep their own tint on overtime rows */
+.pw-table tbody tr.row-ot-warning .pw-no,
+.pw-table tbody tr.row-ot-warning .pw-name { background: rgba(255,167,38,.2); }
+.pw-table tbody tr.row-ot-critical .pw-no,
+.pw-table tbody tr.row-ot-critical .pw-name { background: rgba(244,67,54,.22); }
+
+.pw-ot-legend {
+  font-size: .75rem; color: var(--text2);
+  padding: 6px 12px 2px; text-align: right;
+}
+
 /* ════════════════════════════════════════════════════════════
    DESKTOP LAYOUT — min-width: 1024px
    (мобилният изглед под 1024px е непроменен)
