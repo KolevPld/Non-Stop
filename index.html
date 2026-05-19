@@ -965,7 +965,7 @@
           <div class="table-responsive">
             <table class="dr-table dr-table-narrow">
               <thead>
-                <tr><th>#</th><th>Фирма / Доставчик</th><th>Сума (€)</th></tr>
+                <tr><th>#</th><th>Фирма / Доставчик</th><th>Метод</th><th>Сума (€)</th></tr>
               </thead>
               <tbody id="drGoodsBody"></tbody>
             </table>
@@ -973,7 +973,7 @@
           <div class="table-responsive">
             <table class="dr-table dr-table-narrow">
               <thead>
-                <tr><th>#</th><th>Фирма / Доставчик</th><th>Сума (€)</th></tr>
+                <tr><th>#</th><th>Фирма / Доставчик</th><th>Метод</th><th>Сума (€)</th></tr>
               </thead>
               <tbody id="drGoodsBodyRight"></tbody>
             </table>
@@ -991,12 +991,12 @@
         <div class="table-responsive">
           <table class="dr-table dr-table-narrow">
             <thead>
-              <tr><th>#</th><th>Описание</th><th>Сума (€)</th></tr>
+              <tr><th>#</th><th>Описание</th><th>Метод</th><th>Сума (€)</th></tr>
             </thead>
             <tbody id="drOtherBody"></tbody>
             <tfoot>
               <tr class="dr-total-row">
-                <td colspan="2"><strong>Общо други</strong></td>
+                <td colspan="3"><strong>Общо други</strong></td>
                 <td id="drTotalOther" class="mono">0.00</td>
               </tr>
             </tfoot>
@@ -1051,6 +1051,11 @@
         <div class="dr-sum-row">
           <span>− Общо разходи</span>
           <span id="drSumExpenses" class="mono neg">0.00 €</span>
+        </div>
+        <div id="drSumExpensesBreakdown" class="dr-sum-breakdown hidden">
+          <span>Кеш: <span id="drSumExpensesCash" class="mono">0.00 €</span></span>
+          <span>Карта: <span id="drSumExpensesCard" class="mono">0.00 €</span></span>
+          <span>Банков: <span id="drSumExpensesBank" class="mono">0.00 €</span></span>
         </div>
         <div class="dr-sum-row">
           <span>− Общо аванси</span>

@@ -2864,6 +2864,11 @@ function renderDrGoodsTable() {
                  onkeydown="supplKeyDown(${i}, event)">
         </div>
       </td>
+      <td><select class="dr-input dr-method-sel" data-goods="${i}" data-field="method" oninput="drCalc()">
+        <option value="Кеш">💵 Кеш</option>
+        <option value="Карта">💳 Карта</option>
+        <option value="Банков превод">🏦 Банков</option>
+      </select></td>
       <td><input type="number" class="dr-input mono" step="0.01" placeholder="0.00" data-goods="${i}" data-field="amount" oninput="drCalc()"></td>
     </tr>`;
   tbody.innerHTML = Array.from({ length: split }, (_, i) => row(i)).join("");
@@ -2890,6 +2895,11 @@ function renderDrOtherTable() {
     <tr>
       <td class="dr-num">${i + 1}</td>
       <td><input type="text" class="dr-input" placeholder="Описание" list="drOtherDescList" data-other="${i}" data-field="desc"></td>
+      <td><select class="dr-input dr-method-sel" data-other="${i}" data-field="method" oninput="drCalc()">
+        <option value="Кеш">💵 Кеш</option>
+        <option value="Карта">💳 Карта</option>
+        <option value="Банков превод">🏦 Банков</option>
+      </select></td>
       <td><input type="number" class="dr-input mono" step="0.01" placeholder="0.00" data-other="${i}" data-field="amount" oninput="drCalc()"></td>
     </tr>`).join("");
 }
@@ -2966,11 +2976,13 @@ function collectDrData() {
 
   const expensesGoods = Array.from({ length: DR_GOODS }, (_, i) => ({
     supplier: drField("goods", i, "supplier") || "",
+    method:   drField("goods", i, "method")   || "Кеш",
     amount:   parseFloat(drField("goods", i, "amount")) || 0
   })).filter(g => g.supplier || g.amount > 0);
 
   const expensesOther = Array.from({ length: DR_OTHER }, (_, i) => ({
-    description: drField("other", i, "desc") || "",
+    description: drField("other", i, "desc")   || "",
+    method:      drField("other", i, "method") || "Кеш",
     amount:      parseFloat(drField("other", i, "amount")) || 0
   })).filter(o => o.description || o.amount > 0);
 
@@ -2995,16 +3007,28 @@ function collectDrData() {
   const totalPosIncome       = r2(shifts.reduce((s, sh) => s + sh.pos, 0));
   const totalGoodsExpense    = r2(expensesGoods.reduce((s, g) => s + g.amount, 0));
   const totalOtherExpense    = r2(expensesOther.reduce((s, o) => s + o.amount, 0));
+  const cashGoodsExpense     = r2(expensesGoods.filter(g => (g.method || "Кеш") !== "Карта" && (g.method || "Кеш") !== "Банков превод").reduce((s, g) => s + g.amount, 0));
+  const cashOtherExpense     = r2(expensesOther.filter(o => (o.method || "Кеш") !== "Карта" && (o.method || "Кеш") !== "Банков превод").reduce((s, o) => s + o.amount, 0));
+  const cardGoodsExpense     = r2(expensesGoods.filter(g => g.method === "Карта").reduce((s, g) => s + g.amount, 0));
+  const cardOtherExpense     = r2(expensesOther.filter(o => o.method === "Карта").reduce((s, o) => s + o.amount, 0));
+  const bankGoodsExpense     = r2(expensesGoods.filter(g => g.method === "Банков превод").reduce((s, g) => s + g.amount, 0));
+  const bankOtherExpense     = r2(expensesOther.filter(o => o.method === "Банков превод").reduce((s, o) => s + o.amount, 0));
+  const cashExpenseTotal     = r2(cashGoodsExpense + cashOtherExpense);
+  const cardExpenseTotal     = r2(cardGoodsExpense + cardOtherExpense);
+  const bankExpenseTotal     = r2(bankGoodsExpense + bankOtherExpense);
   const totalSideIncomes     = r2(sideIncomes.reduce((s, si) => s + si.amount, 0));
   const totalSideIncomesCash = r2(sideIncomes.filter(si => si.method === "Кеш").reduce((s, si) => s + si.amount, 0));
   const totalAdvances        = r2(advances.reduce((s, a) => s + a.amount, 0));
-  const endCash = r2(startCash + totalCashIncome + totalSideIncomesCash - totalGoodsExpense - totalOtherExpense - totalAdvances);
+  const endCash = r2(startCash + totalCashIncome + totalSideIncomesCash - cashExpenseTotal - totalAdvances);
 
   return {
     shopId: _drShopId, date, startCash, shifts,
     expensesGoods, expensesOther, sideIncomes, advances,
     totalCashIncome, totalPosIncome,
     totalGoodsExpense, totalOtherExpense,
+    cashGoodsExpense, cashOtherExpense, cashExpenseTotal,
+    cardGoodsExpense, cardOtherExpense, cardExpenseTotal,
+    bankGoodsExpense, bankOtherExpense, bankExpenseTotal,
     totalSideIncomes, totalSideIncomesCash, totalAdvances, endCash
   };
 }
@@ -3051,6 +3075,19 @@ window.drCalc = function() {
   setText("drSumSideIncome", (d.totalSideIncomes || 0).toFixed(2) + " €");
   setText("drSumExpenses",   r2(d.totalGoodsExpense + d.totalOtherExpense).toFixed(2) + " €");
   setText("drSumAdvances",   (d.totalAdvances    || 0).toFixed(2) + " €");
+
+  const hasNonCash = (d.cardExpenseTotal || 0) > 0 || (d.bankExpenseTotal || 0) > 0;
+  const brkDiv = document.getElementById("drSumExpensesBreakdown");
+  if (brkDiv) {
+    if (hasNonCash) {
+      setText("drSumExpensesCash", (d.cashExpenseTotal || 0).toFixed(2) + " €");
+      setText("drSumExpensesCard", (d.cardExpenseTotal || 0).toFixed(2) + " €");
+      setText("drSumExpensesBank", (d.bankExpenseTotal || 0).toFixed(2) + " €");
+      brkDiv.classList.remove("hidden");
+    } else {
+      brkDiv.classList.add("hidden");
+    }
+  }
 
   const endEl = document.getElementById("drSumEnding");
   if (endEl) {
@@ -3147,6 +3184,7 @@ function populateDrForm(data) {
   for (let i = 0; i < DR_GOODS; i++) {
     const g = goods[i] || {};
     setDrField("goods", i, "supplier", g.supplier || "");
+    setDrField("goods", i, "method",   g.method   || "Кеш");
     setDrField("goods", i, "amount",   g.amount   || "");
   }
 
@@ -3154,6 +3192,7 @@ function populateDrForm(data) {
   for (let i = 0; i < DR_OTHER; i++) {
     const o = other[i] || {};
     setDrField("other", i, "desc",   o.description || "");
+    setDrField("other", i, "method", o.method      || "Кеш");
     setDrField("other", i, "amount", o.amount       || "");
   }
 
@@ -3455,6 +3494,15 @@ async function persistReport(status) {
     totalPosIncome:      data.totalPosIncome,
     totalGoodsExpense:   data.totalGoodsExpense,
     totalOtherExpense:   data.totalOtherExpense,
+    cashGoodsExpense:    data.cashGoodsExpense   || 0,
+    cashOtherExpense:    data.cashOtherExpense   || 0,
+    cashExpenseTotal:    data.cashExpenseTotal   || 0,
+    cardGoodsExpense:    data.cardGoodsExpense   || 0,
+    cardOtherExpense:    data.cardOtherExpense   || 0,
+    cardExpenseTotal:    data.cardExpenseTotal   || 0,
+    bankGoodsExpense:    data.bankGoodsExpense   || 0,
+    bankOtherExpense:    data.bankOtherExpense   || 0,
+    bankExpenseTotal:    data.bankExpenseTotal   || 0,
     totalSideIncomes:    data.totalSideIncomes,
     totalAdvances:       data.totalAdvances,
     endCash:             data.endCash,
@@ -3531,24 +3579,36 @@ async function createMainRecordsFromDr(report) {
     ids.push(ref.id);
   }
 
-  if (report.totalGoodsExpense > 0) {
-    const suppNames = (report.expensesGoods || [])
-      .filter(g => g.amount > 0 && g.supplier)
-      .map(g => g.supplier).join(", ") || note;
+  const goodsByMethod = {};
+  for (const g of (report.expensesGoods || [])) {
+    if (!g.amount) continue;
+    const m = g.method || "Кеш";
+    if (!goodsByMethod[m]) goodsByMethod[m] = { total: 0, names: [] };
+    goodsByMethod[m].total += g.amount;
+    if (g.supplier) goodsByMethod[m].names.push(g.supplier);
+  }
+  for (const [method, data] of Object.entries(goodsByMethod)) {
+    const suppNames = data.names.join(", ") || note;
     const ref = await addDoc(collection(db, "records"), {
-      date: report.date, type: "Разход", method: "Кеш",
-      amount: report.totalGoodsExpense, store, category: "Стока", note: suppNames, imageUrl: "", ...drMeta
+      date: report.date, type: "Разход", method,
+      amount: r2(data.total), store, category: "Стока", note: suppNames, imageUrl: "", ...drMeta
     });
     ids.push(ref.id);
   }
 
-  if (report.totalOtherExpense > 0) {
-    const otherNote = (report.expensesOther || [])
-      .filter(o => o.amount > 0 && o.description)
-      .map(o => o.description).join(", ") || note;
+  const otherByMethod = {};
+  for (const o of (report.expensesOther || [])) {
+    if (!o.amount) continue;
+    const m = o.method || "Кеш";
+    if (!otherByMethod[m]) otherByMethod[m] = { total: 0, descs: [] };
+    otherByMethod[m].total += o.amount;
+    if (o.description) otherByMethod[m].descs.push(o.description);
+  }
+  for (const [method, data] of Object.entries(otherByMethod)) {
+    const otherNote = data.descs.join(", ") || note;
     const ref = await addDoc(collection(db, "records"), {
-      date: report.date, type: "Разход", method: "Кеш",
-      amount: report.totalOtherExpense, store, category: "Друго", note: otherNote, imageUrl: "", ...drMeta
+      date: report.date, type: "Разход", method,
+      amount: r2(data.total), store, category: "Друго", note: otherNote, imageUrl: "", ...drMeta
     });
     ids.push(ref.id);
   }
@@ -3634,6 +3694,9 @@ async function saveClosedReportEdits() {
     sideIncomes: data.sideIncomes, advances: data.advances,
     totalCashIncome: data.totalCashIncome, totalPosIncome: data.totalPosIncome,
     totalGoodsExpense: data.totalGoodsExpense, totalOtherExpense: data.totalOtherExpense,
+    cashGoodsExpense: data.cashGoodsExpense || 0, cashOtherExpense: data.cashOtherExpense || 0, cashExpenseTotal: data.cashExpenseTotal || 0,
+    cardGoodsExpense: data.cardGoodsExpense || 0, cardOtherExpense: data.cardOtherExpense || 0, cardExpenseTotal: data.cardExpenseTotal || 0,
+    bankGoodsExpense: data.bankGoodsExpense || 0, bankOtherExpense: data.bankOtherExpense || 0, bankExpenseTotal: data.bankExpenseTotal || 0,
     totalSideIncomes: data.totalSideIncomes, totalAdvances: data.totalAdvances,
     endCash: _drData.endCash,
     createdBy: _drData.createdBy, createdAt: _drData.createdAt,
