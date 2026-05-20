@@ -2886,7 +2886,7 @@ function renderDrGoodsTable() {
         </div>
       </td>
       <td><select class="dr-input dr-method-sel" data-goods="${i}" data-field="method" oninput="drCalc()">
-        <option value="Кеш">💵 Кеш</option>
+        <option value="Кеш" selected>💵 Кеш</option>
         <option value="Карта">💳 Карта</option>
         <option value="Банков превод">🏦 Банков</option>
       </select></td>
@@ -2917,7 +2917,7 @@ function renderDrOtherTable() {
       <td class="dr-num">${i + 1}</td>
       <td><input type="text" class="dr-input" placeholder="Описание" list="drOtherDescList" data-other="${i}" data-field="desc"></td>
       <td><select class="dr-input dr-method-sel" data-other="${i}" data-field="method" oninput="drCalc()">
-        <option value="Кеш">💵 Кеш</option>
+        <option value="Кеш" selected>💵 Кеш</option>
         <option value="Карта">💳 Карта</option>
         <option value="Банков превод">🏦 Банков</option>
       </select></td>
@@ -2933,7 +2933,7 @@ function renderDrSideIncomeTable() {
       <td class="dr-num">${i + 1}</td>
       <td><input type="text" class="dr-input" placeholder="Описание" data-side="${i}" data-field="desc"></td>
       <td><select class="dr-input dr-method-sel" data-side="${i}" data-field="method" oninput="drCalc()">
-        <option value="Кеш">💵 Кеш</option>
+        <option value="Кеш" selected>💵 Кеш</option>
         <option value="Карта">💳 Карта</option>
         <option value="Банков превод">🏦 Банков</option>
       </select></td>
@@ -3282,6 +3282,7 @@ function clearDrForm() {
   const hint = document.getElementById("drCarryoverHint");
   if (hint) hint.textContent = "";
   document.querySelectorAll(".dr-input").forEach(el => { el.value = ""; });
+  document.querySelectorAll(".dr-method-sel").forEach(sel => { sel.value = "Кеш"; });
   document.getElementById("drChangeLog")?.classList.add("hidden");
   drCalc();
 }
