@@ -2557,11 +2557,13 @@ let _drStatus    = "draft";
 let _drDocId     = null;   // Firestore document ID
 let _drData      = null;
 let _drEmployees = [];
+let _drEmployeesLoaded = false;
 let _suppliers = [];
 
 // ── Инициализация ────────────────────────────────────
 function initDailyReport(storeRole) {
   _drShopId = storeRole;
+  _drEmployeesLoaded = false;
   const num = storeRole === "store1" ? "1" : "2";
   const titleEl = document.getElementById("storeTitle");
   if (titleEl) titleEl.textContent = `Магазин ${num}`;
@@ -2829,6 +2831,25 @@ window.addEventListener("scroll", function (e) {
 }());
 
 // ── Рендиране на таблиците ───────────────────────────
+function _buildOperatorSelect(i) {
+  if (!_drEmployeesLoaded) {
+    return `<select class="dr-input dr-operator-select" data-shift="${i}" data-field="operator">
+      <option value="">⏳ Зареждане...</option>
+    </select>`;
+  }
+  if (_drEmployees.length === 0) {
+    return `<select class="dr-input dr-operator-select" data-shift="${i}" data-field="operator">
+      <option value="">— Изберете служител —</option>
+      <option value="" disabled>Няма активни служители</option>
+    </select>`;
+  }
+  const opts = _drEmployees.map(e => `<option value="${escHtml(e.name)}">${escHtml(e.name)}</option>`).join("");
+  return `<select class="dr-input dr-operator-select" data-shift="${i}" data-field="operator">
+    <option value="">— Изберете служител —</option>
+    ${opts}
+  </select>`;
+}
+
 function renderDrShiftsTable() {
   const tbody = document.getElementById("drShiftsBody");
   if (!tbody) return;
@@ -2836,7 +2857,7 @@ function renderDrShiftsTable() {
     <tr>
       <td class="dr-shift-name">${sh.name}</td>
       <td class="dr-shift-time">${sh.from}–${sh.to}</td>
-      <td><input type="text"   class="dr-input"      placeholder="Оператор" data-shift="${i}" data-field="operator"></td>
+      <td>${_buildOperatorSelect(i)}</td>
       <td class="mono dr-auto-cell" id="drShiftRev${i}">0.00</td>
       <td><input type="number" class="dr-input mono" step="0.01" placeholder="0.00" data-shift="${i}" data-field="cash"  oninput="drCalc()"></td>
       <td><input type="number" class="dr-input mono" step="0.01" placeholder="0.00" data-shift="${i}" data-field="pos"   oninput="drCalc()"></td>
@@ -2931,7 +2952,15 @@ async function loadDrEmployees() {
       .map(d => ({ id: d.id, ...d.data() }))
       .filter(e => e.active !== false)
       .sort((a, b) => (a.name || "").localeCompare(b.name || "", "bg"));
+    _drEmployeesLoaded = true;
     renderDrAdvancesTable();
+    renderDrShiftsTable();
+    if (_drData) {
+      (_drData.shifts || []).forEach((sh, i) => {
+        if (i >= DR_SHIFTS_DEF.length) return;
+        _setOperatorValue(i, sh.operator || "");
+      });
+    }
   } catch (e) { console.error("loadDrEmployees:", e); }
 }
 
@@ -3043,6 +3072,21 @@ function drField(type, idx, field) {
 function setDrField(type, idx, field, val) {
   const el = document.querySelector(`[data-${type}="${idx}"][data-field="${field}"]`);
   if (el) el.value = val ?? "";
+}
+
+function _setOperatorValue(i, operatorName) {
+  const sel = document.querySelector(`[data-shift="${i}"][data-field="operator"]`);
+  if (!sel || sel.tagName !== "SELECT") return;
+  if (operatorName) {
+    const exists = Array.from(sel.options).some(o => o.value === operatorName);
+    if (!exists) {
+      const opt = document.createElement("option");
+      opt.value = operatorName;
+      opt.textContent = `(стар) ${operatorName}`;
+      sel.add(opt, 1);
+    }
+  }
+  sel.value = operatorName || "";
 }
 
 function r2(n) { return Math.round(n * 100) / 100; }
@@ -3189,7 +3233,7 @@ function populateDrForm(data) {
 
   (data.shifts || []).forEach((sh, i) => {
     if (i >= DR_SHIFTS_DEF.length) return;
-    setDrField("shift", i, "operator", sh.operator || "");
+    _setOperatorValue(i, sh.operator || "");
     setDrField("shift", i, "cash",     sh.cash     || "");
     setDrField("shift", i, "pos",      sh.pos      || "");
     setDrField("shift", i, "plus",     sh.plus     || "");

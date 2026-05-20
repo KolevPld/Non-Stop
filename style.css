@@ -1931,6 +1931,24 @@ body.admin .table-responsive.admin-only { display: block; }
   text-align: right; font-variant-numeric: tabular-nums;
 }
 .dr-method-sel { width: 73px; max-width: 75px; min-width: 64px; padding: 2px 4px; font-size: 13px; cursor: pointer; }
+.dr-operator-select {
+  background: var(--bg, #0d121f);
+  border: 1px solid var(--border, #2a2f3a);
+  color: var(--text);
+  padding: 6px 10px;
+  border-radius: 6px;
+  width: 100%;
+  font-size: 14px;
+  cursor: pointer;
+}
+.dr-operator-select:focus {
+  border-color: var(--accent, #4caf50);
+  outline: none;
+}
+.dr-operator-select option {
+  background: var(--bg2, #1a1f2e);
+  color: var(--text);
+}
 .dr-sum-breakdown {
   display: flex; gap: 10px; flex-wrap: wrap;
   font-size: .75rem; color: var(--text2); padding: 0 4px 6px;
