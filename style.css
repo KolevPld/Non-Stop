@@ -2866,21 +2866,49 @@ body.light .dr-owner-totals-row td { background: #f0f2f5 !important; }
 .wh-mob-unit { font-size: .75rem; color: var(--text3); }
 
 /* ── Cell edit modal ─────────────────────────────── */
-.wh-cell-panel { max-width: 400px !important; }
+#whCellModal {
+  position: fixed; inset: 0; z-index: 1000;
+  display: flex; align-items: flex-end; justify-content: center;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: fadeIn .2s ease;
+}
+#whCellModal.hidden { display: none; }
+#whCellModal > .dr-detail-backdrop {
+  position: absolute; inset: 0; background: transparent; z-index: 0;
+}
+#whCellModal .wh-cell-panel {
+  position: relative; z-index: 1;
+  max-width: 480px; width: 100%;
+  box-shadow: 0 -4px 40px rgba(0, 0, 0, 0.55), 0 20px 60px rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--border2);
+}
+@media (min-width: 640px) {
+  #whCellModal { align-items: center; }
+  #whCellModal .wh-cell-panel { border-radius: 14px; }
+}
+
 .wh-cell-panel .dr-detail-body {
   padding: 16px 18px;
 }
-.wh-cell-panel .field-label { margin-top: 0; }
+.wh-cell-panel .field-label {
+  margin-top: 0;
+  color: var(--text2); font-size: .72rem;
+  text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px;
+}
 .wh-cell-panel input[type="number"],
 .wh-cell-panel input[type="text"],
 .wh-cell-panel select {
-  width: 100%; background: var(--bg3); color: var(--text);
+  width: 100%; background: var(--bg); color: var(--text);
   border: 1px solid var(--border2); border-radius: var(--radius-sm);
-  padding: 8px 10px; font-family: var(--font); font-size: .875rem;
+  padding: 10px 12px; font-family: var(--font); font-size: .875rem;
   margin-bottom: 4px;
+  transition: border-color .15s ease;
 }
 .wh-cell-panel input:focus,
-.wh-cell-panel select:focus { outline: none; border-color: var(--blue); }
+.wh-cell-panel select:focus { outline: none; border-color: var(--green); }
+.wh-cell-panel .dr-detail-close:hover { transform: scale(1.12); }
 
 /* ── Owner work hours screen ─────────────────────── */
 .wh-owner-title {
