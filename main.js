@@ -4658,7 +4658,8 @@ function whCellClass(h) {
 // ── Init (called at login for store managers) ──────────────
 function initWorkHours(shopId) {
   _whShopId = shopId;
-  _whMonth  = new Date().toISOString().slice(0, 7);
+  const _now = new Date();
+  _whMonth  = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, "0")}`;
   _whMobileDay = new Date().toISOString().slice(0, 10);
   const mobDay = document.getElementById("whMobileDay");
   if (mobDay) mobDay.value = _whMobileDay;
@@ -4798,9 +4799,11 @@ window.whToggleEmpSection = function() {
 
 // ── Month navigation ───────────────────────────────────────
 window.whChangeMonth = function(delta) {
-  const [y, m] = _whMonth.split("-").map(Number);
-  const d = new Date(y, m - 1 + delta, 1);
-  _whMonth = d.toISOString().slice(0, 7);
+  let [y, m] = _whMonth.split("-").map(Number);
+  m += delta;
+  if (m > 12) { m = 1;  y++; }
+  if (m < 1)  { m = 12; y--; }
+  _whMonth = `${y}-${String(m).padStart(2, "0")}`;
   const lbl = document.getElementById("whMonthLabel");
   if (lbl) lbl.textContent = formatMonth(_whMonth);
   loadWhData();
@@ -5130,7 +5133,8 @@ window.loadWageScreen = async function() {
   const monthInput = document.getElementById("wageMonth");
   if (!monthInput) return;
   if (!_wageMonth) {
-    _wageMonth = new Date().toISOString().slice(0, 7);
+    const _wn = new Date();
+    _wageMonth = `${_wn.getFullYear()}-${String(_wn.getMonth() + 1).padStart(2, "0")}`;
     monthInput.value = _wageMonth;
   }
   const lbl = document.getElementById("wageMonthLabel");
@@ -5139,9 +5143,11 @@ window.loadWageScreen = async function() {
 };
 
 window.wageChangeMonth = function(delta) {
-  const [y, m] = _wageMonth.split("-").map(Number);
-  const d = new Date(y, m - 1 + delta, 1);
-  _wageMonth = d.toISOString().slice(0, 7);
+  let [y, m] = _wageMonth.split("-").map(Number);
+  m += delta;
+  if (m > 12) { m = 1;  y++; }
+  if (m < 1)  { m = 12; y--; }
+  _wageMonth = `${y}-${String(m).padStart(2, "0")}`;
   const lbl = document.getElementById("wageMonthLabel");
   if (lbl) lbl.textContent = formatMonth(_wageMonth);
   const inp = document.getElementById("wageMonth");
@@ -5307,8 +5313,10 @@ async function loadWageHistory() {
     const base      = _wageMonth || new Date().toISOString().slice(0, 7);
     const [by, bm]  = base.split("-").map(Number);
     const months    = Array.from({ length: 6 }, (_, i) => {
-      const d = new Date(by, bm - 1 - i, 1);
-      return d.toISOString().slice(0, 7);
+      let mi = bm - i, yi = by;
+      if (mi < 1)  { mi += 12; yi--; }
+      if (mi > 12) { mi -= 12; yi++; }
+      return `${yi}-${String(mi).padStart(2, "0")}`;
     });
 
     // Fetch all work_hours once (no range index needed)
@@ -5573,8 +5581,9 @@ function renderPayrollHistTable(el) {
   // Generate month picker options (last 18 months)
   const now = new Date();
   const monthOpts = Array.from({ length: 18 }, (_, i) => {
-    const d   = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const val = d.toISOString().slice(0, 7);
+    let mi = now.getMonth() + 1 - i, yi = now.getFullYear();
+    while (mi < 1) { mi += 12; yi--; }
+    const val = `${yi}-${String(mi).padStart(2, "0")}`;
     return `<option value="${val}" ${val === _salHistMonth ? "selected" : ""}>${formatMonth(val)}</option>`;
   }).join("");
 
