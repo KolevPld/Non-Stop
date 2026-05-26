@@ -141,48 +141,6 @@ exports.sendTaskReminders = onSchedule(
   }
 );
 
-exports.dailyCloseReminder = onSchedule(
-  { schedule: '30 23 * * *', timeZone: 'Europe/Sofia', region: 'us-central1' },
-  async () => {
-    const db = admin.firestore();
-    const now = new Date();
-    const sofia = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Sofia' }));
-    const ymd = sofia.toISOString().slice(0, 10);
-
-    const reportsSnap = await db.collection('daily_reports')
-      .where('date', '==', ymd)
-      .get();
-
-    const closedShops = new Set();
-    reportsSnap.forEach(d => { if (d.data().status === 'closed') closedShops.add(d.data().shopId); });
-
-    const missing = ['store1', 'store2'].filter(s => !closedShops.has(s));
-    if (!missing.length) {
-      logger.info('Всички магазини са затворили деня.');
-      return;
-    }
-
-    const tokensSnap = await db.collection('fcmTokens').get();
-    const tokens = tokensSnap.docs.map(d => d.data().token).filter(Boolean);
-    if (!tokens.length) return;
-
-    const shopNames = missing.map(s => s === 'store1' ? 'Магазин 1' : 'Магазин 2').join(', ');
-    await admin.messaging().sendEachForMulticast({
-      notification: {
-        title: '⏰ Нон Стоп — Незатворен ден',
-        body:  `${shopNames} не са затворили деня (${ymd})`
-      },
-      webpush: {
-        fcmOptions: { link: '/' },
-        notification: { icon: '/icon-192.png', badge: '/icon-192.png' }
-      },
-      tokens
-    });
-    logger.info('Daily close reminder sent', { missing });
-  }
-);
-
-
 // ── Авто-прехвърляне на начална каса при затваряне на ден ─────
 exports.autoCarryStartCash = onDocumentUpdated(
   { document: 'daily_reports/{docId}', region: 'us-central1' },
