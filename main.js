@@ -6694,97 +6694,165 @@ function _mrRenderInto(el, d, monthVal) {
     : (monthVal || '');
   const cmp = d.comparison || null;
 
-  const diffAbs = (abs, lowerIsBetter) => {
-    if (abs === undefined || abs === null || isNaN(abs)) return '';
+  // Comparison helpers — skip if prev month had no data
+  const hasPrevData = cmp && cmp.prevTotals && ((cmp.prevTotals.turnover || 0) > 0 || (cmp.prevTotals.netProfit || 0) > 0);
+  const prevLabel   = (hasPrevData && cmp.prevMonth)
+    ? _mrMonthNames[(cmp.prevMonth || 1) - 1] + (cmp.prevYear ? ' ' + cmp.prevYear : '')
+    : null;
+
+  const kpiDiff = (abs, pct, lowerIsBetter) => {
+    if (!hasPrevData || abs === undefined || abs === null || isNaN(abs)) return '';
     const up  = lowerIsBetter ? abs < 0 : abs > 0;
     const col = abs === 0 ? 'var(--text2)' : up ? '#4caf50' : '#f44336';
     const arr = abs > 0 ? '▲' : abs < 0 ? '▼' : '●';
-    return '<span style="color:' + col + ';font-size:0.8rem">' + arr + (abs > 0 ? '+' : '') + _mrFmt(abs) + ' €</span>';
+    const pctStr = (pct !== undefined && pct !== null && isFinite(pct))
+      ? ' (' + (pct > 0 ? '+' : '') + pct.toFixed(1) + '%)'
+      : '';
+    return '<span class="mr-kpi-diff-val" style="color:' + col + '">'
+      + arr + ' ' + (abs > 0 ? '+' : '') + _mrFmt(abs) + ' €' + pctStr
+      + '</span>';
   };
-  const pctTxt = (pct, lowerIsBetter) => {
-    if (pct === undefined || pct === null) return '';
-    const up  = lowerIsBetter ? pct < 0 : pct > 0;
-    const col = pct === 0 ? 'var(--text2)' : up ? '#4caf50' : '#f44336';
-    return ' <span style="color:' + col + ';font-size:0.75rem">(' + (pct > 0 ? '+' : '') + pct.toFixed(1) + '%)</span>';
-  };
 
-  const perShopHtml = d.perShop ? ['store1', 'store2'].map(sid => {
-    const ps = d.perShop[sid];
-    if (!ps) return '';
-    const lbl = sid === 'store1' ? 'Магазин 1' : 'Магазин 2';
-    return '<div class="wr-compare-card">'
-      + '<div class="wr-compare-label" style="font-weight:600">' + lbl + '</div>'
-      + '<div style="font-size:0.85rem;color:var(--text2)">Оборот: <b>' + _mrFmt(ps.turnover) + '</b> €</div>'
-      + '<div style="font-size:0.85rem;color:var(--text2)">Стока: <b>' + _mrFmt(ps.stoka) + '</b> €</div>'
-      + '<div style="font-size:0.85rem;color:var(--text2)">Нетна: <b>' + _mrFmt(ps.netProfit) + '</b> €</div>'
-      + '<div style="font-size:0.85rem;color:var(--text2)">Дни: <b>' + (ps.closedDays ?? '—') + '</b></div>'
-      + '</div>';
-  }).join('') : '';
-
-  el.innerHTML = '<div style="margin-bottom:10px;color:var(--text2);font-size:0.85rem;">'
-    + monthLabel
-    + (d.generatedAt ? ' &mdash; генерирана ' + new Date(d.generatedAt.seconds * 1000).toLocaleString('bg-BG', {timeZone: 'Europe/Sofia'}) : '')
+  // ── СЕКЦИЯ 1: KPI карти ───────────────────────────────────
+  const kpiCards = [
+    {
+      label: 'Оборот',
+      val:   _mrFmt(d.totalTurnover) + ' €',
+      diff:  kpiDiff(cmp?.turnover?.abs,   cmp?.turnover?.pct,   false),
+      accent: false
+    },
+    {
+      label: 'Стока',
+      val:   _mrFmt(d.totalStoka) + ' €',
+      diff:  kpiDiff(cmp?.stoka?.abs,      cmp?.stoka?.pct,      true),
+      accent: false
+    },
+    {
+      label: 'Нетна печалба',
+      val:   _mrFmt(d.netProfit) + ' €',
+      diff:  kpiDiff(cmp?.netProfit?.abs,  cmp?.netProfit?.pct,  false),
+      accent: true
+    },
+    {
+      label: 'Затворени дни',
+      val:   String(d.closedDaysCount ?? '—'),
+      diff:  hasPrevData && (cmp?.closedDays?.abs !== undefined)
+               ? kpiDiff(cmp.closedDays.abs, null, false)
+               : '',
+      accent: false
+    }
+  ].map(c =>
+    '<div class="mr-kpi-card' + (c.accent ? ' mr-kpi-card--accent' : '') + '">'
+    + '<div class="mr-kpi-label">' + c.label + '</div>'
+    + '<div class="mr-kpi-value">' + c.val + '</div>'
+    + (c.diff
+        ? '<div class="mr-kpi-diff">' + c.diff + '</div>'
+        : (hasPrevData ? '' : '<div class="mr-kpi-diff mr-kpi-no-cmp">—</div>'))
     + '</div>'
+  ).join('');
 
-    + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;margin-bottom:14px;">'
+  // ── СЕКЦИЯ 2: Финансови детайли ───────────────────────────
+  const finRows = [
+    { label: 'Заплати',                val: _mrFmt(d.totalSalary)      + ' €', bold: false },
+    { label: 'Аванси',                 val: _mrFmt(d.totalAdvances)    + ' €', bold: false },
+    { label: 'Оставени за зареждане',  val: _mrFmt(d.totalLeftForStock)+ ' €', bold: false },
+    { label: 'ДДС за внасяне',         val: _mrFmt(d.vatDue)           + ' €', bold: true  },
+    { label: 'Корп. данък (10%)',       val: _mrFmt(d.corpTax)          + ' €', bold: true  },
+  ].map((r, i) =>
+    '<tr class="' + (i % 2 === 0 ? 'mr-tr-even' : '') + (r.bold ? ' mr-tr-bold' : '') + '">'
+    + '<td class="mr-td-label">' + r.label + '</td>'
+    + '<td class="mr-td-val">'   + r.val   + '</td>'
+    + '</tr>'
+  ).join('');
 
-    + '<div class="wr-compare-card"><div class="wr-compare-label">Оборот (€)</div>'
-    + '<div class="wr-compare-val">' + _mrFmt(d.totalTurnover) + '</div>'
-    + (cmp ? '<div class="wr-compare-diff">' + diffAbs(cmp.turnover && cmp.turnover.abs, false) + pctTxt(cmp.turnover && cmp.turnover.pct, false) + '</div>' : '')
-    + '</div>'
-
-    + '<div class="wr-compare-card"><div class="wr-compare-label">Стока (€)</div>'
-    + '<div class="wr-compare-val">' + _mrFmt(d.totalStoka) + '</div>'
-    + (cmp ? '<div class="wr-compare-diff">' + diffAbs(cmp.stoka && cmp.stoka.abs, true) + pctTxt(cmp.stoka && cmp.stoka.pct, true) + '</div>' : '')
-    + '</div>'
-
-    + '<div class="wr-compare-card"><div class="wr-compare-label">Нетна печалба (€)</div>'
-    + '<div class="wr-compare-val">' + _mrFmt(d.netProfit) + '</div>'
-    + (cmp ? '<div class="wr-compare-diff">' + diffAbs(cmp.netProfit && cmp.netProfit.abs, false) + pctTxt(cmp.netProfit && cmp.netProfit.pct, false) + '</div>' : '')
-    + '</div>'
-
-    + '<div class="wr-compare-card"><div class="wr-compare-label">Затворени дни</div>'
-    + '<div class="wr-compare-val">' + (d.closedDaysCount ?? '—') + '</div>'
-    + (cmp ? '<div class="wr-compare-diff">' + diffAbs(cmp.closedDays && cmp.closedDays.abs, false) + '</div>' : '')
-    + '</div>'
-
-    + '<div class="wr-compare-card"><div class="wr-compare-label">Заплати (€)</div>'
-    + '<div class="wr-compare-val">' + _mrFmt(d.totalSalary) + '</div></div>'
-
-    + '<div class="wr-compare-card"><div class="wr-compare-label">Аванси (€)</div>'
-    + '<div class="wr-compare-val">' + _mrFmt(d.totalAdvances) + '</div></div>'
-
-    + '<div class="wr-compare-card"><div class="wr-compare-label">Оставени за зареждане (€)</div>'
-    + '<div class="wr-compare-val">' + _mrFmt(d.totalLeftForStock) + '</div></div>'
-
-    + '<div class="wr-compare-card"><div class="wr-compare-label">ДДС дължим (€)</div>'
-    + '<div class="wr-compare-val">' + _mrFmt(d.vatDue) + '</div></div>'
-
-    + '<div class="wr-compare-card"><div class="wr-compare-label">Корп. данък (€)</div>'
-    + '<div class="wr-compare-val">' + _mrFmt(d.corpTax) + '</div></div>'
-
-    + '</div>'
-
-    + (d.bestDay || d.worstDay ? '<div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">'
-      + (d.bestDay ? '<div class="wr-compare-card" style="flex:1;min-width:150px">'
-        + '<div class="wr-compare-label">Най-добър ден</div>'
-        + '<div class="wr-compare-val" style="font-size:1rem">' + d.bestDay.date + '</div>'
-        + '<div style="color:var(--text2);font-size:0.85rem">' + _mrFmt(d.bestDay.turnover) + ' €</div></div>' : '')
-      + (d.worstDay ? '<div class="wr-compare-card" style="flex:1;min-width:150px">'
-        + '<div class="wr-compare-label">Най-слаб ден</div>'
-        + '<div class="wr-compare-val" style="font-size:1rem">' + d.worstDay.date + '</div>'
-        + '<div style="color:var(--text2);font-size:0.85rem">' + _mrFmt(d.worstDay.turnover) + ' €</div></div>' : '')
+  // ── СЕКЦИЯ 3: Най-добър / Най-лош ден ────────────────────
+  const dayBadges = (d.bestDay || d.worstDay) ? (
+    (d.bestDay ? '<div class="mr-day-badge mr-day-badge--best">'
+      + '<span class="mr-day-icon">🏆</span>'
+      + '<span class="mr-day-info"><span class="mr-day-title">Най-добър ден</span>'
+      + '<span class="mr-day-detail">' + d.bestDay.date + ' &mdash; ' + _mrFmt(d.bestDay.turnover) + ' €</span></span>'
       + '</div>' : '')
+    + (d.worstDay ? '<div class="mr-day-badge mr-day-badge--worst">'
+      + '<span class="mr-day-icon">📉</span>'
+      + '<span class="mr-day-info"><span class="mr-day-title">Най-слаб ден</span>'
+      + '<span class="mr-day-detail">' + d.worstDay.date + ' &mdash; ' + _mrFmt(d.worstDay.turnover) + ' €</span></span>'
+      + '</div>' : '')
+  ) : '';
 
-    + (perShopHtml ? '<h4 style="margin:0 0 8px;color:var(--text1)">По магазин</h4>'
-      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">'
-      + perShopHtml + '</div>' : '')
+  // ── СЕКЦИЯ 4: По магазин ──────────────────────────────────
+  let shopTableHtml = '';
+  if (d.perShop) {
+    const shops = ['store1', 'store2'].filter(sid => d.perShop[sid]);
+    if (shops.length) {
+      const totalTurnover = shops.reduce((s, sid) => s + (d.perShop[sid].turnover  || 0), 0);
+      const totalStoka    = shops.reduce((s, sid) => s + (d.perShop[sid].stoka     || 0), 0);
+      const totalNet      = shops.reduce((s, sid) => s + (d.perShop[sid].netProfit || 0), 0);
+      const totalDays     = shops.reduce((s, sid) => s + (d.perShop[sid].closedDays|| 0), 0);
 
-    + (cmp && cmp.prevTotals ? '<div style="font-size:0.82rem;color:var(--text2);margin-top:4px;">Сравнение спрямо '
-      + _mrMonthNames[(cmp.prevMonth || 1) - 1] + ' ' + cmp.prevYear
-      + ' — оборот: ' + _mrFmt(cmp.prevTotals.turnover)
-      + ' €, стока: ' + _mrFmt(cmp.prevTotals.stoka)
-      + ' €, нетна: ' + _mrFmt(cmp.prevTotals.netProfit) + ' €</div>' : '');
+      const shopRows = shops.map(sid => {
+        const ps  = d.perShop[sid];
+        const lbl = sid === 'store1' ? 'Магазин 1' : 'Магазин 2';
+        return '<tr>'
+          + '<td class="mr-td-label">' + lbl + '</td>'
+          + '<td class="mr-td-val">' + _mrFmt(ps.turnover)  + ' €</td>'
+          + '<td class="mr-td-val">' + _mrFmt(ps.stoka)     + ' €</td>'
+          + '<td class="mr-td-val">' + _mrFmt(ps.netProfit) + ' €</td>'
+          + '<td class="mr-td-val">' + (ps.closedDays ?? '—') + '</td>'
+          + '</tr>';
+      }).join('');
+
+      shopTableHtml =
+        '<tr class="mr-tr-total">'
+        + '<td class="mr-td-label">ОБЩО</td>'
+        + '<td class="mr-td-val">' + _mrFmt(totalTurnover) + ' €</td>'
+        + '<td class="mr-td-val">' + _mrFmt(totalStoka)    + ' €</td>'
+        + '<td class="mr-td-val">' + _mrFmt(totalNet)      + ' €</td>'
+        + '<td class="mr-td-val">' + totalDays + '</td>'
+        + '</tr>';
+
+      shopTableHtml = '<div class="mr-table-wrap"><table class="mr-table">'
+        + '<thead><tr>'
+        + '<th class="mr-th-label">Магазин</th>'
+        + '<th class="mr-th-val">Оборот</th>'
+        + '<th class="mr-th-val">Стока</th>'
+        + '<th class="mr-th-val">Нетна печалба</th>'
+        + '<th class="mr-th-val">Дни</th>'
+        + '</tr></thead>'
+        + '<tbody>' + shopRows + '</tbody>'
+        + '<tfoot>' + shopTableHtml + '</tfoot>'
+        + '</table></div>';
+    }
+  }
+
+  // ── Сглобяване ────────────────────────────────────────────
+  const genLine = d.generatedAt
+    ? '<div class="mr-gen-line">генерирана '
+      + new Date(d.generatedAt.seconds * 1000).toLocaleString('bg-BG', {timeZone: 'Europe/Sofia'})
+      + (prevLabel ? ' &nbsp;·&nbsp; сравнение с ' + prevLabel : '')
+      + '</div>'
+    : '';
+
+  el.innerHTML =
+    genLine
+
+    // Секция 1
+    + '<div class="mr-kpi-grid">' + kpiCards + '</div>'
+
+    // Секция 2
+    + '<div class="mr-section">'
+    + '<div class="mr-section-title">Финансови детайли</div>'
+    + '<div class="mr-table-wrap"><table class="mr-table mr-table--narrow">'
+    + '<tbody>' + finRows + '</tbody>'
+    + '</table></div>'
+    + '</div>'
+
+    // Секция 3
+    + (dayBadges ? '<div class="mr-section"><div class="mr-section-title">Дни</div>'
+      + '<div class="mr-day-badges">' + dayBadges + '</div></div>' : '')
+
+    // Секция 4
+    + (shopTableHtml ? '<div class="mr-section"><div class="mr-section-title">По магазини</div>'
+      + shopTableHtml + '</div>' : '');
 }
 
 window.loadMonthlyReport = loadMonthlyReport;

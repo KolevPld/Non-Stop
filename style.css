@@ -3978,3 +3978,94 @@ body.light .pw-input  { background: #fff; border-color: #ccd3db; }
   #wrTable thead th { background: #f0f0f0 !important; }
   #wrTable tfoot td { background: #f0f0f0 !important; }
 }
+
+/* ── Месечна справка — редизайн ─────────────────────────── */
+.mr-gen-line {
+  font-size: 0.78rem; color: var(--text2); margin-bottom: 16px;
+}
+/* KPI grid */
+.mr-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.mr-kpi-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 16px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.mr-kpi-card--accent {
+  border-color: rgba(212, 175, 55, 0.45);
+  background: rgba(212, 175, 55, 0.07);
+}
+.mr-kpi-label {
+  font-size: 0.68rem; font-weight: 600; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--text2);
+}
+.mr-kpi-value {
+  font-size: 1.6rem; font-weight: 700;
+  font-variant-numeric: tabular-nums; line-height: 1.1;
+  color: var(--text);
+}
+.mr-kpi-card--accent .mr-kpi-value { color: #d4af37; }
+.mr-kpi-diff { font-size: 0.78rem; min-height: 1.2em; }
+.mr-kpi-diff-val { font-variant-numeric: tabular-nums; }
+.mr-kpi-no-cmp { color: var(--text2); opacity: 0.5; }
+/* Sections */
+.mr-section {
+  border-top: 1px solid var(--border);
+  padding-top: 16px; margin-bottom: 20px;
+}
+.mr-section-title {
+  font-size: 0.72rem; font-weight: 600; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--text2);
+  margin-bottom: 10px;
+}
+/* Tables */
+.mr-table-wrap { overflow-x: auto; }
+.mr-table {
+  width: 100%; border-collapse: collapse;
+  font-size: 0.875rem;
+}
+.mr-th-label, .mr-th-val {
+  background: var(--bg2); color: var(--text2);
+  font-size: 0.72rem; font-weight: 600; letter-spacing: 0.04em;
+  text-transform: uppercase; padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.mr-th-val { text-align: right; font-variant-numeric: tabular-nums; }
+.mr-td-label { padding: 8px 12px; color: var(--text); }
+.mr-td-val {
+  padding: 8px 12px; text-align: right;
+  font-variant-numeric: tabular-nums; color: var(--text);
+}
+.mr-tr-even td { background: rgba(255,255,255,0.025); }
+.mr-tr-bold td { font-weight: 600; }
+.mr-tr-total td {
+  font-weight: 700; border-top: 2px solid var(--border);
+  background: var(--bg2);
+}
+.mr-table--narrow { max-width: 420px; }
+/* Day badges */
+.mr-day-badges { display: flex; gap: 12px; flex-wrap: wrap; }
+.mr-day-badge {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px 16px;
+  flex: 1; min-width: 200px;
+}
+.mr-day-badge--best  { border-color: rgba(76, 175, 80, 0.4); }
+.mr-day-badge--worst { border-color: rgba(244, 67, 54, 0.4); }
+.mr-day-icon  { font-size: 1.3rem; line-height: 1; }
+.mr-day-info  { display: flex; flex-direction: column; gap: 2px; }
+.mr-day-title { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text2); }
+.mr-day-detail { font-size: 0.9rem; font-variant-numeric: tabular-nums; color: var(--text); }
+.mr-day-badge--best  .mr-day-detail { color: #4caf50; }
+.mr-day-badge--worst .mr-day-detail { color: #f44336; }
+/* Mobile */
+@media (max-width: 640px) {
+  .mr-kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .mr-kpi-value { font-size: 1.25rem; }
+  .mr-day-badge { min-width: 140px; }
+}
