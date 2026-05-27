@@ -3979,6 +3979,17 @@ body.light .pw-input  { background: #fff; border-color: #ccd3db; }
   #wrTable tfoot td { background: #f0f0f0 !important; }
 }
 
+/* ── Reports details toggle button ──────────────────────── */
+.reports-details-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; padding: 10px 16px; margin: 4px 0 16px;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text2);
+  font-size: 0.8rem; font-weight: 500; cursor: pointer;
+  transition: background-color .15s ease, color .15s ease;
+}
+.reports-details-btn:hover { background: var(--bg3, #1e2435); color: var(--text); }
+
 /* ── Месечна справка — редизайн ─────────────────────────── */
 .mr-gen-line {
   font-size: 0.78rem; color: var(--text2); margin-bottom: 16px;

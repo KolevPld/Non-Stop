@@ -192,89 +192,7 @@
       <h2><i class="fa-solid fa-chart-pie" style="color:var(--green)"></i> Отчети</h2>
     </div>
 
-    <!-- Сравнение table — full width, same as chart -->
-    <div id="liveBalance" class="summary admin-only"></div>
-
-    <!-- Наличности & Данъчна справка accordion -->
-    <div class="summary admin-only">
-      <button class="accordion-btn" onclick="toggleFinancePanel()">
-        <span><i class="fa-solid fa-file-invoice-dollar"></i> Наличности &amp; Данъчна справка</span>
-        <span id="financeArrow" class="accordion-arrow">▾</span>
-      </button>
-      <div id="financePanel" class="hidden">
-        <div id="methodSummaryExtra"></div>
-        <div id="taxSummary"></div>
-      </div>
-    </div>
-
-
-    <!-- Filters -->
-    <div class="filters-card admin-only">
-      <div class="card-title"><i class="fa-solid fa-filter"></i> Филтри</div>
-
-      <div class="date-row">
-        <div>
-          <label>От</label>
-          <input type="date" id="startDate" onchange="applyFilters()">
-        </div>
-        <div>
-          <label>До</label>
-          <input type="date" id="endDate" onchange="applyFilters()">
-        </div>
-        <button class="btn-secondary" onclick="setCurrentMonth()" style="min-height:42px; font-size:0.75rem; white-space:nowrap; padding: 0 12px;">
-          📅 Месец
-        </button>
-      </div>
-
-      <div class="filter-grid">
-        <select id="filterType"     onchange="applyFilters()">
-          <option value="">Всички типове</option>
-          <option>Приход</option>
-          <option>Разход</option>
-        </select>
-        <select id="filterMethod"   onchange="applyFilters()">
-          <option value="">Всички методи</option>
-          <option value="Кеш">Кеш</option>
-          <option value="Банка">Банка / Карта</option>
-        </select>
-        <select id="filterCategory" onchange="applyFilters()">
-          <option value="">Всички категории</option>
-          <option>Оборот</option>
-          <option>Стока</option>
-          <option>Заплати</option>
-          <option>Наеми</option>
-          <option>Без ДДС</option>
-          <option>Митко</option>
-          <option>Велко</option>
-          <option>Пренос</option>
-          <option>Друго</option>
-        </select>
-        <select id="filterStore"    onchange="applyFilters()">
-          <option value="">Всички магазини</option>
-          <option value="1">🏪 М1</option>
-          <option value="2">🏪 М2</option>
-          <option value="КасаКеш">💰 Каса Кеш</option>
-          <option value="КасаБанка">🏦 Каса Банка</option>
-        </select>
-      </div>
-
-      <div class="filter-actions">
-        <button class="btn-secondary" onclick="clearFilters()">
-          <i class="fa-solid fa-xmark"></i> Изчисти
-        </button>
-        <button class="btn-secondary" onclick="printFilteredTable()">
-          <i class="fa-solid fa-print"></i> Принтирай
-        </button>
-        <button class="btn-secondary" onclick="exportFilteredToExcel()" style="color:var(--green);">
-          <i class="fa-solid fa-file-excel"></i> Excel
-        </button>
-      </div>
-    </div>
-
-    <!-- Filter summary -->
-    <div id="filterSummary" class="admin-only" style="display:none;"></div>
-
-    <!-- Седмична справка -->
+    <!-- Седмична справка — ВИНАГИ видима -->
     <div id="weeklyReportCard" class="card admin-only" style="margin-bottom:14px;">
       <h3 style="margin:0 0 12px;">
         <i class="fa-solid fa-calendar-week" style="color:var(--green)"></i>
@@ -300,7 +218,7 @@
       <div id="wrCompareWrap"></div>
     </div>
 
-    <!-- Месечна справка -->
+    <!-- Месечна справка — ВИНАГИ видима -->
     <div id="monthlyReportCard" class="card admin-only" style="margin-bottom:14px;">
       <h3 style="margin:0 0 12px;">
         <i class="fa-solid fa-calendar-days" style="color:#ffca28"></i>
@@ -321,24 +239,115 @@
       </div>
     </div>
 
-    <!-- Records table -->
-    <div class="table-responsive admin-only">
-      <table id="recordsTable">
-        <thead>
-          <tr>
-            <th>Дата</th>
-            <th>Тип</th>
-            <th>Сума</th>
-            <th>Метод</th>
-            <th>Магазин</th>
-            <th>Кат.</th>
-            <th>Бележка</th>
-            <th>—</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
+    <!-- Toggle бутон за детайли -->
+    <button id="reportsDetailsBtn" class="reports-details-btn" onclick="toggleReportsDetails()">
+      <i class="fa-solid fa-chevron-down"></i> Покажи детайли
+    </button>
+
+    <!-- Collapsible секция — скрита по подразбиране -->
+    <div id="reportsDetailsSection" class="hidden">
+
+      <!-- Сравнение table — full width -->
+      <div id="liveBalance" class="summary admin-only"></div>
+
+      <!-- Наличности & Данъчна справка accordion -->
+      <div class="summary admin-only">
+        <button class="accordion-btn" onclick="toggleFinancePanel()">
+          <span><i class="fa-solid fa-file-invoice-dollar"></i> Наличности &amp; Данъчна справка</span>
+          <span id="financeArrow" class="accordion-arrow">▾</span>
+        </button>
+        <div id="financePanel" class="hidden">
+          <div id="methodSummaryExtra"></div>
+          <div id="taxSummary"></div>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="filters-card admin-only">
+        <div class="card-title"><i class="fa-solid fa-filter"></i> Филтри</div>
+
+        <div class="date-row">
+          <div>
+            <label>От</label>
+            <input type="date" id="startDate" onchange="applyFilters()">
+          </div>
+          <div>
+            <label>До</label>
+            <input type="date" id="endDate" onchange="applyFilters()">
+          </div>
+          <button class="btn-secondary" onclick="setCurrentMonth()" style="min-height:42px; font-size:0.75rem; white-space:nowrap; padding: 0 12px;">
+            📅 Месец
+          </button>
+        </div>
+
+        <div class="filter-grid">
+          <select id="filterType"     onchange="applyFilters()">
+            <option value="">Всички типове</option>
+            <option>Приход</option>
+            <option>Разход</option>
+          </select>
+          <select id="filterMethod"   onchange="applyFilters()">
+            <option value="">Всички методи</option>
+            <option value="Кеш">Кеш</option>
+            <option value="Банка">Банка / Карта</option>
+          </select>
+          <select id="filterCategory" onchange="applyFilters()">
+            <option value="">Всички категории</option>
+            <option>Оборот</option>
+            <option>Стока</option>
+            <option>Заплати</option>
+            <option>Наеми</option>
+            <option>Без ДДС</option>
+            <option>Митко</option>
+            <option>Велко</option>
+            <option>Пренос</option>
+            <option>Друго</option>
+          </select>
+          <select id="filterStore"    onchange="applyFilters()">
+            <option value="">Всички магазини</option>
+            <option value="1">🏪 М1</option>
+            <option value="2">🏪 М2</option>
+            <option value="КасаКеш">💰 Каса Кеш</option>
+            <option value="КасаБанка">🏦 Каса Банка</option>
+          </select>
+        </div>
+
+        <div class="filter-actions">
+          <button class="btn-secondary" onclick="clearFilters()">
+            <i class="fa-solid fa-xmark"></i> Изчисти
+          </button>
+          <button class="btn-secondary" onclick="printFilteredTable()">
+            <i class="fa-solid fa-print"></i> Принтирай
+          </button>
+          <button class="btn-secondary" onclick="exportFilteredToExcel()" style="color:var(--green);">
+            <i class="fa-solid fa-file-excel"></i> Excel
+          </button>
+        </div>
+      </div>
+
+      <!-- Filter summary -->
+      <div id="filterSummary" class="admin-only" style="display:none;"></div>
+
+      <!-- Records table -->
+      <div class="table-responsive admin-only">
+        <table id="recordsTable">
+          <thead>
+            <tr>
+              <th>Дата</th>
+              <th>Тип</th>
+              <th>Сума</th>
+              <th>Метод</th>
+              <th>Магазин</th>
+              <th>Кат.</th>
+              <th>Бележка</th>
+              <th>—</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+    </div><!-- /reportsDetailsSection -->
 
   </div><!-- /screen-report -->
 

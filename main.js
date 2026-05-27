@@ -178,6 +178,7 @@ window.logout = function () {
 // 🔄 Глобални променливи
 // --------------------------------------------------
 let records = [];
+let _reportsDetailsLoaded = false;
 let filteredRecords = [];
 let chartRef = null;
 let editingId = null;
@@ -356,12 +357,10 @@ function refreshUI() {
   renderRecentTable();
   renderTotalSummaryCards();
   if (isAdmin) {
-    renderTable();
-    renderMethodSummary();
-    /* renderChart(); — премахнато */
-    applyFilters();
-    renderTaxSummary();
-    renderLiveBalance();
+    _reportsDetailsLoaded = false;
+    if (!document.getElementById("reportsDetailsSection")?.classList.contains("hidden")) {
+      _renderReportsDetails();
+    }
   }
 }
 
@@ -393,14 +392,13 @@ async function loadRecords() {
   });
 
   if (document.body.classList.contains("admin")) {
-    renderTable();
     renderRecentList(); renderRecentTable();
-    renderMethodSummary();
-    /* renderChart(); — премахнато */
-    applyFilters();
-    renderTaxSummary();
+    _reportsDetailsLoaded = false;
+    if (!document.getElementById("reportsDetailsSection")?.classList.contains("hidden")) {
+      _renderReportsDetails();
+    }
     window.showScreen("add"); document.getElementById("bottomNav")?.classList.remove("hidden");
-    renderLiveBalance(); renderTotalSummaryCards();
+    renderTotalSummaryCards();
   } else {
     renderRecentList(); renderRecentTable();
     window.showScreen("add"); document.getElementById("bottomNav")?.classList.remove("hidden");
@@ -1742,6 +1740,30 @@ window.toggleCustomCategory = toggleCustomCategory;
 // 🆕 НОВИ ФУНКЦИИ — редизайн 2026-03
 // ════════════════════════════════════════════════
 
+// ── Reports details — lazy render + toggle ────────────────────
+function _renderReportsDetails() {
+  renderStoreComparison();
+  renderMethodSummary();
+  renderTaxSummary();
+  applyFilters();
+  _reportsDetailsLoaded = true;
+}
+
+window.toggleReportsDetails = function() {
+  const section = document.getElementById("reportsDetailsSection");
+  const btn     = document.getElementById("reportsDetailsBtn");
+  if (!section || !btn) return;
+  const opening = section.classList.contains("hidden");
+  if (opening) {
+    section.classList.remove("hidden");
+    if (!_reportsDetailsLoaded) _renderReportsDetails();
+    btn.innerHTML = '<i class="fa-solid fa-chevron-up"></i> Скрий детайли';
+  } else {
+    section.classList.add("hidden");
+    btn.innerHTML = '<i class="fa-solid fa-chevron-down"></i> Покажи детайли';
+  }
+};
+
 // ── showScreen — единна функция (add / report / notes) ────────
 window.showScreen = function(screen) {
   const addScreen      = document.getElementById("screen-add");
@@ -1768,10 +1790,11 @@ window.showScreen = function(screen) {
     if (!isAdmin) { alert("Нямаш достъп до този екран."); return; }
     reportScreen?.classList.remove("hidden");
     document.getElementById('navReports')?.classList.add('active');
-    renderTable(); renderMethodSummary();
-    /* renderChart(); — премахнато */ applyFilters(); renderTaxSummary();
     _wrPopulateWeekSelect(); renderWeeklyReport(); _wrAutoCheckSunday();
     _mrPopulateMonthSelect(); loadMonthlyReport();
+    if (!document.getElementById("reportsDetailsSection")?.classList.contains("hidden")) {
+      _renderReportsDetails();
+    }
 
   } else if (screen === "notes") {
     notesScreen?.classList.remove("hidden");
