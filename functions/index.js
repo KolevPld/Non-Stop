@@ -538,15 +538,17 @@ async function _calcMonthlyData(year, month) {
     db.collection('records').where('date', '>=', firstDay).where('date', '<=', lastDay).get()
   ]);
 
-  const norm     = (s) => String(s ?? '').trim();
-  const normLow  = (s) => norm(s).toLowerCase();
-  const isSalary = (c) => { const v = normLow(c); return v === 'заплата' || v === 'заплати'; };
+  const norm        = (s) => String(s ?? '').trim();
+  const normLow     = (s) => norm(s).toLowerCase();
+  const isSalary    = (c) => { const v = normLow(c); return v === 'заплата' || v === 'заплати'; };
+  const isBankMethod = (m) => normLow(m).startsWith('банка');
 
   const summary = {
     period: { firstDay, lastDay, year, month },
     totalTurnover: 0, totalCash: 0, totalPos: 0,
     totalStoka: 0, totalSalary: 0, totalOtherExp: 0,
     totalSideInc: 0, totalAdvances: 0, totalLeftForStock: 0,
+    totalSalaryBank: 0,
     netProfit: 0, vatDue: 0, corpTax: 0,
     closedDaysCount: 0, closedDaysByShop: { store1: 0, store2: 0 },
     bestDay: null, worstDay: null,
@@ -589,14 +591,18 @@ async function _calcMonthlyData(year, month) {
 
   recSnap.forEach(d => {
     const r = d.data();
-    if (r.type === 'Разход' && isSalary(r.category)) summary.totalSalary += Number(r.amount || 0);
+    if (r.type === 'Разход' && isSalary(r.category)) {
+      const amt = Number(r.amount || 0);
+      summary.totalSalary += amt;
+      if (isBankMethod(r.method)) summary.totalSalaryBank += amt;
+    }
   });
 
   summary.netProfit  = summary.totalTurnover + summary.totalSideInc - summary.totalStoka -
                        summary.totalSalary - summary.totalOtherExp - summary.totalAdvances;
   summary.vatDue     = Math.max(0, summary.totalTurnover / 6 - summary.totalStoka / 6);
-  const taxNet       = (summary.totalTurnover - summary.totalStoka) / 1.20;
-  summary.corpTax    = taxNet > 0 ? taxNet * 0.10 : 0;
+  const taxBase      = (summary.totalTurnover - summary.totalStoka) / 1.20 - summary.totalSalaryBank;
+  summary.corpTax    = taxBase > 0 ? +(taxBase * 0.10).toFixed(2) : 0;
 
   for (const sid of ['store1', 'store2']) {
     const ps = summary.perShop[sid];
