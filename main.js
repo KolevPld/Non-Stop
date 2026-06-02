@@ -1209,7 +1209,7 @@ window.renderWeeklyReport = async function() {
       if (!r) {
         return `<tr>
           <td class="wr-day-name">${DAY_NAMES[i]}<br><small>${_wrFormatDate(ymd)}</small></td>
-          <td colspan="7" style="color:var(--text3);text-align:center;">(няма отчет)</td>
+          <td colspan="8" style="color:var(--text3);text-align:center;">(няма отчет)</td>
         </tr>`;
       }
       const cash  = Number(r.totalCashIncome  || 0);
@@ -1230,6 +1230,7 @@ window.renderWeeklyReport = async function() {
         : "";
       return `<tr>
         <td class="wr-day-name">${DAY_NAMES[i]}<br><small>${_wrFormatDate(ymd)}</small> ${statusBadge}</td>
+        <td>${fmt(cash + pos)}</td>
         <td>${fmt(cash)}</td>
         <td>${fmt(pos)}</td>
         <td>${fmt(cash + pos)}</td>
@@ -1256,6 +1257,7 @@ window.renderWeeklyReport = async function() {
       <thead>
         <tr>
           <th>Ден</th>
+          <th>Оборот</th>
           <th>Кеш</th>
           <th>POS</th>
           <th>Приход общо</th>
@@ -1269,6 +1271,7 @@ window.renderWeeklyReport = async function() {
       <tfoot>
         <tr>
           <td><strong>Общо</strong></td>
+          <td><strong>${totalInc.toFixed(2)}</strong></td>
           <td><strong>${totCash.toFixed(2)}</strong></td>
           <td><strong>${totPos.toFixed(2)}</strong></td>
           <td><strong>${totalInc.toFixed(2)}</strong></td>
@@ -1279,7 +1282,7 @@ window.renderWeeklyReport = async function() {
         </tr>
         <tr style="background:rgba(255,202,40,0.08)">
           <td colspan="3"><strong>Нетен резултат за седмицата:</strong></td>
-          <td colspan="5"><strong style="color:${net >= 0 ? "var(--green)" : "var(--red)"};">${net.toFixed(2)} €</strong></td>
+          <td colspan="6"><strong style="color:${net >= 0 ? "var(--green)" : "var(--red)"};">${net.toFixed(2)} €</strong></td>
         </tr>
       </tfoot>
     </table>${leftBanner}`;
@@ -1501,7 +1504,7 @@ window.exportWeeklyPDF = async function() {
     // Таблица
     const tableBody = rows.map(r => [
       `${r.date.slice(8,10)}.${r.date.slice(5,7)} (${r.dayName})${r.hasReport ? '' : ' *'}`,
-      fmt(r.cash), fmt(r.pos), fmt(r.stoka), fmt(r.otherExp),
+      fmt(r.cash + r.pos), fmt(r.cash), fmt(r.pos), fmt(r.stoka), fmt(r.otherExp),
       fmt(r.sideInc), fmt(r.avans), fmt(r.total)
     ]);
 
@@ -1510,9 +1513,9 @@ window.exportWeeklyPDF = async function() {
     }
 
     pdf.autoTable({
-      head: [['Ден', 'КЕШ', 'КАРТА', 'Стока', 'Други р.', 'Стр. прих.', 'Аванси', 'Общо']],
+      head: [['Ден', 'Оборот', 'КЕШ', 'КАРТА', 'Стока', 'Други р.', 'Стр. прих.', 'Аванси', 'Общо']],
       body: tableBody,
-      foot: [['ОБЩО', fmt(totals.cash), fmt(totals.pos), fmt(totals.stoka),
+      foot: [['ОБЩО', fmt(totals.cash + totals.pos), fmt(totals.cash), fmt(totals.pos), fmt(totals.stoka),
               fmt(totals.otherExp), fmt(totals.sideInc), fmt(totals.avans), fmt(totals.total)]],
       startY: 32,
       margin: { left: margin, right: margin },
