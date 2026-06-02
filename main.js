@@ -1209,7 +1209,7 @@ window.renderWeeklyReport = async function() {
       if (!r) {
         return `<tr>
           <td class="wr-day-name">${DAY_NAMES[i]}<br><small>${_wrFormatDate(ymd)}</small></td>
-          <td colspan="8" style="color:var(--text3);text-align:center;">(няма отчет)</td>
+          <td colspan="7" style="color:var(--text3);text-align:center;">(няма отчет)</td>
         </tr>`;
       }
       const cash  = Number(r.totalCashIncome  || 0);
@@ -1233,7 +1233,6 @@ window.renderWeeklyReport = async function() {
         <td>${fmt(cash + pos)}</td>
         <td>${fmt(cash)}</td>
         <td>${fmt(pos)}</td>
-        <td>${fmt(cash + pos)}</td>
         <td>${fmt(goods)}</td>
         <td>${fmt(other)}${leftNote}</td>
         <td>${fmt(side)}</td>
@@ -1260,7 +1259,6 @@ window.renderWeeklyReport = async function() {
           <th>Оборот</th>
           <th>Кеш</th>
           <th>POS</th>
-          <th>Приход общо</th>
           <th>Стока</th>
           <th>Друг разход</th>
           <th>Стр. приход</th>
@@ -1274,7 +1272,6 @@ window.renderWeeklyReport = async function() {
           <td><strong>${totalInc.toFixed(2)}</strong></td>
           <td><strong>${totCash.toFixed(2)}</strong></td>
           <td><strong>${totPos.toFixed(2)}</strong></td>
-          <td><strong>${totalInc.toFixed(2)}</strong></td>
           <td><strong>${totGoods.toFixed(2)}</strong></td>
           <td><strong>${totOther.toFixed(2)}</strong></td>
           <td><strong>${totSide.toFixed(2)}</strong></td>
@@ -1282,7 +1279,7 @@ window.renderWeeklyReport = async function() {
         </tr>
         <tr style="background:rgba(255,202,40,0.08)">
           <td colspan="3"><strong>Нетен резултат за седмицата:</strong></td>
-          <td colspan="6"><strong style="color:${net >= 0 ? "var(--green)" : "var(--red)"};">${net.toFixed(2)} €</strong></td>
+          <td colspan="5"><strong style="color:${net >= 0 ? "var(--green)" : "var(--red)"};">${net.toFixed(2)} €</strong></td>
         </tr>
       </tfoot>
     </table>${leftBanner}`;
