@@ -4138,6 +4138,7 @@ window.openDrDetailModal = async function(docId) {
     if (!snap.exists()) { body.innerHTML = '<div class="tasks-empty">Не е намерен.</div>'; return; }
 
     const r      = snap.data();
+    window._currentModalReport = r;
     const closed = r.status === "closed";
     const store  = r.shopId === "store1" ? "Магазин 1" : "Магазин 2";
 
@@ -4160,6 +4161,7 @@ window.openDrDetailModal = async function(docId) {
 window.closeDrDetailModal = function() {
   document.getElementById("drDetailModal")?.classList.add("hidden");
   _currentModalReportId = null;
+  window._currentModalReport = null;
 };
 
 function buildDrDetailHtml(r) {
@@ -4399,6 +4401,134 @@ window.exportReportPdf = function() {
   win.document.close();
   win.focus();
   setTimeout(() => win.print(), 400);
+};
+
+window.exportDailyPDF = async function() {
+  const r = window._currentModalReport;
+  if (!r) { alert('Отчетът не е зареден.'); return; }
+  if (typeof window.jspdf === 'undefined' || !window.jspdf.jsPDF) { alert('jsPDF не е заредена.'); return; }
+  const { jsPDF } = window.jspdf;
+
+  const shopName = r.shopId === 'store1' ? 'Магазин 1' : r.shopId === 'store2' ? 'Магазин 2' : (r.shopId || '—');
+  const date     = r.date || '';
+  const statusLabel = r.status === 'closed' ? 'Затворен' : r.status === 'draft' ? 'Чернова' : (r.status || '—');
+  const fmt = (n) => (Number(n) || 0).toFixed(2);
+
+  try {
+    await _loadRobotoFont();
+
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    pdf.addFileToVFS('DejaVuSans.ttf',      _robotoRegular);
+    pdf.addFileToVFS('DejaVuSans-Bold.ttf', _robotoBold);
+    pdf.addFont('DejaVuSans.ttf',      'DejaVuSans', 'normal');
+    pdf.addFont('DejaVuSans-Bold.ttf', 'DejaVuSans', 'bold');
+    pdf.setFont('DejaVuSans', 'normal');
+
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const margin = 14;
+
+    // Header
+    pdf.setFontSize(16); pdf.setFont('DejaVuSans', 'bold');
+    pdf.text('Нон Стоп — Дневен отчет', margin, 16);
+    pdf.setFontSize(11); pdf.setFont('DejaVuSans', 'normal');
+    pdf.text(`Магазин: ${shopName}    Дата: ${date}    Статус: ${statusLabel}`, margin, 23);
+    pdf.setFontSize(9);
+    pdf.text(`Генериран: ${new Date().toLocaleString('bg-BG', { timeZone: 'Europe/Sofia' })}`, pageW - margin, 23, { align: 'right' });
+    pdf.setDrawColor(180); pdf.line(margin, 27, pageW - margin, 27);
+
+    // Обобщение
+    let y = 33;
+    pdf.setFontSize(11); pdf.setFont('DejaVuSans', 'bold');
+    pdf.text('Обобщение', margin, y); y += 5;
+    pdf.setFontSize(10); pdf.setFont('DejaVuSans', 'normal');
+
+    const sumRows = [
+      ['Начална каса',          fmt(r.startCash)],
+      ['+ Приходи КЕШ',         fmt(r.totalCashIncome)],
+      ['+ Приходи POS',         fmt(r.totalPosIncome)],
+      ['+ Странични приходи',   fmt(r.totalSideIncomes)],
+      ['− Разход Стоки',        fmt(r.totalGoodsExpense)],
+      ['− Разход Други',        fmt(r.totalOtherExpense)],
+      ['− Аванси',              fmt(r.totalAdvances)]
+    ];
+    sumRows.forEach(([label, val]) => {
+      pdf.text(label, margin + 2, y);
+      pdf.text(`${val} €`, pageW - margin - 2, y, { align: 'right' });
+      y += 5;
+    });
+    pdf.setDrawColor(150); pdf.line(margin, y, pageW - margin, y); y += 5;
+    pdf.setFont('DejaVuSans', 'bold');
+    pdf.text('Крайна каса', margin + 2, y);
+    pdf.text(`${fmt(r.endCash)} €`, pageW - margin - 2, y, { align: 'right' });
+    y += 8;
+
+    // Смени
+    const shiftTotals = (r.shifts || []).reduce((acc, sh) => ({
+      ob: acc.ob + (sh.cash||0) + (sh.pos||0),
+      cash: acc.cash + (sh.cash||0), pos: acc.pos + (sh.pos||0),
+      plus: acc.plus + (sh.plus||0), minus: acc.minus + (sh.minus||0)
+    }), { ob:0, cash:0, pos:0, plus:0, minus:0 });
+
+    pdf.autoTable({
+      head: [['Смяна','Час','Оператор','Оборот','КЕШ','POS','+','−']],
+      body: (r.shifts || []).map(sh => [
+        sh.name || '—', `${sh.from||''}–${sh.to||''}`, sh.operator || '—',
+        fmt((sh.cash||0)+(sh.pos||0)), fmt(sh.cash), fmt(sh.pos), fmt(sh.plus), fmt(sh.minus)
+      ]),
+      foot: [['Общо','','', fmt(shiftTotals.ob), fmt(shiftTotals.cash), fmt(shiftTotals.pos), fmt(shiftTotals.plus), fmt(shiftTotals.minus)]],
+      startY: y,
+      margin: { left: margin, right: margin },
+      styles:      { font: 'DejaVuSans', fontSize: 9, cellPadding: 2, halign: 'right' },
+      headStyles:  { fillColor: [44, 62, 80], textColor: 255, fontStyle: 'bold', halign: 'center' },
+      footStyles:  { fillColor: [220, 220, 220], textColor: 30, fontStyle: 'bold' },
+      columnStyles:{ 0: { halign: 'left' }, 1: { halign: 'left' }, 2: { halign: 'left' } }
+    });
+    y = (pdf.lastAutoTable?.finalY ?? y) + 6;
+
+    const addSubTable = (title, head, body) => {
+      if (!body.length) return;
+      if (y > pageH - 50) { pdf.addPage(); y = margin; }
+      pdf.setFontSize(11); pdf.setFont('DejaVuSans', 'bold');
+      pdf.text(title, margin, y); y += 2;
+      pdf.autoTable({
+        head: [head], body, startY: y + 2,
+        margin: { left: margin, right: margin },
+        styles:      { font: 'DejaVuSans', fontSize: 9, cellPadding: 2 },
+        headStyles:  { fillColor: [70, 90, 110], textColor: 255, fontStyle: 'bold' }
+      });
+      y = (pdf.lastAutoTable?.finalY ?? y) + 6;
+    };
+
+    addSubTable('Странични приходи',
+      ['#','Описание','Метод','Сума'],
+      (r.sideIncomes || []).map((s,i) => [i+1, s.description||'—', s.method||'—', fmt(s.amount)+' €']));
+
+    addSubTable('Разход Стоки',
+      ['#','Доставчик','Сума'],
+      (r.expensesGoods || []).map((g,i) => [i+1, g.supplier||'—', fmt(g.amount)+' €']));
+
+    addSubTable('Разход Други',
+      ['#','Описание','Сума'],
+      (r.expensesOther || []).map((o,i) => [i+1, o.description||'—', fmt(o.amount)+' €']));
+
+    addSubTable('Аванси',
+      ['#','Служител','Бележка','Сума'],
+      (r.advances || []).map((a,i) => [i+1, a.employeeName||'—', a.note||'', fmt(a.amount)+' €']));
+
+    // Подписи
+    const signY = pageH - 22;
+    pdf.setDrawColor(100); pdf.setTextColor(80); pdf.setFontSize(9); pdf.setFont('DejaVuSans','normal');
+    pdf.line(margin, signY, margin + 70, signY);
+    pdf.line(pageW - margin - 70, signY, pageW - margin, signY);
+    pdf.text('Изготвил (управител)', margin, signY + 5);
+    pdf.text('Приел (собственик)', pageW - margin - 70, signY + 5);
+
+    pdf.save(`дневен_отчет_${r.shopId}_${date}.pdf`);
+  } catch (err) {
+    console.error('exportDailyPDF:', err);
+    alert('Грешка при генериране на PDF: ' + (err.message || err));
+  }
 };
 
 // ════════════════════════════════════════════════
