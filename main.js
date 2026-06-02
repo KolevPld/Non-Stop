@@ -1294,7 +1294,41 @@ window.renderWeeklyReport = async function() {
 };
 
 window.printWeeklyReport = function() {
+  const shopSel = document.getElementById('wrShopSel');
+  const weekSel = document.getElementById('wrWeekSel');
+  const shopName = shopSel?.options[shopSel.selectedIndex]?.text || '';
+  const monStr   = weekSel?.value || '';
+
+  // Build "01.06 – 07.06.2026" period label
+  let periodLabel = '';
+  if (monStr) {
+    const mon = new Date(monStr + 'T00:00:00Z');
+    const sun = new Date(mon); sun.setUTCDate(mon.getUTCDate() + 6);
+    const f = d => `${String(d.getUTCDate()).padStart(2,'0')}.${String(d.getUTCMonth()+1).padStart(2,'0')}`;
+    periodLabel = `${f(mon)} – ${f(sun)}.${sun.getUTCFullYear()}`;
+  }
+
+  const printedAt = new Date().toLocaleString('bg-BG', { timeZone: 'Europe/Sofia',
+    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+  // Inject/update print-only header
+  let hdr = document.getElementById('wrPrintHeader');
+  if (!hdr) {
+    hdr = document.createElement('div');
+    hdr.id = 'wrPrintHeader';
+    const card = document.getElementById('weeklyReportCard');
+    if (card) card.prepend(hdr);
+  }
+  hdr.innerHTML = `
+    <div class="wr-print-title">Седмична справка — ${shopName}</div>
+    <div class="wr-print-meta">
+      <span>Период: <strong>${periodLabel}</strong></span>
+      <span>Принтирано: ${printedAt}</span>
+    </div>`;
+
+  document.body.classList.add('printing-weekly');
   window.print();
+  document.body.classList.remove('printing-weekly');
 };
 
 // ── Helper: зарежда обобщени данни за дадена седмица ─────────────────────

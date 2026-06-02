@@ -3959,24 +3959,71 @@ body.light .pw-input  { background: #fff; border-color: #ccd3db; }
 }
 
 /* Печат — само седмичната справка, всичко друго скрито */
+.wr-print-title, .wr-print-meta { display: none; }
+
 @media print {
-  body * { visibility: hidden; }
-  #weeklyReportCard, #weeklyReportCard * { visibility: visible; }
-  #weeklyReportCard {
-    position: absolute;
-    left: 0; top: 0;
-    width: 100%;
-    padding: 20px;
-    background: white !important;
-    color: black !important;
+  @page { size: A4 landscape; margin: 10mm; }
+
+  /* Изолирай само weeklyReportCard */
+  body.printing-weekly * { visibility: hidden; }
+  body.printing-weekly #weeklyReportCard,
+  body.printing-weekly #weeklyReportCard * { visibility: visible; }
+  body.printing-weekly #weeklyReportCard {
+    position: absolute; left: 0; top: 0;
+    width: 100%; padding: 12px 16px;
+    background: #fff !important; color: #000 !important;
+    box-shadow: none !important; border: none !important;
   }
-  #weeklyReportCard * { color: black !important; background: white !important; border-color: #ccc !important; }
-  .wr-controls { display: none !important; }
-  #wrAutoBanner { display: none !important; }
-  #wrCompareWrap { display: none !important; }
-  #wrTable th, #wrTable td { border: 1px solid #ccc; padding: 4px 6px; }
-  #wrTable thead th { background: #f0f0f0 !important; }
-  #wrTable tfoot td { background: #f0f0f0 !important; }
+
+  /* Скрий контролите и бутоните */
+  body.printing-weekly .wr-controls,
+  body.printing-weekly #wrAutoBanner { display: none !important; }
+
+  /* Print-only header */
+  body.printing-weekly .wr-print-title {
+    display: block !important;
+    font-size: 14pt; font-weight: 700; margin-bottom: 4px;
+    color: #000 !important;
+  }
+  body.printing-weekly .wr-print-meta {
+    display: flex !important; justify-content: space-between;
+    font-size: 9pt; color: #555 !important; margin-bottom: 10px;
+    border-bottom: 1px solid #ccc; padding-bottom: 6px;
+  }
+
+  /* Таблица */
+  body.printing-weekly #weeklyReportCard * {
+    color: #000 !important; background: transparent !important;
+    border-color: #ccc !important;
+  }
+  body.printing-weekly .table-responsive { overflow: visible !important; }
+  body.printing-weekly #wrTable {
+    width: 100% !important; font-size: 9pt;
+    border-collapse: collapse;
+  }
+  body.printing-weekly #wrTable th,
+  body.printing-weekly #wrTable td {
+    border: 1px solid #bbb !important; padding: 3px 6px !important;
+    color: #000 !important;
+  }
+  body.printing-weekly #wrTable thead th {
+    background: #e8e8e8 !important; font-weight: 700;
+  }
+  body.printing-weekly #wrTable tfoot td {
+    background: #f2f2f2 !important; font-weight: 700;
+  }
+  body.printing-weekly #wrTable tbody tr:nth-child(even) td {
+    background: #fafafa !important;
+  }
+  body.printing-weekly tr { page-break-inside: avoid; }
+
+  /* Сравнение — покажи го, оправи стиловете */
+  body.printing-weekly #wrCompareWrap { visibility: visible !important; }
+  body.printing-weekly #wrCompareWrap > div > div > div {
+    border: 1px solid #ccc !important; border-radius: 4px !important;
+    background: #f9f9f9 !important; padding: 6px 10px !important;
+  }
+  body.printing-weekly #wrCompareWrap [style*="color:"] { color: inherit !important; }
 }
 
 /* ── Reports details toggle button ──────────────────────── */
