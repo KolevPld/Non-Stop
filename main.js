@@ -4139,15 +4139,35 @@ function buildDrDetailHtml(r) {
   const statusMap = { closed: ["🔒 Затворен", "var(--green)"], draft: ["📝 Чернова", "var(--amber)"], open: ["🔓 Отворен", "var(--blue)"] };
   const [statusLabel, statusColor] = statusMap[r.status] || ["—", "var(--text3)"];
 
-  const shiftsHtml = (r.shifts || []).map(sh => `
-    <tr>
+  const shiftTotals = (r.shifts || []).reduce((acc, sh) => ({
+    oborot: acc.oborot + (sh.cash || 0) + (sh.pos || 0),
+    cash:   acc.cash  + (sh.cash  || 0),
+    pos:    acc.pos   + (sh.pos   || 0),
+    plus:   acc.plus  + (sh.plus  || 0),
+    minus:  acc.minus + (sh.minus || 0),
+  }), { oborot: 0, cash: 0, pos: 0, plus: 0, minus: 0 });
+
+  const shiftsHtml = (r.shifts || []).map(sh => {
+    const oborot = (sh.cash || 0) + (sh.pos || 0);
+    return `<tr>
       <td>${escHtml(sh.name || "—")}</td><td>${sh.from}–${sh.to}</td>
       <td>${escHtml(sh.operator || "—")}</td>
+      <td class="mono">${oborot.toFixed(2)}</td>
       <td class="mono">${(sh.cash  || 0).toFixed(2)}</td>
       <td class="mono">${(sh.pos   || 0).toFixed(2)}</td>
       <td class="mono">${(sh.plus  || 0).toFixed(2)}</td>
       <td class="mono">${(sh.minus || 0).toFixed(2)}</td>
-    </tr>`).join("") || '<tr><td colspan="7" class="tasks-empty">—</td></tr>';
+    </tr>`;
+  }).join("") || '<tr><td colspan="8" class="tasks-empty">—</td></tr>';
+
+  const shiftsTfoot = `<tfoot><tr class="dr-total-row">
+    <td colspan="3"><strong>Общо</strong></td>
+    <td class="mono"><strong>${shiftTotals.oborot.toFixed(2)}</strong></td>
+    <td class="mono"><strong>${shiftTotals.cash.toFixed(2)}</strong></td>
+    <td class="mono"><strong>${shiftTotals.pos.toFixed(2)}</strong></td>
+    <td class="mono"><strong>${shiftTotals.plus.toFixed(2)}</strong></td>
+    <td class="mono"><strong>${shiftTotals.minus.toFixed(2)}</strong></td>
+  </tr></tfoot>`;
 
   const sideHtml = (r.sideIncomes || []).map((s, i) => `
     <tr>
@@ -4216,8 +4236,9 @@ function buildDrDetailHtml(r) {
     <div class="dr-section-title" style="margin-top:16px;">👥 Смени</div>
     <div class="table-responsive">
       <table class="dr-detail-shift-table">
-        <thead><tr><th>Смяна</th><th>Час</th><th>Оператор</th><th>КЕШ</th><th>POS</th><th>+</th><th>−</th></tr></thead>
+        <thead><tr><th>Смяна</th><th>Час</th><th>Оператор</th><th>Оборот</th><th>КЕШ</th><th>POS</th><th>+</th><th>−</th></tr></thead>
         <tbody>${shiftsHtml}</tbody>
+        ${shiftsTfoot}
       </table>
     </div>
 
