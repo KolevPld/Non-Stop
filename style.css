@@ -3958,72 +3958,66 @@ body.light .pw-input  { background: #fff; border-color: #ccd3db; }
   margin-left: 4px;
 }
 
-/* Печат — само седмичната справка, всичко друго скрито */
-.wr-print-title, .wr-print-meta { display: none; }
+/* Печат — седмична справка: landscape, на цяла страница, като PDF */
+@page { size: A4 landscape; margin: 10mm; }
+
+#wrPrintHeader { display: none; }
+.wr-print-title { font-size: 16pt; font-weight: 700; }
+.wr-print-meta { display: flex; justify-content: space-between; font-size: 9pt; }
 
 @media print {
-  @page { size: A4 landscape; margin: 10mm; }
+  body.print-weekly * { visibility: hidden; }
+  body.print-weekly #weeklyReportCard,
+  body.print-weekly #weeklyReportCard * { visibility: visible; }
 
-  /* Изолирай само weeklyReportCard */
-  body.printing-weekly * { visibility: hidden; }
-  body.printing-weekly #weeklyReportCard,
-  body.printing-weekly #weeklyReportCard * { visibility: visible; }
-  body.printing-weekly #weeklyReportCard {
-    position: absolute; left: 0; top: 0;
-    width: 100%; padding: 12px 16px;
-    background: #fff !important; color: #000 !important;
-    box-shadow: none !important; border: none !important;
+  body.print-weekly #app {
+    max-width: none !important; margin: 0 !important; padding: 0 !important;
+    transform: none !important; animation: none !important;
   }
-
-  /* Скрий контролите и бутоните */
-  body.printing-weekly .wr-controls,
-  body.printing-weekly #wrAutoBanner { display: none !important; }
-
-  /* Print-only header */
-  body.printing-weekly .wr-print-title {
-    display: block !important;
-    font-size: 14pt; font-weight: 700; margin-bottom: 4px;
-    color: #000 !important;
+  body.print-weekly #screen-report {
+    display: block !important; transform: none !important; animation: none !important;
   }
-  body.printing-weekly .wr-print-meta {
-    display: flex !important; justify-content: space-between;
-    font-size: 9pt; color: #555 !important; margin-bottom: 10px;
-    border-bottom: 1px solid #ccc; padding-bottom: 6px;
+  body.print-weekly #screen-report::before { content: "" !important; display: none !important; }
+
+  body.print-weekly #weeklyReportCard {
+    position: static !important; width: 100% !important; max-width: none !important;
+    margin: 0 !important; padding: 0 !important; border: none !important;
+    box-shadow: none !important; background: #fff !important; color: #000 !important;
+  }
+  body.print-weekly #weeklyReportCard * {
+    color: #000 !important; background: transparent !important; border-color: #999 !important;
   }
 
-  /* Таблица */
-  body.printing-weekly #weeklyReportCard * {
-    color: #000 !important; background: transparent !important;
-    border-color: #ccc !important;
-  }
-  body.printing-weekly .table-responsive { overflow: visible !important; }
-  body.printing-weekly #wrTable {
-    width: 100% !important; font-size: 9pt;
-    border-collapse: collapse;
-  }
-  body.printing-weekly #wrTable th,
-  body.printing-weekly #wrTable td {
-    border: 1px solid #bbb !important; padding: 3px 6px !important;
-    color: #000 !important;
-  }
-  body.printing-weekly #wrTable thead th {
-    background: #e8e8e8 !important; font-weight: 700;
-  }
-  body.printing-weekly #wrTable tfoot td {
-    background: #f2f2f2 !important; font-weight: 700;
-  }
-  body.printing-weekly #wrTable tbody tr:nth-child(even) td {
-    background: #fafafa !important;
-  }
-  body.printing-weekly tr { page-break-inside: avoid; }
+  body.print-weekly .wr-controls,
+  body.print-weekly #wrAutoBanner,
+  body.print-weekly #wrCompareWrap,
+  body.print-weekly #weeklyReportCard > h3 { display: none !important; }
 
-  /* Сравнение — покажи го, оправи стиловете */
-  body.printing-weekly #wrCompareWrap { visibility: visible !important; }
-  body.printing-weekly #wrCompareWrap > div > div > div {
-    border: 1px solid #ccc !important; border-radius: 4px !important;
-    background: #f9f9f9 !important; padding: 6px 10px !important;
+  body.print-weekly #wrPrintHeader {
+    display: block !important; margin-bottom: 12px;
+    border-bottom: 2px solid #000; padding-bottom: 6px;
   }
-  body.printing-weekly #wrCompareWrap [style*="color:"] { color: inherit !important; }
+  body.print-weekly .wr-print-title { color: #000 !important; margin-bottom: 4px; }
+  body.print-weekly .wr-print-meta { color: #000 !important; }
+
+  body.print-weekly .table-responsive { overflow: visible !important; }
+  body.print-weekly #wrTable { width: 100% !important; border-collapse: collapse; font-size: 9.5pt; }
+  body.print-weekly #wrTable th,
+  body.print-weekly #wrTable td {
+    border: 1px solid #999 !important; padding: 5px 7px !important;
+    text-align: right; white-space: nowrap;
+  }
+  body.print-weekly #wrTable th:first-child,
+  body.print-weekly #wrTable td:first-child { text-align: left; }
+  body.print-weekly #wrTable thead th {
+    background: #e8e8e8 !important; position: static !important; font-weight: 700;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  body.print-weekly #wrTable tfoot td {
+    background: #f0f0f0 !important; font-weight: 700;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  body.print-weekly #wrTable tr { page-break-inside: avoid; }
 }
 
 /* ── Reports details toggle button ──────────────────────── */
