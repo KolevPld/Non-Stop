@@ -2570,9 +2570,9 @@ window.deleteOwnerEntry = async function(id) {
 // ════════════════════════════════════════════════
 
 const DR_SHIFTS_DEF = [
-  { name: "Сутрешна",   from: "07:00", to: "15:00" },
-  { name: "Следобедна", from: "15:00", to: "23:00" },
-  { name: "Нощна",      from: "23:00", to: "07:00" }
+  { name: "Сутрешна",   from: "07:00", to: "14:00" },
+  { name: "Следобедна", from: "14:00", to: "21:00" },
+  { name: "Нощна",      from: "20:00", to: "08:00" }
 ];
 const DR_GOODS        = 15;
 const DR_OTHER        = 5;
