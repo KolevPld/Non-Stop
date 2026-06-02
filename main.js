@@ -1109,6 +1109,10 @@ function renderTaxSummary() {
 }
 
 // ── Седмична справка ──────────────────────────────────────────────────────
+function _ymdLocal(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 function _wrFormatDate(ymd) {
   if (!ymd) return "";
   const [, m, d] = ymd.split("-");
@@ -1121,7 +1125,7 @@ function _wrMondayOf(ymd) {
   const day = dt.getDay(); // 0=Sun
   const diff = day === 0 ? -6 : 1 - day;
   dt.setDate(dt.getDate() + diff);
-  return dt.toISOString().slice(0, 10);
+  return _ymdLocal(dt);
 }
 
 function _wrBuildWeekOptions() {
@@ -1133,10 +1137,10 @@ function _wrBuildWeekOptions() {
   const diff = day === 0 ? -6 : 1 - day;
   mon.setDate(mon.getDate() + diff);
   for (let i = 0; i < 12; i++) {
-    const monStr = mon.toISOString().slice(0, 10);
+    const monStr = _ymdLocal(mon);
     const sun = new Date(mon);
     sun.setDate(sun.getDate() + 6);
-    const sunStr = sun.toISOString().slice(0, 10);
+    const sunStr = _ymdLocal(sun);
     weeks.push({ value: monStr, label: `${_wrFormatDate(monStr)} – ${_wrFormatDate(sunStr)}` });
     mon.setDate(mon.getDate() - 7);
   }
