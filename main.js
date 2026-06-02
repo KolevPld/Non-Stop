@@ -4426,22 +4426,22 @@ window.exportDailyPDF = async function() {
 
     const pageW = pdf.internal.pageSize.getWidth();
     const pageH = pdf.internal.pageSize.getHeight();
-    const margin = 14;
+    const margin = 12;
 
     // Header
-    pdf.setFontSize(16); pdf.setFont('DejaVuSans', 'bold');
-    pdf.text('Нон Стоп — Дневен отчет', margin, 16);
-    pdf.setFontSize(11); pdf.setFont('DejaVuSans', 'normal');
-    pdf.text(`Магазин: ${shopName}    Дата: ${date}    Статус: ${statusLabel}`, margin, 23);
+    pdf.setFontSize(14); pdf.setFont('DejaVuSans', 'bold');
+    pdf.text('Нон Стоп — Дневен отчет', margin, 14);
+    pdf.setFontSize(10); pdf.setFont('DejaVuSans', 'normal');
+    pdf.text(`Магазин: ${shopName}    Дата: ${date}    Статус: ${statusLabel}`, margin, 20);
     pdf.setFontSize(9);
-    pdf.text(`Генериран: ${new Date().toLocaleString('bg-BG', { timeZone: 'Europe/Sofia' })}`, pageW - margin, 23, { align: 'right' });
-    pdf.setDrawColor(180); pdf.line(margin, 27, pageW - margin, 27);
+    pdf.text(`Генериран: ${new Date().toLocaleString('bg-BG', { timeZone: 'Europe/Sofia' })}`, pageW - margin, 20, { align: 'right' });
+    pdf.setDrawColor(180); pdf.line(margin, 23, pageW - margin, 23);
 
     // Обобщение
-    let y = 33;
-    pdf.setFontSize(11); pdf.setFont('DejaVuSans', 'bold');
-    pdf.text('Обобщение', margin, y); y += 5;
-    pdf.setFontSize(10); pdf.setFont('DejaVuSans', 'normal');
+    let y = 28;
+    pdf.setFontSize(10); pdf.setFont('DejaVuSans', 'bold');
+    pdf.text('Обобщение', margin, y); y += 4;
+    pdf.setFontSize(9); pdf.setFont('DejaVuSans', 'normal');
 
     const sumRows = [
       ['Начална каса',          fmt(r.startCash)],
@@ -4455,13 +4455,13 @@ window.exportDailyPDF = async function() {
     sumRows.forEach(([label, val]) => {
       pdf.text(label, margin + 2, y);
       pdf.text(`${val} €`, pageW - margin - 2, y, { align: 'right' });
-      y += 5;
+      y += 4;
     });
-    pdf.setDrawColor(150); pdf.line(margin, y, pageW - margin, y); y += 5;
+    pdf.setDrawColor(150); pdf.line(margin, y, pageW - margin, y); y += 4;
     pdf.setFont('DejaVuSans', 'bold');
     pdf.text('Крайна каса', margin + 2, y);
     pdf.text(`${fmt(r.endCash)} €`, pageW - margin - 2, y, { align: 'right' });
-    y += 8;
+    y += 5;
 
     // Смени
     const shiftTotals = (r.shifts || []).reduce((acc, sh) => ({
@@ -4479,25 +4479,25 @@ window.exportDailyPDF = async function() {
       foot: [['Общо','','', fmt(shiftTotals.ob), fmt(shiftTotals.cash), fmt(shiftTotals.pos), fmt(shiftTotals.plus), fmt(shiftTotals.minus)]],
       startY: y,
       margin: { left: margin, right: margin },
-      styles:      { font: 'DejaVuSans', fontSize: 9, cellPadding: 2, halign: 'right' },
+      styles:      { font: 'DejaVuSans', fontSize: 9, cellPadding: 1.5, halign: 'right' },
       headStyles:  { fillColor: [44, 62, 80], textColor: 255, fontStyle: 'bold', halign: 'center' },
       footStyles:  { fillColor: [220, 220, 220], textColor: 30, fontStyle: 'bold' },
       columnStyles:{ 0: { halign: 'left' }, 1: { halign: 'left' }, 2: { halign: 'left' } }
     });
-    y = (pdf.lastAutoTable?.finalY ?? y) + 6;
+    y = (pdf.lastAutoTable?.finalY ?? y) + 4;
 
     const addSubTable = (title, head, body) => {
       if (!body.length) return;
       if (y > pageH - 50) { pdf.addPage(); y = margin; }
-      pdf.setFontSize(11); pdf.setFont('DejaVuSans', 'bold');
+      pdf.setFontSize(10); pdf.setFont('DejaVuSans', 'bold');
       pdf.text(title, margin, y); y += 2;
       pdf.autoTable({
         head: [head], body, startY: y + 2,
         margin: { left: margin, right: margin },
-        styles:      { font: 'DejaVuSans', fontSize: 9, cellPadding: 2 },
+        styles:      { font: 'DejaVuSans', fontSize: 8.5, cellPadding: 1.5 },
         headStyles:  { fillColor: [70, 90, 110], textColor: 255, fontStyle: 'bold' }
       });
-      y = (pdf.lastAutoTable?.finalY ?? y) + 6;
+      y = (pdf.lastAutoTable?.finalY ?? y) + 4;
     };
 
     addSubTable('Странични приходи',
@@ -4517,7 +4517,7 @@ window.exportDailyPDF = async function() {
       (r.advances || []).map((a,i) => [i+1, a.employeeName||'—', a.note||'', fmt(a.amount)+' €']));
 
     // Подписи
-    const signY = pageH - 22;
+    const signY = pageH - 18;
     pdf.setDrawColor(100); pdf.setTextColor(80); pdf.setFontSize(9); pdf.setFont('DejaVuSans','normal');
     pdf.line(margin, signY, margin + 70, signY);
     pdf.line(pageW - margin - 70, signY, pageW - margin, signY);
