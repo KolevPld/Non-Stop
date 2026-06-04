@@ -1367,9 +1367,14 @@ async function _wrLoadWeekData(shopId, monStr) {
     (dr.advances      || []).forEach(a  => avans   += Number(a.amount || 0));
   });
 
-  const turnover  = cash + pos;
-  const netProfit = turnover + sideInc + totShiftPlus - totShiftMinus - stoka - otherExp - avans;
-  return { turnover, stoka, netProfit, cash, pos, sideInc, otherExp, avans, leftForStock, hasData: snap.size > 0 };
+  const turnover  = r2(cash + pos);
+  const netProfit = r2(turnover + sideInc + totShiftPlus - totShiftMinus - stoka - otherExp - avans);
+  return {
+    turnover, stoka: r2(stoka), netProfit,
+    cash: r2(cash), pos: r2(pos), sideInc: r2(sideInc),
+    otherExp: r2(otherExp), avans: r2(avans),
+    leftForStock: r2(leftForStock), hasData: snap.size > 0
+  };
 }
 
 // ── Сравнение спрямо миналата седмица ────────────────────────────────────
@@ -4462,15 +4467,18 @@ window.exportDailyPDF = async function() {
     pdf.text('Обобщение', margin, y); y += 4;
     pdf.setFontSize(9); pdf.setFont('DejaVuSans', 'normal');
 
+    const totShiftPlus  = (r.shifts || []).reduce((s, sh) => s + (sh.plus  || 0), 0);
+    const totShiftMinus = (r.shifts || []).reduce((s, sh) => s + (sh.minus || 0), 0);
+
     const sumRows = [
       ['Начална каса',          fmt(r.startCash)],
       ['+ Приходи КЕШ',         fmt(r.totalCashIncome)],
       ['+ Приходи POS',         fmt(r.totalPosIncome)],
       ['+ Странични приходи',   fmt(r.totalSideIncomes)],
-      ['+ Корекции (смени)',    fmt((r.shifts || []).reduce((s, sh) => s + (sh.plus  || 0), 0))],
+      ...(totShiftPlus  > 0 ? [['+ Корекции (смени)', fmt(totShiftPlus)]]  : []),
       ['− Разход Стоки',        fmt(r.totalGoodsExpense)],
       ['− Разход Други',        fmt(r.totalOtherExpense)],
-      ['− Липси (смени)',       fmt((r.shifts || []).reduce((s, sh) => s + (sh.minus || 0), 0))],
+      ...(totShiftMinus > 0 ? [['− Липси (смени)',    fmt(totShiftMinus)]] : []),
       ['− Аванси (кеш)',         fmt(r.totalAdvances)]
     ];
     sumRows.forEach(([label, val]) => {
