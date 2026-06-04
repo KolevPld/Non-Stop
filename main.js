@@ -3175,7 +3175,7 @@ window.drCalc = function() {
 
   DR_SHIFTS_DEF.forEach((_, i) => {
     const sh  = d.shifts[i];
-    const rev = r2((sh.cash || 0) + (sh.pos || 0) + (sh.plus || 0) - (sh.minus || 0));
+    const rev = r2((sh.cash || 0) + (sh.pos || 0));
     const el  = document.getElementById(`drShiftRev${i}`);
     if (el) el.textContent = rev.toFixed(2);
   });
@@ -4193,7 +4193,7 @@ function buildDrDetailHtml(r) {
   const [statusLabel, statusColor] = statusMap[r.status] || ["—", "var(--text3)"];
 
   const shiftTotals = (r.shifts || []).reduce((acc, sh) => ({
-    oborot: acc.oborot + (sh.cash || 0) + (sh.pos || 0) + (sh.plus || 0) - (sh.minus || 0),
+    oborot: acc.oborot + (sh.cash || 0) + (sh.pos || 0),
     cash:   acc.cash  + (sh.cash  || 0),
     pos:    acc.pos   + (sh.pos   || 0),
     plus:   acc.plus  + (sh.plus  || 0),
@@ -4201,7 +4201,7 @@ function buildDrDetailHtml(r) {
   }), { oborot: 0, cash: 0, pos: 0, plus: 0, minus: 0 });
 
   const shiftsHtml = (r.shifts || []).map(sh => {
-    const oborot = (sh.cash || 0) + (sh.pos || 0) + (sh.plus || 0) - (sh.minus || 0);
+    const oborot = (sh.cash || 0) + (sh.pos || 0);
     return `<tr>
       <td>${escHtml(sh.name || "—")}</td><td>${sh.from}–${sh.to}</td>
       <td>${escHtml(sh.operator || "—")}</td>
@@ -4494,7 +4494,7 @@ window.exportDailyPDF = async function() {
 
     // Смени
     const shiftTotals = (r.shifts || []).reduce((acc, sh) => ({
-      ob: acc.ob + (sh.cash||0) + (sh.pos||0) + (sh.plus||0) - (sh.minus||0),
+      ob: acc.ob + (sh.cash||0) + (sh.pos||0),
       cash: acc.cash + (sh.cash||0), pos: acc.pos + (sh.pos||0),
       plus: acc.plus + (sh.plus||0), minus: acc.minus + (sh.minus||0)
     }), { ob:0, cash:0, pos:0, plus:0, minus:0 });
@@ -4503,7 +4503,7 @@ window.exportDailyPDF = async function() {
       head: [['Смяна','Час','Оператор','Оборот','КЕШ','POS','+','−']],
       body: (r.shifts || []).map(sh => [
         sh.name || '—', `${sh.from||''}–${sh.to||''}`, sh.operator || '—',
-        fmt((sh.cash||0)+(sh.pos||0)+(sh.plus||0)-(sh.minus||0)), fmt(sh.cash), fmt(sh.pos), fmt(sh.plus), fmt(sh.minus)
+        fmt((sh.cash||0)+(sh.pos||0)), fmt(sh.cash), fmt(sh.pos), fmt(sh.plus), fmt(sh.minus)
       ]),
       foot: [['Общо','','', fmt(shiftTotals.ob), fmt(shiftTotals.cash), fmt(shiftTotals.pos), fmt(shiftTotals.plus), fmt(shiftTotals.minus)]],
       startY: y,
