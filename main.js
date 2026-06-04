@@ -1178,7 +1178,8 @@ window.renderWeeklyReport = async function() {
       query(
         collection(db, "daily_reports"),
         where("shopId", "==", shopId),
-        where("date", "in", days)
+        where("date", "in", days),
+        where("status", "==", "closed")
       )
     );
     const byDate = {};
@@ -1340,18 +1341,22 @@ async function _wrLoadWeekData(shopId, monStr) {
   const snap = await getDocs(query(
     collection(db, 'daily_reports'),
     where('shopId', '==', shopId),
-    where('date', 'in', days)
+    where('date', 'in', days),
+    where('status', '==', 'closed')
   ));
   const byDate = {};
   snap.forEach(d => { byDate[d.data().date] = d.data(); });
 
-  const norm     = (s) => String(s ?? '').trim();
-  const normLow  = (s) => norm(s).toLowerCase();
-  const isSalary = (c) => { const v = normLow(c); return v === 'заплата' || v === 'заплати'; };
+  const norm = (s) => String(s ?? '').trim();
 
   let cash = 0, pos = 0, stoka = 0, otherExp = 0, sideInc = 0, avans = 0, leftForStock = 0;
+  let totShiftPlus = 0, totShiftMinus = 0;
   Object.values(byDate).forEach(dr => {
-    (dr.shifts        || []).forEach(sh => { cash += Number(sh.cash || 0); pos += Number(sh.pos || 0); });
+    (dr.shifts        || []).forEach(sh => {
+      cash += Number(sh.cash || 0); pos += Number(sh.pos || 0);
+      totShiftPlus  += Number(sh.plus  || 0);
+      totShiftMinus += Number(sh.minus || 0);
+    });
     (dr.expensesGoods || []).forEach(g  => stoka   += Number(g.amount || 0));
     (dr.expensesOther || []).forEach(o  => {
       const amt = Number(o.amount || 0);
@@ -1363,7 +1368,7 @@ async function _wrLoadWeekData(shopId, monStr) {
   });
 
   const turnover  = cash + pos;
-  const netProfit = turnover + sideInc - stoka - otherExp - avans;
+  const netProfit = turnover + sideInc + totShiftPlus - totShiftMinus - stoka - otherExp - avans;
   return { turnover, stoka, netProfit, cash, pos, sideInc, otherExp, avans, leftForStock, hasData: snap.size > 0 };
 }
 
@@ -1469,14 +1474,13 @@ window.exportWeeklyPDF = async function() {
     const snap = await getDocs(query(
       collection(db, 'daily_reports'),
       where('shopId', '==', shopId),
-      where('date', 'in', days)
+      where('date', 'in', days),
+      where('status', '==', 'closed')
     ));
     const byDate = {};
     snap.forEach(d => { byDate[d.data().date] = d.data(); });
 
     const norm     = (s) => String(s ?? '').trim();
-    const normLow  = (s) => norm(s).toLowerCase();
-    const isSalary = (c) => { const v = normLow(c); return v === 'заплата' || v === 'заплати'; };
     const dayNames = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
     const fmt      = (n) => (Number(n) || 0).toFixed(2);
 
@@ -1484,8 +1488,13 @@ window.exportWeeklyPDF = async function() {
     const rows = days.map(date => {
       const dr = byDate[date];
       let cash = 0, pos = 0, stoka = 0, otherExp = 0, sideInc = 0, avans = 0, leftToday = 0;
+      let shiftPlus = 0, shiftMinus = 0;
       if (dr) {
-        (dr.shifts || []).forEach(sh => { cash += Number(sh.cash || 0); pos += Number(sh.pos || 0); });
+        (dr.shifts || []).forEach(sh => {
+          cash += Number(sh.cash || 0); pos += Number(sh.pos || 0);
+          shiftPlus  += Number(sh.plus  || 0);
+          shiftMinus += Number(sh.minus || 0);
+        });
         (dr.expensesGoods || []).forEach(g => stoka += Number(g.amount || 0));
         (dr.expensesOther || []).forEach(o => {
           const amt = Number(o.amount || 0);
@@ -1495,7 +1504,7 @@ window.exportWeeklyPDF = async function() {
         (dr.sideIncomes || []).forEach(s => sideInc += Number(s.amount || 0));
         (dr.advances   || []).forEach(a => avans    += Number(a.amount || 0));
       }
-      const total = cash + pos + sideInc - stoka - otherExp - avans;
+      const total = cash + pos + sideInc + shiftPlus - shiftMinus - stoka - otherExp - avans;
       const d     = new Date(date + 'T00:00:00Z');
       return { date, dayName: dayNames[d.getUTCDay()], cash, pos, stoka, otherExp, sideInc, avans, leftToday, total, hasReport: !!dr };
     });
@@ -3093,13 +3102,13 @@ function collectDrData() {
   const totalPosIncome       = r2(shifts.reduce((s, sh) => s + sh.pos, 0));
   const totalGoodsExpense    = r2(expensesGoods.reduce((s, g) => s + g.amount, 0));
   const totalOtherExpense    = r2(expensesOther.reduce((s, o) => s + o.amount, 0));
-  const cashGoodsExpense     = r2(expensesGoods.filter(g => (g.method || "Кеш") !== "Карта" && (g.method || "Кеш") !== "Банков превод").reduce((s, g) => s + g.amount, 0));
-  const cashOtherExpense     = r2(expensesOther.filter(o => (o.method || "Кеш") !== "Карта" && (o.method || "Кеш") !== "Банков превод").reduce((s, o) => s + o.amount, 0));
+  const cashGoodsExpense     = expensesGoods.filter(g => (g.method || "Кеш") !== "Карта" && (g.method || "Кеш") !== "Банков превод").reduce((s, g) => s + g.amount, 0);
+  const cashOtherExpense     = expensesOther.filter(o => (o.method || "Кеш") !== "Карта" && (o.method || "Кеш") !== "Банков превод").reduce((s, o) => s + o.amount, 0);
   const cardGoodsExpense     = r2(expensesGoods.filter(g => g.method === "Карта").reduce((s, g) => s + g.amount, 0));
   const cardOtherExpense     = r2(expensesOther.filter(o => o.method === "Карта").reduce((s, o) => s + o.amount, 0));
   const bankGoodsExpense     = r2(expensesGoods.filter(g => g.method === "Банков превод").reduce((s, g) => s + g.amount, 0));
   const bankOtherExpense     = r2(expensesOther.filter(o => o.method === "Банков превод").reduce((s, o) => s + o.amount, 0));
-  const cashExpenseTotal     = r2(cashGoodsExpense + cashOtherExpense);
+  const cashExpenseTotal     = cashGoodsExpense + cashOtherExpense;
   const cardExpenseTotal     = r2(cardGoodsExpense + cardOtherExpense);
   const bankExpenseTotal     = r2(bankGoodsExpense + bankOtherExpense);
   const totalSideIncomes     = r2(sideIncomes.reduce((s, si) => s + si.amount, 0));
@@ -3158,7 +3167,7 @@ window.drCalc = function() {
 
   DR_SHIFTS_DEF.forEach((_, i) => {
     const sh  = d.shifts[i];
-    const rev = r2(sh.cash + sh.pos + sh.plus - sh.minus);
+    const rev = r2((sh.cash || 0) + (sh.pos || 0) + (sh.plus || 0) - (sh.minus || 0));
     const el  = document.getElementById(`drShiftRev${i}`);
     if (el) el.textContent = rev.toFixed(2);
   });
