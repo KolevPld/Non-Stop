@@ -2606,7 +2606,7 @@ const DR_SHIFTS_DEF = [
   { name: "Следобедна", from: "14:00", to: "21:00" },
   { name: "Нощна",      from: "20:00", to: "08:00" }
 ];
-const DR_GOODS        = 15;
+const DR_GOODS        = 20;
 const DR_OTHER        = 5;
 const DR_SIDE_INCOMES = 3;
 const DR_ADVANCES     = 3;
