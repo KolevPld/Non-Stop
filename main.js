@@ -1202,7 +1202,7 @@ window.renderWeeklyReport = async function() {
       totalLeftForStock += left;
     });
 
-    let totCash = 0, totPos = 0, totGoods = 0, totOther = 0, totSide = 0, totAdv = 0;
+    let totCash = 0, totPos = 0, totGoods = 0, totOther = 0, totSide = 0, totAdv = 0, totShiftPlus = 0, totShiftMinus = 0;
 
     const rows = days.map((ymd, i) => {
       const r = byDate[ymd];
@@ -1219,9 +1219,12 @@ window.renderWeeklyReport = async function() {
       const other = Math.max(0, Number(r.totalOtherExpense || 0) - left);
       const side  = Number(r.totalSideIncomes  || 0);
       const adv   = Number(r.totalAdvances     || 0);
+      const shiftPlus  = (r.shifts || []).reduce((s, sh) => s + Number(sh.plus  || 0), 0);
+      const shiftMinus = (r.shifts || []).reduce((s, sh) => s + Number(sh.minus || 0), 0);
       totCash  += cash;  totPos   += pos;
       totGoods += goods; totOther += other;
       totSide  += side;  totAdv   += adv;
+      totShiftPlus += shiftPlus; totShiftMinus += shiftMinus;
       const statusBadge = r.status === "closed"
         ? '<span class="badge-closed" style="font-size:0.65rem;background:var(--green);color:#111;padding:1px 5px;border-radius:4px;">✔</span>'
         : '<span class="badge-draft" style="font-size:0.65rem;background:var(--amber);color:#111;padding:1px 5px;border-radius:4px;">чернова</span>';
@@ -1242,7 +1245,7 @@ window.renderWeeklyReport = async function() {
 
     const totalInc = totCash + totPos;
     const totalExp = totGoods + totOther + totAdv;
-    const net = totalInc + totSide - totalExp;
+    const net = totalInc + totSide + totShiftPlus - totShiftMinus - totalExp;
 
     const leftBanner = totalLeftForStock > 0
       ? `<div style="margin-top:12px;padding:10px 14px;background:rgba(76,175,80,0.12);border:1px solid rgba(76,175,80,0.4);border-radius:8px;font-size:0.9rem;">
@@ -3105,7 +3108,9 @@ function collectDrData() {
   const bankSideIncomes      = r2(sideIncomes.filter(si => si.method === "Банков превод").reduce((s, si) => s + si.amount, 0));
   const totalSideIncomesCash = cashSideIncomes;
   const totalAdvances        = r2(advances.reduce((s, a) => s + a.amount, 0));
-  const endCash = r2(startCash + totalCashIncome + cashSideIncomes - cashExpenseTotal - totalAdvances);
+  const totalShiftPlus  = r2(shifts.reduce((s, sh) => s + (sh.plus  || 0), 0));
+  const totalShiftMinus = r2(shifts.reduce((s, sh) => s + (sh.minus || 0), 0));
+  const endCash = r2(startCash + totalCashIncome + cashSideIncomes + totalShiftPlus - totalShiftMinus - cashExpenseTotal - totalAdvances);
 
   return {
     shopId: _drShopId, date, startCash, shifts,
@@ -3117,7 +3122,7 @@ function collectDrData() {
     bankGoodsExpense, bankOtherExpense, bankExpenseTotal,
     totalSideIncomes, totalSideIncomesCash,
     cashSideIncomes, cardSideIncomes, bankSideIncomes,
-    totalAdvances, endCash
+    totalAdvances, totalShiftPlus, totalShiftMinus, endCash
   };
 }
 
@@ -4254,8 +4259,10 @@ function buildDrDetailHtml(r) {
       <div class="dr-detail-sum-row"><span>+ Приходи КЕШ</span><span class="mono pos">${fmt(r.totalCashIncome)}</span></div>
       <div class="dr-detail-sum-row"><span>+ Приходи POS</span><span class="mono pos">${fmt(r.totalPosIncome)}</span></div>
       ${(r.totalSideIncomes || 0) > 0 ? `<div class="dr-detail-sum-row"><span>+ Странични приходи</span><span class="mono pos">${fmt(r.totalSideIncomes)}</span></div>` : ""}
+      ${(r.shifts || []).some(sh => (sh.plus || 0) > 0) ? `<div class="dr-detail-sum-row"><span>+ Корекции (смени)</span><span class="mono pos">${fmt((r.shifts || []).reduce((s, sh) => s + (sh.plus || 0), 0))}</span></div>` : ""}
       <div class="dr-detail-sum-row"><span>− Разход Стоки</span><span class="mono neg">${fmt(r.totalGoodsExpense)}</span></div>
       <div class="dr-detail-sum-row"><span>− Разход Други</span><span class="mono neg">${fmt(r.totalOtherExpense)}</span></div>
+      ${(r.shifts || []).some(sh => (sh.minus || 0) > 0) ? `<div class="dr-detail-sum-row"><span>− Липси (смени)</span><span class="mono neg">${fmt((r.shifts || []).reduce((s, sh) => s + (sh.minus || 0), 0))}</span></div>` : ""}
       ${(r.totalAdvances || 0) > 0 ? `<div class="dr-detail-sum-row"><span>− Аванси</span><span class="mono neg">${fmt(r.totalAdvances)}</span></div>` : ""}
       <div class="dr-sum-divider"></div>
       <div class="dr-detail-sum-row dr-detail-sum-final">
@@ -4448,8 +4455,10 @@ window.exportDailyPDF = async function() {
       ['+ Приходи КЕШ',         fmt(r.totalCashIncome)],
       ['+ Приходи POS',         fmt(r.totalPosIncome)],
       ['+ Странични приходи',   fmt(r.totalSideIncomes)],
+      ['+ Корекции (смени)',    fmt((r.shifts || []).reduce((s, sh) => s + (sh.plus  || 0), 0))],
       ['− Разход Стоки',        fmt(r.totalGoodsExpense)],
       ['− Разход Други',        fmt(r.totalOtherExpense)],
+      ['− Липси (смени)',       fmt((r.shifts || []).reduce((s, sh) => s + (sh.minus || 0), 0))],
       ['− Аванси',              fmt(r.totalAdvances)]
     ];
     sumRows.forEach(([label, val]) => {
