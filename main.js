@@ -3116,6 +3116,9 @@ function collectDrData() {
   const cardSideIncomes      = r2(sideIncomes.filter(si => si.method === "Карта").reduce((s, si) => s + si.amount, 0));
   const bankSideIncomes      = r2(sideIncomes.filter(si => si.method === "Банков превод").reduce((s, si) => s + si.amount, 0));
   const totalSideIncomesCash = cashSideIncomes;
+  // ПРЕДПОЛОЖЕНИЕ: Всички аванси са в кеш (потвърдено от собственика, 2026-06-04).
+  // Ако авансите започнат да се плащат и по банка — добави поле "method" в advance обекта
+  // и филтрирай: advances.filter(a => !a.method || a.method === "Кеш").
   const totalAdvances        = r2(advances.reduce((s, a) => s + a.amount, 0));
   const totalShiftPlus  = r2(shifts.reduce((s, sh) => s + (sh.plus  || 0), 0));
   const totalShiftMinus = r2(shifts.reduce((s, sh) => s + (sh.minus || 0), 0));
@@ -4185,7 +4188,7 @@ function buildDrDetailHtml(r) {
   const [statusLabel, statusColor] = statusMap[r.status] || ["—", "var(--text3)"];
 
   const shiftTotals = (r.shifts || []).reduce((acc, sh) => ({
-    oborot: acc.oborot + (sh.cash || 0) + (sh.pos || 0),
+    oborot: acc.oborot + (sh.cash || 0) + (sh.pos || 0) + (sh.plus || 0) - (sh.minus || 0),
     cash:   acc.cash  + (sh.cash  || 0),
     pos:    acc.pos   + (sh.pos   || 0),
     plus:   acc.plus  + (sh.plus  || 0),
@@ -4193,7 +4196,7 @@ function buildDrDetailHtml(r) {
   }), { oborot: 0, cash: 0, pos: 0, plus: 0, minus: 0 });
 
   const shiftsHtml = (r.shifts || []).map(sh => {
-    const oborot = (sh.cash || 0) + (sh.pos || 0);
+    const oborot = (sh.cash || 0) + (sh.pos || 0) + (sh.plus || 0) - (sh.minus || 0);
     return `<tr>
       <td>${escHtml(sh.name || "—")}</td><td>${sh.from}–${sh.to}</td>
       <td>${escHtml(sh.operator || "—")}</td>
@@ -4272,7 +4275,7 @@ function buildDrDetailHtml(r) {
       <div class="dr-detail-sum-row"><span>− Разход Стоки</span><span class="mono neg">${fmt(r.totalGoodsExpense)}</span></div>
       <div class="dr-detail-sum-row"><span>− Разход Други</span><span class="mono neg">${fmt(r.totalOtherExpense)}</span></div>
       ${(r.shifts || []).some(sh => (sh.minus || 0) > 0) ? `<div class="dr-detail-sum-row"><span>− Липси (смени)</span><span class="mono neg">${fmt((r.shifts || []).reduce((s, sh) => s + (sh.minus || 0), 0))}</span></div>` : ""}
-      ${(r.totalAdvances || 0) > 0 ? `<div class="dr-detail-sum-row"><span>− Аванси</span><span class="mono neg">${fmt(r.totalAdvances)}</span></div>` : ""}
+      ${(r.totalAdvances || 0) > 0 ? `<div class="dr-detail-sum-row"><span>− Аванси (кеш)</span><span class="mono neg">${fmt(r.totalAdvances)}</span></div>` : ""}
       <div class="dr-sum-divider"></div>
       <div class="dr-detail-sum-row dr-detail-sum-final">
         <span><strong>Крайна каса</strong></span>
@@ -4468,7 +4471,7 @@ window.exportDailyPDF = async function() {
       ['− Разход Стоки',        fmt(r.totalGoodsExpense)],
       ['− Разход Други',        fmt(r.totalOtherExpense)],
       ['− Липси (смени)',       fmt((r.shifts || []).reduce((s, sh) => s + (sh.minus || 0), 0))],
-      ['− Аванси',              fmt(r.totalAdvances)]
+      ['− Аванси (кеш)',         fmt(r.totalAdvances)]
     ];
     sumRows.forEach(([label, val]) => {
       pdf.text(label, margin + 2, y);
@@ -4483,7 +4486,7 @@ window.exportDailyPDF = async function() {
 
     // Смени
     const shiftTotals = (r.shifts || []).reduce((acc, sh) => ({
-      ob: acc.ob + (sh.cash||0) + (sh.pos||0),
+      ob: acc.ob + (sh.cash||0) + (sh.pos||0) + (sh.plus||0) - (sh.minus||0),
       cash: acc.cash + (sh.cash||0), pos: acc.pos + (sh.pos||0),
       plus: acc.plus + (sh.plus||0), minus: acc.minus + (sh.minus||0)
     }), { ob:0, cash:0, pos:0, plus:0, minus:0 });
@@ -4492,7 +4495,7 @@ window.exportDailyPDF = async function() {
       head: [['Смяна','Час','Оператор','Оборот','КЕШ','POS','+','−']],
       body: (r.shifts || []).map(sh => [
         sh.name || '—', `${sh.from||''}–${sh.to||''}`, sh.operator || '—',
-        fmt((sh.cash||0)+(sh.pos||0)), fmt(sh.cash), fmt(sh.pos), fmt(sh.plus), fmt(sh.minus)
+        fmt((sh.cash||0)+(sh.pos||0)+(sh.plus||0)-(sh.minus||0)), fmt(sh.cash), fmt(sh.pos), fmt(sh.plus), fmt(sh.minus)
       ]),
       foot: [['Общо','','', fmt(shiftTotals.ob), fmt(shiftTotals.cash), fmt(shiftTotals.pos), fmt(shiftTotals.plus), fmt(shiftTotals.minus)]],
       startY: y,
