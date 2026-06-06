@@ -3169,6 +3169,36 @@ function _setOperatorValue(i, operatorName) {
 
 function r2(n) { return Math.round(n * 100) / 100; }
 
+// Преизчислява endCash от суровите данни на отчета (shifts, expenses, sideIncomes, advances).
+// Ползва се за показване — стари отчети, затворени преди добавянето на plus/minus в endCash,
+// имат сторирана грешна стойност. Тази функция ги "самоизлекува" без миграция.
+function _recalcEndCash(r) {
+  if (!r) return 0;
+  const startCash     = Number(r.startCash || 0);
+  const shifts        = r.shifts          || [];
+  const expensesGoods = r.expensesGoods   || [];
+  const expensesOther = r.expensesOther   || [];
+  const sideIncomes   = r.sideIncomes     || [];
+  const advances      = r.advances        || [];
+
+  const totalCashIncome = shifts.reduce((s, sh) => s + Number(sh.cash  || 0), 0);
+  const totalShiftPlus  = shifts.reduce((s, sh) => s + Number(sh.plus  || 0), 0);
+  const totalShiftMinus = shifts.reduce((s, sh) => s + Number(sh.minus || 0), 0);
+
+  const isCash = (x) => (x.method || "Кеш") !== "Карта" && (x.method || "Кеш") !== "Банков превод";
+  const cashGoodsExpense = expensesGoods.filter(isCash).reduce((s, g)  => s + Number(g.amount  || 0), 0);
+  const cashOtherExpense = expensesOther.filter(isCash).reduce((s, o)  => s + Number(o.amount  || 0), 0);
+  const cashSideIncomes  = sideIncomes  .filter(isCash).reduce((s, si) => s + Number(si.amount || 0), 0);
+  const totalAdvances    = advances.reduce((s, a) => s + Number(a.amount || 0), 0);
+
+  return r2(
+    startCash + totalCashIncome + cashSideIncomes
+    + totalShiftPlus - totalShiftMinus
+    - (cashGoodsExpense + cashOtherExpense)
+    - totalAdvances
+  );
+}
+
 // ── Изчисляване и обновяване на резюмето ─────────────
 window.drCalc = function() {
   const d = collectDrData();
@@ -3972,7 +4002,7 @@ async function loadRecentReports() {
           <div class="dr-hist-amounts">
             <span>💰 КЕШ: ${fmt(r.totalCashIncome)}</span>
             <span>💳 POS: ${fmt(r.totalPosIncome)}</span>
-            <span class="${(r.endCash || 0) >= 0 ? "pos" : "neg"}">🏁 Крайна: ${fmt(r.endCash)}</span>
+            <span class="${_recalcEndCash(r) >= 0 ? "pos" : "neg"}">🏁 Крайна: ${fmt(_recalcEndCash(r))}</span>
           </div>
         </div>`;
     }).join("");
@@ -4078,7 +4108,7 @@ function renderDrOwnerTable(reports) {
   const tot = reports.reduce((acc, r) => ({
     inc: acc.inc + (r.totalCashIncome || 0) + (r.totalPosIncome || 0),
     exp: acc.exp + (r.totalGoodsExpense || 0) + (r.totalOtherExpense || 0),
-    end: acc.end + (r.endCash || 0)
+    end: acc.end + _recalcEndCash(r)
   }), { inc: 0, exp: 0, end: 0 });
 
   tbody.innerHTML = reports.map(r => {
@@ -4086,7 +4116,8 @@ function renderDrOwnerTable(reports) {
     const store   = r.shopId === "store1" ? "М1" : "М2";
     const income  = r2((r.totalCashIncome || 0) + (r.totalPosIncome || 0));
     const expense = r2((r.totalGoodsExpense || 0) + (r.totalOtherExpense || 0));
-    const endOk   = (r.endCash || 0) >= 0;
+    const endRecalc = _recalcEndCash(r);
+    const endOk   = endRecalc >= 0;
     return `
       <tr class="${closed ? "" : "dr-owner-draft-row"}">
         <td>${r.date || "—"}</td>
@@ -4095,7 +4126,7 @@ function renderDrOwnerTable(reports) {
         <td class="mono">${fmt(r.startCash)}</td>
         <td class="mono pos">${fmt(income)}</td>
         <td class="mono neg">${fmt(expense)}</td>
-        <td class="mono ${endOk ? "pos" : "neg"}">${fmt(r.endCash)}</td>
+        <td class="mono ${endOk ? "pos" : "neg"}">${fmt(endRecalc)}</td>
         <td><button class="btn-icon btn-dr-link" onclick="openDrDetailModal('${r.id}')" title="Детайли">📋</button></td>
       </tr>`;
   }).join("") + `
@@ -4260,7 +4291,8 @@ function buildDrDetailHtml(r) {
       <span class="dr-log-time">${(l.timestamp || "").slice(0, 16).replace("T", " ")}</span>
     </div>`).join("") || '<div class="tasks-empty" style="padding:8px 0;">—</div>';
 
-  const endOk = (r.endCash || 0) >= 0;
+  const endCashDisplay = _recalcEndCash(r);
+  const endOk = endCashDisplay >= 0;
   const store  = r.shopId === "store1" ? "Магазин 1" : "Магазин 2";
 
   return `
@@ -4284,7 +4316,7 @@ function buildDrDetailHtml(r) {
       <div class="dr-sum-divider"></div>
       <div class="dr-detail-sum-row dr-detail-sum-final">
         <span><strong>Крайна каса</strong></span>
-        <span class="mono ${endOk ? "pos" : "neg"}"><strong>${fmt(r.endCash)}</strong></span>
+        <span class="mono ${endOk ? "pos" : "neg"}"><strong>${fmt(endCashDisplay)}</strong></span>
       </div>
     </div>
 
@@ -4489,7 +4521,7 @@ window.exportDailyPDF = async function() {
     pdf.setDrawColor(150); pdf.line(margin, y, pageW - margin, y); y += 4;
     pdf.setFont('DejaVuSans', 'bold');
     pdf.text('Крайна каса', margin + 2, y);
-    pdf.text(`${fmt(r.endCash)} €`, pageW - margin - 2, y, { align: 'right' });
+    pdf.text(`${fmt(_recalcEndCash(r))} €`, pageW - margin - 2, y, { align: 'right' });
     y += 5;
 
     // Смени
