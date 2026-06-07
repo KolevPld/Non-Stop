@@ -3199,6 +3199,32 @@ function _recalcEndCash(r) {
   );
 }
 
+// Преизчислява ВСИЧКИ обобщителни стойности на отчет от суровите данни.
+// Ползва се навсякъде където отчетът се ПОКАЗВА — гарантира consistency между стари и нови отчети.
+function _recalcReportTotals(r) {
+  if (!r) return {};
+  const shifts        = r.shifts        || [];
+  const expensesGoods = r.expensesGoods || [];
+  const expensesOther = r.expensesOther || [];
+  const sideIncomes   = r.sideIncomes   || [];
+  const advances      = r.advances      || [];
+
+  const isCash = (x) => (x.method || "Кеш") !== "Карта" && (x.method || "Кеш") !== "Банков превод";
+
+  return {
+    totalCashIncome:   r2(shifts.reduce((s, sh) => s + Number(sh.cash  || 0), 0)),
+    totalPosIncome:    r2(shifts.reduce((s, sh) => s + Number(sh.pos   || 0), 0)),
+    totalShiftPlus:    r2(shifts.reduce((s, sh) => s + Number(sh.plus  || 0), 0)),
+    totalShiftMinus:   r2(shifts.reduce((s, sh) => s + Number(sh.minus || 0), 0)),
+    totalGoodsExpense: r2(expensesGoods.reduce((s, g) => s + Number(g.amount || 0), 0)),
+    totalOtherExpense: r2(expensesOther.reduce((s, o) => s + Number(o.amount || 0), 0)),
+    totalSideIncomes:  r2(sideIncomes.reduce((s, si) => s + Number(si.amount || 0), 0)),
+    totalAdvances:     r2(advances.reduce((s, a) => s + Number(a.amount || 0), 0)),
+    cashSideIncomes:   r2(sideIncomes.filter(isCash).reduce((s, si) => s + Number(si.amount || 0), 0)),
+    endCash:           _recalcEndCash(r)
+  };
+}
+
 // ── Изчисляване и обновяване на резюмето ─────────────
 window.drCalc = function() {
   const d = collectDrData();
@@ -4134,6 +4160,8 @@ function renderDrOwnerTable(reports) {
   const tbody = document.getElementById("drOwnerTableBody");
   if (!tbody) return;
 
+  window._ownerReportsCache = reports;
+
   if (!reports.length) {
     tbody.innerHTML = '<tr><td colspan="8" class="tasks-empty">Няма отчети за избраните критерии</td></tr>';
     return;
@@ -4344,9 +4372,24 @@ function buildDrDetailHtml(r) {
       <span class="dr-log-time">${(l.timestamp || "").slice(0, 16).replace("T", " ")}</span>
     </div>`).join("") || '<div class="tasks-empty" style="padding:8px 0;">—</div>';
 
-  const endCashDisplay = _recalcEndCash(r);
+  const t = _recalcReportTotals(r);
+  const endCashDisplay = t.endCash;
   const endOk = endCashDisplay >= 0;
   const store  = r.shopId === "store1" ? "Магазин 1" : "Магазин 2";
+
+  let startWarn = '';
+  try {
+    const cache = window._ownerReportsCache || [];
+    const prev = cache
+      .filter(x => x.shopId === r.shopId && x.status === "closed" && x.date < r.date)
+      .sort((a, b) => b.date.localeCompare(a.date))[0];
+    if (prev) {
+      const prevEnd = _recalcEndCash(prev);
+      if (Math.abs(prevEnd - Number(r.startCash || 0)) > 0.01) {
+        startWarn = ` <span title="Не съвпада с крайна каса на ${prev.date} (${prevEnd.toFixed(2)} €)" style="color:#e74c3c;cursor:help">⚠️</span>`;
+      }
+    }
+  } catch (_) {}
 
   return `
     <div class="dr-detail-meta" style="margin-bottom:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
@@ -4357,15 +4400,15 @@ function buildDrDetailHtml(r) {
     </div>
 
     <div class="dr-detail-summary">
-      <div class="dr-detail-sum-row"><span>Начална каса</span><span class="mono">${fmt(r.startCash)}</span></div>
-      <div class="dr-detail-sum-row"><span>+ Приходи КЕШ</span><span class="mono pos">${fmt(r.totalCashIncome)}</span></div>
-      <div class="dr-detail-sum-row"><span>+ Приходи POS</span><span class="mono pos">${fmt(r.totalPosIncome)}</span></div>
-      ${(r.totalSideIncomes || 0) > 0 ? `<div class="dr-detail-sum-row"><span>+ Странични приходи</span><span class="mono pos">${fmt(r.totalSideIncomes)}</span></div>` : ""}
-      ${(r.shifts || []).some(sh => (sh.plus || 0) > 0) ? `<div class="dr-detail-sum-row"><span>+ Корекции (смени)</span><span class="mono pos">${fmt((r.shifts || []).reduce((s, sh) => s + (sh.plus || 0), 0))}</span></div>` : ""}
-      <div class="dr-detail-sum-row"><span>− Разход Стоки</span><span class="mono neg">${fmt(r.totalGoodsExpense)}</span></div>
-      <div class="dr-detail-sum-row"><span>− Разход Други</span><span class="mono neg">${fmt(r.totalOtherExpense)}</span></div>
-      ${(r.shifts || []).some(sh => (sh.minus || 0) > 0) ? `<div class="dr-detail-sum-row"><span>− Липси (смени)</span><span class="mono neg">${fmt((r.shifts || []).reduce((s, sh) => s + (sh.minus || 0), 0))}</span></div>` : ""}
-      ${(r.totalAdvances || 0) > 0 ? `<div class="dr-detail-sum-row"><span>− Аванси (кеш)</span><span class="mono neg">${fmt(r.totalAdvances)}</span></div>` : ""}
+      <div class="dr-detail-sum-row"><span>Начална каса</span><span class="mono">${fmt(r.startCash)}${startWarn}</span></div>
+      <div class="dr-detail-sum-row"><span>+ Приходи КЕШ</span><span class="mono pos">${fmt(t.totalCashIncome)}</span></div>
+      <div class="dr-detail-sum-row"><span>+ Приходи POS</span><span class="mono pos">${fmt(t.totalPosIncome)}</span></div>
+      ${t.totalSideIncomes > 0 ? `<div class="dr-detail-sum-row"><span>+ Странични приходи</span><span class="mono pos">${fmt(t.totalSideIncomes)}</span></div>` : ""}
+      ${t.totalShiftPlus > 0 ? `<div class="dr-detail-sum-row"><span>+ Корекции (смени)</span><span class="mono pos">${fmt(t.totalShiftPlus)}</span></div>` : ""}
+      <div class="dr-detail-sum-row"><span>− Разход Стоки</span><span class="mono neg">${fmt(t.totalGoodsExpense)}</span></div>
+      <div class="dr-detail-sum-row"><span>− Разход Други</span><span class="mono neg">${fmt(t.totalOtherExpense)}</span></div>
+      ${t.totalShiftMinus > 0 ? `<div class="dr-detail-sum-row"><span>− Липси (смени)</span><span class="mono neg">${fmt(t.totalShiftMinus)}</span></div>` : ""}
+      ${t.totalAdvances > 0 ? `<div class="dr-detail-sum-row"><span>− Аванси (кеш)</span><span class="mono neg">${fmt(t.totalAdvances)}</span></div>` : ""}
       <div class="dr-sum-divider"></div>
       <div class="dr-detail-sum-row dr-detail-sum-final">
         <span><strong>Крайна каса</strong></span>
@@ -4552,19 +4595,37 @@ window.exportDailyPDF = async function() {
     pdf.text('Обобщение', margin, y); y += 4;
     pdf.setFontSize(9); pdf.setFont('DejaVuSans', 'normal');
 
-    const totShiftPlus  = (r.shifts || []).reduce((s, sh) => s + (sh.plus  || 0), 0);
-    const totShiftMinus = (r.shifts || []).reduce((s, sh) => s + (sh.minus || 0), 0);
+    const t = _recalcReportTotals(r);
+
+    // Провери за несъответствие на начална каса с предишния ден
+    let startCashLabel = 'Начална каса';
+    try {
+      const prevSnap = await getDocs(query(
+        collection(db, 'daily_reports'),
+        where('shopId', '==', r.shopId),
+        where('status', '==', 'closed')
+      ));
+      const prev = prevSnap.docs.map(d => d.data())
+        .filter(x => x.date < r.date)
+        .sort((a, b) => b.date.localeCompare(a.date))[0];
+      if (prev) {
+        const prevEnd = _recalcEndCash(prev);
+        if (Math.abs(prevEnd - Number(r.startCash || 0)) > 0.01) {
+          startCashLabel = `Начална каса (⚠ не съвпада с ${prev.date}: ${prevEnd.toFixed(2)} €)`;
+        }
+      }
+    } catch (_) {}
 
     const sumRows = [
-      ['Начална каса',          fmt(r.startCash)],
-      ['+ Приходи КЕШ',         fmt(r.totalCashIncome)],
-      ['+ Приходи POS',         fmt(r.totalPosIncome)],
-      ['+ Странични приходи',   fmt(r.totalSideIncomes)],
-      ...(totShiftPlus  > 0 ? [['+ Корекции (смени)', fmt(totShiftPlus)]]  : []),
-      ['− Разход Стоки',        fmt(r.totalGoodsExpense)],
-      ['− Разход Други',        fmt(r.totalOtherExpense)],
-      ...(totShiftMinus > 0 ? [['− Липси (смени)',    fmt(totShiftMinus)]] : []),
-      ['− Аванси (кеш)',         fmt(r.totalAdvances)]
+      [startCashLabel,          fmt(r.startCash)],
+      ['+ Приходи КЕШ',         fmt(t.totalCashIncome)],
+      ['+ Приходи POS',         fmt(t.totalPosIncome)],
+      ['+ Странични приходи',   fmt(t.totalSideIncomes)],
+      ...(t.totalShiftPlus  > 0 ? [['+ Корекции (смени)', fmt(t.totalShiftPlus)]]  : []),
+      ['− Разход Стоки',        fmt(t.totalGoodsExpense)],
+      ['− Разход Други',        fmt(t.totalOtherExpense)],
+      ...(t.totalShiftMinus > 0 ? [['− Липси (смени)',    fmt(t.totalShiftMinus)]] : []),
+      ['− Аванси (кеш)',         fmt(t.totalAdvances)]
     ];
     sumRows.forEach(([label, val]) => {
       pdf.text(label, margin + 2, y);
@@ -4574,7 +4635,7 @@ window.exportDailyPDF = async function() {
     pdf.setDrawColor(150); pdf.line(margin, y, pageW - margin, y); y += 4;
     pdf.setFont('DejaVuSans', 'bold');
     pdf.text('Крайна каса', margin + 2, y);
-    pdf.text(`${fmt(_recalcEndCash(r))} €`, pageW - margin - 2, y, { align: 'right' });
+    pdf.text(`${fmt(t.endCash)} €`, pageW - margin - 2, y, { align: 'right' });
     y += 5;
 
     // Смени
