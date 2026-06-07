@@ -3323,7 +3323,7 @@ async function loadPrevEndCash(date) {
 
     if (prev.length) {
       const el = document.getElementById("drStartCash");
-      if (el) el.value = (prev[0].endCash ?? 0).toFixed(2);
+      if (el) el.value = _recalcEndCash(prev[0]).toFixed(2);
       const hint = document.getElementById("drCarryoverHint");
       if (hint) hint.textContent = `↑ прехвърлено от ${prev[0].date}`;
     }
@@ -3338,6 +3338,41 @@ function populateDrForm(data) {
   if (scEl) scEl.value = data.startCash != null ? data.startCash.toFixed(2) : "";
   const hintEl = document.getElementById("drCarryoverHint");
   if (hintEl) hintEl.textContent = "";
+
+  // Async проверка за несъответствие startCash ≠ вчерашен recalc endCash
+  if (data.date && _drShopId) {
+    (async () => {
+      try {
+        const snap = await getDocs(query(
+          collection(db, "daily_reports"),
+          where("shopId", "==", _drShopId),
+          where("status", "==", "closed")
+        ));
+        const prev = snap.docs.map(d => d.data())
+          .filter(r => r.date < data.date)
+          .sort((a, b) => b.date.localeCompare(a.date))[0];
+        if (!prev) return;
+        const correctStart = _recalcEndCash(prev);
+        const currentStart = Number(data.startCash || 0);
+        if (Math.abs(correctStart - currentStart) > 0.01) {
+          const hint = document.getElementById("drCarryoverHint");
+          if (hint) {
+            hint.innerHTML = `⚠️ <span style="color:#e74c3c">Не съвпада с крайна каса на ${prev.date}: ${correctStart.toFixed(2)} €</span>` +
+              ` <button type="button" id="drSyncStartBtn" class="btn-small" style="margin-left:8px">Синхронизирай</button>`;
+            const btn = document.getElementById("drSyncStartBtn");
+            if (btn) btn.onclick = () => {
+              const el = document.getElementById("drStartCash");
+              if (el) {
+                el.value = correctStart.toFixed(2);
+                if (typeof drCalc === "function") drCalc();
+                hint.textContent = `✓ Синхронизирано с ${prev.date}. Не забравяй да запазиш и затвориш отново.`;
+              }
+            };
+          }
+        }
+      } catch (e) { console.warn("startCash mismatch check:", e); }
+    })();
+  }
 
   (data.shifts || []).forEach((sh, i) => {
     if (i >= DR_SHIFTS_DEF.length) return;
@@ -4111,6 +4146,18 @@ function renderDrOwnerTable(reports) {
     end: acc.end + _recalcEndCash(r)
   }), { inc: 0, exp: 0, end: 0 });
 
+  // Строим map за бърз lookup на предишния затворен отчет по магазин
+  const closedByShop = {};
+  [...reports].sort((a, b) => a.date.localeCompare(b.date)).forEach(r => {
+    if (r.status === "closed") closedByShop[`${r.shopId}_${r.date}`] = r;
+  });
+  const getPrev = (r) => {
+    const sorted = Object.values(closedByShop)
+      .filter(x => x.shopId === r.shopId && x.date < r.date)
+      .sort((a, b) => b.date.localeCompare(a.date));
+    return sorted[0] || null;
+  };
+
   tbody.innerHTML = reports.map(r => {
     const closed  = r.status === "closed";
     const store   = r.shopId === "store1" ? "М1" : "М2";
@@ -4118,12 +4165,18 @@ function renderDrOwnerTable(reports) {
     const expense = r2((r.totalGoodsExpense || 0) + (r.totalOtherExpense || 0));
     const endRecalc = _recalcEndCash(r);
     const endOk   = endRecalc >= 0;
+    const prev    = getPrev(r);
+    const prevEnd = prev ? _recalcEndCash(prev) : null;
+    const isMismatch = prev && Math.abs(prevEnd - Number(r.startCash || 0)) > 0.01;
+    const warnIcon = isMismatch
+      ? ` <span title="Не съвпада с крайна каса на ${prev.date} (${prevEnd.toFixed(2)} €)" style="color:#e74c3c;cursor:help">⚠️</span>`
+      : '';
     return `
       <tr class="${closed ? "" : "dr-owner-draft-row"}">
         <td>${r.date || "—"}</td>
         <td>${store}</td>
         <td><span class="dr-hist-badge ${closed ? "badge-closed" : "badge-draft"}">${closed ? "✅ Затворен" : "📝 Чернова"}</span></td>
-        <td class="mono">${fmt(r.startCash)}</td>
+        <td class="mono">${fmt(r.startCash)}${warnIcon}</td>
         <td class="mono pos">${fmt(income)}</td>
         <td class="mono neg">${fmt(expense)}</td>
         <td class="mono ${endOk ? "pos" : "neg"}">${fmt(endRecalc)}</td>
