@@ -3896,7 +3896,7 @@ async function saveClosedReportEdits() {
 
   const payload = {
     shopId: _drShopId, date: data.date, status: "closed",
-    startCash: _drData.startCash, shifts: data.shifts,
+    startCash: data.startCash, shifts: data.shifts,
     expensesGoods: data.expensesGoods, expensesOther: data.expensesOther,
     sideIncomes: data.sideIncomes, advances: data.advances,
     totalCashIncome: data.totalCashIncome, totalPosIncome: data.totalPosIncome,
@@ -3907,7 +3907,7 @@ async function saveClosedReportEdits() {
     totalSideIncomes: data.totalSideIncomes,
     cashSideIncomes: data.cashSideIncomes || 0, cardSideIncomes: data.cardSideIncomes || 0, bankSideIncomes: data.bankSideIncomes || 0,
     totalAdvances: data.totalAdvances,
-    endCash: _drData.endCash,
+    endCash: data.endCash,
     createdBy: _drData.createdBy, createdAt: _drData.createdAt,
     lastModifiedBy: currentUserId, lastModifiedAt: now,
     changeLog,
