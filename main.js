@@ -4027,7 +4027,7 @@ function hideDrBanner() {
   document.getElementById("drStatusBanner")?.classList.add("hidden");
 }
 
-// ── Последни 5 отчета ────────────────────────────────
+// ── Последни 10 отчета ───────────────────────────────
 async function loadRecentReports() {
   const el = document.getElementById("drRecentList");
   if (!el || !_drShopId) return;
@@ -4041,7 +4041,7 @@ async function loadRecentReports() {
     const sorted = raw.docs
       .filter(d => d.data() && typeof d.data().date === "string")
       .sort((a, b) => b.data().date.localeCompare(a.data().date))
-      .slice(0, 5);
+      .slice(0, 10);
     const snap = { docs: sorted, empty: sorted.length === 0 };
 
     if (snap.empty) {
