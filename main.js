@@ -3760,6 +3760,7 @@ async function persistReport(status) {
     _drDocId  = ref.id;
   }
 
+  _refreshOwnerReportInCache(payload, _drDocId);
   _drData   = payload;
   _drStatus = status;
 
@@ -3911,6 +3912,20 @@ async function sendOwnerNotification(report) {
   } catch (e) { console.warn("sendOwnerNotification:", e); }
 }
 
+// Обновява _drOwnerReports след запис, за да не вижда собственикът стари стойности.
+// Без това: owner панелът показва кеширани числа до пълно зареждане (F5).
+function _refreshOwnerReportInCache(payload, docId) {
+  if (!Array.isArray(_drOwnerReports)) return;
+  const idx = _drOwnerReports.findIndex(r => r.id === docId);
+  const entry = { ...payload, id: docId };
+  if (idx >= 0) {
+    _drOwnerReports[idx] = entry;
+  } else {
+    _drOwnerReports.unshift(entry);
+  }
+  if (typeof window.applyDrFilters === "function") window.applyDrFilters();
+}
+
 // ── Запази редакция на затворен отчет ──────────────────
 async function saveClosedReportEdits() {
   const data = collectDrData();
@@ -3943,6 +3958,7 @@ async function saveClosedReportEdits() {
   };
 
   await updateDoc(doc(db, "daily_reports", _drDocId), payload);
+  _refreshOwnerReportInCache(payload, _drDocId);
   _drData   = payload;
   _drStatus = "closed";
 
@@ -4130,7 +4146,7 @@ async function loadDailyReportsScreen() {
 
   try {
     const snap = await getDocs(query(collection(db, "daily_reports"), orderBy("date", "desc")));
-    _drOwnerReports = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    window._drOwnerReports = _drOwnerReports = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
     const monthEl = document.getElementById("drFilterMonth");
     if (monthEl && !monthEl.value) {
@@ -4472,11 +4488,18 @@ window.allowReportEdit = async function() {
   if (!confirm("Разреши редакция?\n\nУправителят ще може да промени затворения отчет и транзакциите ще се обновят автоматично.")) return;
 
   try {
+    const editAllowedAt = new Date().toISOString();
     await updateDoc(doc(db, "daily_reports", _currentModalReportId), {
       editAllowed:    true,
-      editAllowedAt:  new Date().toISOString(),
+      editAllowedAt,
       editAllowedBy:  currentUserId
     });
+
+    const idx = _drOwnerReports.findIndex(r => r.id === _currentModalReportId);
+    if (idx >= 0) {
+      _drOwnerReports[idx] = { ..._drOwnerReports[idx], editAllowed: true, editAllowedAt, editAllowedBy: currentUserId };
+      if (typeof window.applyDrFilters === "function") window.applyDrFilters();
+    }
 
     const snap = await getDoc(doc(db, "daily_reports", _currentModalReportId));
     if (snap.exists()) {
