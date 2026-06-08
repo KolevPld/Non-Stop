@@ -3756,8 +3756,9 @@ async function persistReport(status) {
   if (_drDocId) {
     await updateDoc(doc(db, "daily_reports", _drDocId), payload);
   } else {
-    const ref = await addDoc(collection(db, "daily_reports"), payload);
-    _drDocId  = ref.id;
+    const docId = `${_drShopId}_${data.date}`;
+    await setDoc(doc(db, "daily_reports", docId), payload, { merge: true });
+    _drDocId = docId;
   }
 
   _refreshOwnerReportInCache(payload, _drDocId);

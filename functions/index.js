@@ -154,14 +154,34 @@ exports.autoCarryStartCash = onDocumentUpdated(
       return;
     }
 
-    const shopId  = after.shopId;
-    const date    = after.date;
-    const endCash = Number(after.endCash || 0);
+    const shopId = after.shopId;
+    const date   = after.date;
 
     if (!shopId || !date) {
       logger.warn('autoCarryStartCash: липсва shopId/date', { docId: event.params.docId });
       return;
     }
+
+    // Преизчислява endCash от суровите данни (идентична логика с _recalcEndCash в main.js).
+    const shifts        = after.shifts        || [];
+    const expensesGoods = after.expensesGoods || [];
+    const expensesOther = after.expensesOther || [];
+    const sideIncomes   = after.sideIncomes   || [];
+    const advances      = after.advances      || [];
+    const isCash = (x) => (x.method || 'Кеш') !== 'Карта' && (x.method || 'Кеш') !== 'Банков превод';
+    const totalCashIncome  = shifts.reduce((s, sh) => s + Number(sh.cash  || 0), 0);
+    const totalShiftPlus   = shifts.reduce((s, sh) => s + Number(sh.plus  || 0), 0);
+    const totalShiftMinus  = shifts.reduce((s, sh) => s + Number(sh.minus || 0), 0);
+    const cashGoodsExpense = expensesGoods.filter(isCash).reduce((s, g)  => s + Number(g.amount  || 0), 0);
+    const cashOtherExpense = expensesOther.filter(isCash).reduce((s, o)  => s + Number(o.amount  || 0), 0);
+    const cashSideIncomes  = sideIncomes  .filter(isCash).reduce((s, si) => s + Number(si.amount || 0), 0);
+    const totalAdvances    = advances.reduce((s, a) => s + Number(a.amount || 0), 0);
+    const endCash = Math.round(
+      (Number(after.startCash || 0) + totalCashIncome + cashSideIncomes
+       + totalShiftPlus - totalShiftMinus
+       - (cashGoodsExpense + cashOtherExpense) - totalAdvances) * 100
+    ) / 100;
+    logger.info('autoCarryStartCash: преизчислен endCash', { docId: event.params.docId, stored: after.endCash, recalc: endCash });
 
     const d = new Date(date + 'T00:00:00Z');
     d.setUTCDate(d.getUTCDate() + 1);
@@ -220,6 +240,17 @@ exports.protectStartCash = onDocumentUpdated(
     if (!before || !after) return;
 
     if (before.status !== 'closed' || after.status !== 'closed') return;
+
+    // Легитимна редакция — собственикът е разрешил изрично. Не реверирай.
+    if (after.editAllowed === true) {
+      logger.info('protectStartCash: skip — editAllowed=true', { docId: event.params.docId });
+      return;
+    }
+    // Редакцията току-що е завършена (editAllowed: true → false). Не реверирай.
+    if (before.editAllowed === true && after.editAllowed === false) {
+      logger.info('protectStartCash: skip — edit just completed', { docId: event.params.docId });
+      return;
+    }
 
     const startChanged = Number(before.startCash || 0) !== Number(after.startCash || 0);
     const endChanged   = Number(before.endCash || 0)   !== Number(after.endCash || 0);
