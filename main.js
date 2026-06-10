@@ -1816,6 +1816,9 @@ window.toggleReportsDetails = function() {
 
 // ── showScreen — единна функция (add / report / notes) ────────
 window.showScreen = function(screen) {
+  if (_recentReportsUnsub) { _recentReportsUnsub(); _recentReportsUnsub = null; }
+  if (_ownerReportsUnsub)  { _ownerReportsUnsub();  _ownerReportsUnsub  = null; }
+
   const addScreen      = document.getElementById("screen-add");
   const reportScreen   = document.getElementById("screen-report");
   const notesScreen    = document.getElementById("screen-notes");
@@ -2632,6 +2635,8 @@ let _drData      = null;
 let _drEmployees = [];
 let _drEmployeesLoaded = false;
 let _suppliers = [];
+let _recentReportsUnsub = null;
+let _ownerReportsUnsub  = null;
 
 // ── Инициализация ────────────────────────────────────
 function initDailyReport(storeRole) {
@@ -4027,24 +4032,27 @@ function hideDrBanner() {
   document.getElementById("drStatusBanner")?.classList.add("hidden");
 }
 
-// ── Последни 10 отчета ───────────────────────────────
-async function loadRecentReports() {
+// ── Последни 10 отчета (real-time) ───────────────────
+function loadRecentReports() {
   const el = document.getElementById("drRecentList");
   if (!el || !_drShopId) return;
+
+  if (_recentReportsUnsub) { _recentReportsUnsub(); _recentReportsUnsub = null; }
+
   el.innerHTML = '<div class="tasks-empty">Зареждане...</div>';
 
-  try {
-    const raw  = await getDocs(query(
-      collection(db, "daily_reports"),
-      where("shopId", "==", _drShopId)
-    ));
-    const sorted = raw.docs
+  const q = query(
+    collection(db, "daily_reports"),
+    where("shopId", "==", _drShopId)
+  );
+
+  _recentReportsUnsub = onSnapshot(q, (snap) => {
+    const sorted = snap.docs
       .filter(d => d.data() && typeof d.data().date === "string")
       .sort((a, b) => b.data().date.localeCompare(a.data().date))
       .slice(0, 10);
-    const snap = { docs: sorted, empty: sorted.length === 0 };
 
-    if (snap.empty) {
+    if (!sorted.length) {
       el.innerHTML = '<div class="tasks-empty">Все още няма отчети</div>';
       return;
     }
@@ -4062,7 +4070,7 @@ async function loadRecentReports() {
     };
 
     const fmt = n => (Number(n) || 0).toFixed(2) + " €";
-    el.innerHTML = snap.docs.map(d => {
+    el.innerHTML = sorted.map(d => {
       const r       = { id: d.id, ...d.data() };
       const closed  = r.status === "closed";
       const active  = r.id === _drDocId ? "dr-hist-active" : "";
@@ -4084,10 +4092,11 @@ async function loadRecentReports() {
           </div>
         </div>`;
     }).join("");
-  } catch (err) {
-    console.error("loadRecentReports:", err);
+  }, (err) => {
+    console.error("loadRecentReports onSnapshot:", err);
     el.innerHTML = '<div class="tasks-empty">Грешка при зареждане</div>';
-  }
+  });
+
   checkMissingDays();
 }
 
@@ -4137,16 +4146,20 @@ function renderDrChangeLog(log) {
 let _drOwnerReports       = [];
 let _currentModalReportId = null;
 
-// ── Зареждане на екрана ──────────────────────────────
-async function loadDailyReportsScreen() {
+// ── Зареждане на екрана (real-time) ─────────────────
+function loadDailyReportsScreen() {
   const tbody = document.getElementById("drOwnerTableBody");
   if (!tbody) return;
+
+  if (_ownerReportsUnsub) { _ownerReportsUnsub(); _ownerReportsUnsub = null; }
+
   tbody.innerHTML = '<tr><td colspan="8" class="tasks-empty">Зареждане...</td></tr>';
 
   loadOwnerNotifications();
 
-  try {
-    const snap = await getDocs(query(collection(db, "daily_reports"), orderBy("date", "desc")));
+  const q = query(collection(db, "daily_reports"), orderBy("date", "desc"));
+
+  _ownerReportsUnsub = onSnapshot(q, (snap) => {
     window._drOwnerReports = _drOwnerReports = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
     const monthEl = document.getElementById("drFilterMonth");
@@ -4154,10 +4167,10 @@ async function loadDailyReportsScreen() {
       monthEl.value = new Date().toISOString().slice(0, 7);
     }
     applyDrFilters();
-  } catch (err) {
-    console.error("loadDailyReportsScreen:", err);
+  }, (err) => {
+    console.error("loadDailyReportsScreen onSnapshot:", err);
     tbody.innerHTML = `<tr><td colspan="8" class="tasks-empty">Грешка: ${err.message}</td></tr>`;
-  }
+  });
 }
 
 window.applyDrFilters = function() {
