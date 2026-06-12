@@ -2976,21 +2976,26 @@ function renderDrGoodsTable() {
   }
 }
 
-function renderDrOtherTable() {
-  const tbody = document.getElementById("drOtherBody");
-  if (!tbody) return;
-
+function updateDrOtherDescOptions() {
+  const dl = document.getElementById("drOtherDescList");
+  if (!dl) return;
   const dateVal = document.getElementById("drDate")?.value || "";
   let isSunday = false;
   if (dateVal && /^\d{4}-\d{2}-\d{2}$/.test(dateVal)) {
     isSunday = new Date(dateVal + "T00:00:00Z").getUTCDay() === 0;
   }
-
   const baseOpts = ["Ремонт", "Консумативи", "Транспорт", "Комунални", "Друго"];
-  const sundayOpt = isSunday ? `<option value="Оставени за зареждане"></option>` : "";
-  const datalistHtml = `<datalist id="drOtherDescList">${baseOpts.map(o => `<option value="${o}"></option>`).join("")}${sundayOpt}</datalist>`;
+  const opts = isSunday ? [...baseOpts, "Оставени за зареждане"] : baseOpts;
+  dl.innerHTML = opts.map(o => `<option value="${o}"></option>`).join("");
+}
 
-  tbody.innerHTML = datalistHtml + Array.from({ length: DR_OTHER }, (_, i) => `
+function renderDrOtherTable() {
+  const tbody = document.getElementById("drOtherBody");
+  if (!tbody) return;
+
+  updateDrOtherDescOptions();
+
+  tbody.innerHTML = Array.from({ length: DR_OTHER }, (_, i) => `
     <tr>
       <td class="dr-num">${i + 1}</td>
       <td><input type="text" class="dr-input" placeholder="Описание" list="drOtherDescList" data-other="${i}" data-field="desc"></td>
@@ -3365,6 +3370,7 @@ async function loadPrevEndCash(date) {
 function populateDrForm(data) {
   const dateEl = document.getElementById("drDate");
   if (dateEl) dateEl.value = data.date || "";
+  updateDrOtherDescOptions();
   const scEl = document.getElementById("drStartCash");
   if (scEl) scEl.value = data.startCash != null ? data.startCash.toFixed(2) : "";
   const hintEl = document.getElementById("drCarryoverHint");
@@ -4109,6 +4115,7 @@ window.openDrReport = async function(docId) {
     _drStatus = _drData.status || "draft";
     const dateEl = document.getElementById("drDate");
     if (dateEl) dateEl.value = _drData.date || "";
+    updateDrOtherDescOptions();
     populateDrForm(_drData);
     updateDrStatusUI();
     window.scrollTo({ top: 0, behavior: "smooth" });
