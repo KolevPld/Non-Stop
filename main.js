@@ -2655,6 +2655,7 @@ function initDailyReport(storeRole) {
   const today  = new Date().toISOString().slice(0, 10);
   const dateEl = document.getElementById("drDate");
   if (dateEl) { dateEl.value = today; dateEl.max = ""; }
+  _updateDrDateWeekday();
 
   loadSuppliers();
   loadOrCreateReport();
@@ -3179,6 +3180,22 @@ function _setOperatorValue(i, operatorName) {
 
 function r2(n) { return Math.round(n * 100) / 100; }
 
+// Връща съкратеното българско име на деня от седмицата за дадена ISO дата (YYYY-MM-DD).
+function _ymdToWeekday(ymd) {
+  if (!ymd || typeof ymd !== "string") return "";
+  const days = ["Нд", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
+  const d = new Date(ymd + "T12:00:00");
+  if (isNaN(d.getTime())) return "";
+  return days[d.getDay()];
+}
+
+function _updateDrDateWeekday() {
+  const wd = document.getElementById("drDateWeekday");
+  if (!wd) return;
+  const day = _ymdToWeekday(document.getElementById("drDate")?.value || "");
+  wd.textContent = day ? `(${day})` : "";
+}
+
 // Преизчислява endCash от суровите данни на отчета (shifts, expenses, sideIncomes, advances).
 // Ползва се за показване — стари отчети, затворени преди добавянето на plus/minus в endCash,
 // имат сторирана грешна стойност. Тази функция ги "самоизлекува" без миграция.
@@ -3307,6 +3324,7 @@ function setText(id, val) {
 
 // ── Зареждане / Нов отчет ────────────────────────────
 window.loadOrCreateReport = async function() {
+  _updateDrDateWeekday();
   renderDrOtherTable();
   const date = document.getElementById("drDate")?.value;
   if (!date || !_drShopId) return;
@@ -3370,6 +3388,7 @@ async function loadPrevEndCash(date) {
 function populateDrForm(data) {
   const dateEl = document.getElementById("drDate");
   if (dateEl) dateEl.value = data.date || "";
+  _updateDrDateWeekday();
   updateDrOtherDescOptions();
   const scEl = document.getElementById("drStartCash");
   if (scEl) scEl.value = data.startCash != null ? data.startCash.toFixed(2) : "";
@@ -3495,6 +3514,7 @@ window.drNewReportForDate = async function(date) {
     _drStatus = "draft";
     const dateEl = document.getElementById("drDate");
     if (dateEl) { dateEl.value = date; dateEl.disabled = false; }
+    _updateDrDateWeekday();
     clearDrForm();
     updateDrStatusUI();
     hideDrBanner();
@@ -3564,6 +3584,7 @@ window.drNewReport = async function() {
   hideDrBanner();
   const suggested = await suggestNextDrDate();
   if (dateEl) dateEl.value = suggested;
+  _updateDrDateWeekday();
   await loadOrCreateReport();
   window.scrollTo({ top: 0, behavior: "smooth" });
 };
@@ -4086,7 +4107,7 @@ function loadRecentReports() {
       return `
         <div class="dr-hist-item ${active}" onclick="openDrReport('${r.id}')">
           <div class="dr-hist-top">
-            <strong>${r.date}</strong>${delayed}
+            <strong>${r.date}</strong> <span style="color:var(--text3);font-size:.85em;">${_ymdToWeekday(r.date)}</span>${delayed}
             <span class="dr-hist-badge ${closed ? "badge-closed" : "badge-draft"}">
               ${closed ? "✅ Затворен" : "📝 Чернова"}
             </span>
@@ -4115,6 +4136,7 @@ window.openDrReport = async function(docId) {
     _drStatus = _drData.status || "draft";
     const dateEl = document.getElementById("drDate");
     if (dateEl) dateEl.value = _drData.date || "";
+    _updateDrDateWeekday();
     updateDrOtherDescOptions();
     populateDrForm(_drData);
     updateDrStatusUI();
@@ -4238,7 +4260,7 @@ function renderDrOwnerTable(reports) {
       : '';
     return `
       <tr class="${closed ? "" : "dr-owner-draft-row"}">
-        <td>${r.date || "—"}</td>
+        <td>${r.date || "—"}${r.date ? ` <span style="color:var(--text3);font-size:.85em;">(${_ymdToWeekday(r.date)})</span>` : ""}</td>
         <td>${store}</td>
         <td><span class="dr-hist-badge ${closed ? "badge-closed" : "badge-draft"}">${closed ? "✅ Затворен" : "📝 Чернова"}</span></td>
         <td class="mono">${fmt(r.startCash)}${warnIcon}</td>
@@ -4431,7 +4453,7 @@ function buildDrDetailHtml(r) {
   return `
     <div class="dr-detail-meta" style="margin-bottom:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
       <span>🏪 <strong>${escHtml(store)}</strong></span>
-      <span>📅 <strong>${escHtml(r.date || "—")}</strong></span>
+      <span>📅 <strong>${escHtml(r.date || "—")}</strong>${r.date ? ` <span style="color:var(--text3);font-size:.85em;">(${_ymdToWeekday(r.date)})</span>` : ""}</span>
       <span style="color:${statusColor};font-weight:700;">${statusLabel}</span>
       ${r.editAllowed ? '<span style="color:var(--amber);font-size:.8rem;">✏️ Редакцията е разрешена</span>' : ''}
     </div>
