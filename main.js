@@ -1248,6 +1248,17 @@ window.renderWeeklyReport = async function() {
     const totalExp = totGoods + totOther + totAdv;
     const net = totalInc + totSide + totShiftPlus - totShiftMinus - totalExp;
 
+    const totTurnover = totCash + totPos;
+    const cashPct = totTurnover > 0 ? (totCash / totTurnover) * 100 : 0;
+    const posPct  = totTurnover > 0 ? (totPos  / totTurnover) * 100 : 0;
+    const pctBanner = totTurnover > 0
+      ? `<div style="padding:8px 12px;color:var(--text3);font-size:.9em;margin-top:6px;">
+          💰 Кеш: <strong>${cashPct.toFixed(1)}%</strong> &nbsp;|&nbsp;
+          💳 Карта: <strong>${posPct.toFixed(1)}%</strong>
+          <span style="margin-left:8px;opacity:.7;">(от общ оборот ${totTurnover.toFixed(2)} €)</span>
+        </div>`
+      : "";
+
     const leftBanner = totalLeftForStock > 0
       ? `<div style="margin-top:12px;padding:10px 14px;background:rgba(76,175,80,0.12);border:1px solid rgba(76,175,80,0.4);border-radius:8px;font-size:0.9rem;">
           📦 <strong>Оставени за стока:</strong> ${totalLeftForStock.toFixed(2)} €
@@ -1286,7 +1297,7 @@ window.renderWeeklyReport = async function() {
           <td colspan="5"><strong style="color:${net >= 0 ? "var(--green)" : "var(--red)"};">${net.toFixed(2)} €</strong></td>
         </tr>
       </tfoot>
-    </table>${leftBanner}`;
+    </table>${leftBanner}${pctBanner}`;
     _wrRenderComparison(shopId, monStr);
   } catch (err) {
     wrap.innerHTML = `<div class="tasks-empty" style="color:var(--red);">Грешка: ${err.message}</div>`;
@@ -1590,6 +1601,19 @@ window.exportWeeklyPDF = async function() {
     if (rows.some(r => !r.hasReport)) {
       pdf.setFontSize(8); pdf.setTextColor(120);
       pdf.text('* дни без затворен отчет', margin, curY);
+      curY += 5;
+    }
+
+    // Разпределение кеш/карта
+    const pdfTotTurnover = totals.cash + totals.pos;
+    if (pdfTotTurnover > 0) {
+      const pdfCashPct = (totals.cash / pdfTotTurnover) * 100;
+      const pdfPosPct  = (totals.pos  / pdfTotTurnover) * 100;
+      pdf.setFontSize(9); pdf.setFont('DejaVuSans', 'normal'); pdf.setTextColor(80);
+      pdf.text(
+        `Разпределение на оборота: Кеш ${pdfCashPct.toFixed(1)}% | Карта ${pdfPosPct.toFixed(1)}%  (общ оборот ${fmt(pdfTotTurnover)} €)`,
+        margin, curY
+      );
     }
 
     // Подписи
