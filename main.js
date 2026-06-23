@@ -7126,6 +7126,109 @@ ${d.topSuppliers && d.topSuppliers.length ? `
 `;
 }
 
+async function _mrLoadDailyRows(monthVal) {
+  const [y, m] = monthVal.split("-").map(Number);
+  const first   = `${monthVal}-01`;
+  const lastDay = new Date(y, m, 0).getDate();
+  const last    = `${monthVal}-${String(lastDay).padStart(2, "0")}`;
+
+  const q = query(
+    collection(db, "daily_reports"),
+    where("status", "==", "closed"),
+    where("date", ">=", first),
+    where("date", "<=", last)
+  );
+  const snap = await getDocs(q);
+
+  const rows = snap.docs.map(d => {
+    const r  = { id: d.id, ...d.data() };
+    const t  = _recalcReportTotals(r);
+    const norm = (s) => (s || "").trim();
+    let leftForStock = 0, otherExp = 0;
+    (r.expensesOther || []).forEach(o => {
+      const amt = Number(o.amount || 0);
+      if (norm(o.description) === "Оставени за зареждане") leftForStock += amt;
+      else otherExp += amt;
+    });
+    return {
+      date:     r.date,
+      shopId:   r.shopId,
+      turnover: (t.totalCashIncome || 0) + (t.totalPosIncome || 0),
+      cash:     t.totalCashIncome  || 0,
+      pos:      t.totalPosIncome   || 0,
+      stoka:    t.totalGoodsExpense || 0,
+      otherExp: otherExp,
+      sideInc:  t.totalSideIncomes || 0,
+      advances: t.totalAdvances    || 0
+    };
+  });
+
+  rows.sort((a, b) => a.date.localeCompare(b.date) || a.shopId.localeCompare(b.shopId));
+  return rows;
+}
+
+function _mrRenderDailyTable(rows) {
+  if (!rows.length) return '<div class="tasks-empty" style="margin-top:12px;">Няма затворени отчети за периода.</div>';
+
+  const fmt     = (n) => (Number(n) || 0).toFixed(2);
+  const shopLbl = (sid) => sid === "store1" ? "М1" : "М2";
+  const dash    = (v) => v > 0 ? fmt(v) : "—";
+
+  const tot = rows.reduce((a, r) => ({
+    turnover: a.turnover + r.turnover, cash: a.cash + r.cash, pos: a.pos + r.pos,
+    stoka:    a.stoka + r.stoka,       otherExp: a.otherExp + r.otherExp,
+    sideInc:  a.sideInc + r.sideInc,  advances: a.advances + r.advances
+  }), { turnover:0, cash:0, pos:0, stoka:0, otherExp:0, sideInc:0, advances:0 });
+
+  let prevDate = null;
+  const body = rows.map(r => {
+    const newDay  = r.date !== prevDate;
+    prevDate      = r.date;
+    const dayCell = newDay ? `${_ymdToWeekday(r.date)} ${r.date.slice(8)}.${r.date.slice(5,7)}` : "";
+    const sep     = newDay ? ' style="border-top:2px solid var(--border);"' : "";
+    return `<tr${sep}>
+      <td class="mr-td-label">${dayCell}</td>
+      <td class="mr-td-val">${shopLbl(r.shopId)}</td>
+      <td class="mr-td-val">${fmt(r.turnover)}</td>
+      <td class="mr-td-val">${fmt(r.cash)}</td>
+      <td class="mr-td-val">${fmt(r.pos)}</td>
+      <td class="mr-td-val">${dash(r.stoka)}</td>
+      <td class="mr-td-val">${dash(r.otherExp)}</td>
+      <td class="mr-td-val">${dash(r.sideInc)}</td>
+      <td class="mr-td-val">${dash(r.advances)}</td>
+    </tr>`;
+  }).join("");
+
+  return `<div class="mr-section" style="margin-top:18px;">
+    <div class="mr-section-title">Дневна разбивка (по дни)</div>
+    <div class="mr-table-wrap"><table class="mr-table">
+      <thead><tr>
+        <th class="mr-th-label">Ден</th>
+        <th class="mr-th-val">Маг.</th>
+        <th class="mr-th-val">Оборот</th>
+        <th class="mr-th-val">Кеш</th>
+        <th class="mr-th-val">POS</th>
+        <th class="mr-th-val">Стока</th>
+        <th class="mr-th-val">Друг разход</th>
+        <th class="mr-th-val">Стр. приход</th>
+        <th class="mr-th-val">Аванси</th>
+      </tr></thead>
+      <tbody>${body}</tbody>
+      <tfoot><tr class="mr-tr-total">
+        <td class="mr-td-label">ОБЩО</td>
+        <td class="mr-td-val">—</td>
+        <td class="mr-td-val">${fmt(tot.turnover)}</td>
+        <td class="mr-td-val">${fmt(tot.cash)}</td>
+        <td class="mr-td-val">${fmt(tot.pos)}</td>
+        <td class="mr-td-val">${fmt(tot.stoka)}</td>
+        <td class="mr-td-val">${fmt(tot.otherExp)}</td>
+        <td class="mr-td-val">${fmt(tot.sideInc)}</td>
+        <td class="mr-td-val">${fmt(tot.advances)}</td>
+      </tr></tfoot>
+    </table></div>
+  </div>`;
+}
+
 async function loadMonthlyReport() {
   const sel    = document.getElementById('mrMonthSel');
   const status = document.getElementById('mrStatus');
@@ -7147,12 +7250,24 @@ async function loadMonthlyReport() {
     console.log('[monthly] exists:', snap.exists(), 'for', monthVal);
 
     if (!snap.exists()) {
-      el.innerHTML = `<div class="tasks-empty">Няма месечна справка за ${monthVal}.<br>Може да я генерирате ръчно.</div>`;
+      el.innerHTML = `<div class="tasks-empty">Няма генерирана месечна справка за ${monthVal}.<br>Може да я генерирате ръчно. Показвам дневните данни директно:</div>`;
+      try {
+        const dailyRows = await _mrLoadDailyRows(monthVal);
+        el.insertAdjacentHTML("beforeend", _mrRenderDailyTable(dailyRows));
+        window._mrLastDailyRows = dailyRows;
+        window._mrLastMonthVal  = monthVal;
+      } catch (e) { console.warn("monthly daily rows:", e); }
       return;
     }
 
     el.innerHTML = '';
     _mrRenderInto(el, snap.data(), monthVal);
+    try {
+      const dailyRows = await _mrLoadDailyRows(monthVal);
+      el.insertAdjacentHTML("beforeend", _mrRenderDailyTable(dailyRows));
+      window._mrLastDailyRows = dailyRows;
+      window._mrLastMonthVal  = monthVal;
+    } catch (e) { console.warn("monthly daily rows:", e); }
   } catch (e) {
     console.error('loadMonthlyReport:', e);
     el.innerHTML = '<div class="tasks-empty" style="color:#f44336">Грешка при зареждане: ' + e.message + '</div>';
@@ -7361,102 +7476,122 @@ window.exportMonthlyPDF = async function() {
   if (!sel?.value) { alert('Изберете месец.'); return; }
   const monthVal = sel.value;
 
-  // DocId е "YYYY-MM" — четем директно по ключ
-  const ref = doc(db, 'monthly_reports', monthVal);
-  let snap;
-  try { snap = await getDocFromServer(ref); }
-  catch (e) { snap = await getDoc(ref); }
-  if (!snap.exists()) { alert('Няма генерирана справка за ' + monthVal + '. Натиснете "Генерирай" първо.'); return; }
-
-  const d = snap.data();
-  // Извличаме месец/година от docId ("2026-05"), не от d.period
   const [yearStr, monthStr] = monthVal.split('-');
   const monthLabel = _mrMonthNames[Number(monthStr) - 1] + ' ' + yearStr;
 
+  if (typeof window.jspdf === 'undefined' || !window.jspdf.jsPDF) { alert('jsPDF не е заредена.'); return; }
   const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  await _loadRobotoFont();
-  pdf.addFileToVFS('DejaVuSans.ttf',      _robotoRegular);
-  pdf.addFont('DejaVuSans.ttf', 'DejaVuSans', 'normal');
-  pdf.addFileToVFS('DejaVuSans-Bold.ttf', _robotoBold);
-  pdf.addFont('DejaVuSans-Bold.ttf', 'DejaVuSans', 'bold');
-  pdf.setFont('DejaVuSans');
 
-  let yPos = 15;
-  pdf.setFont('DejaVuSans', 'bold');
-  pdf.setFontSize(14);
-  pdf.text('Месечна справка', 14, yPos);
-  yPos += 7;
-  pdf.setFont('DejaVuSans', 'normal');
-  pdf.setFontSize(10);
-  pdf.text(monthLabel, 14, yPos);
-  yPos += 8;
+  try {
+    await _loadRobotoFont();
+    const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    pdf.addFileToVFS('DejaVuSans.ttf',      _robotoRegular);
+    pdf.addFileToVFS('DejaVuSans-Bold.ttf', _robotoBold);
+    pdf.addFont('DejaVuSans.ttf',      'DejaVuSans', 'normal');
+    pdf.addFont('DejaVuSans-Bold.ttf', 'DejaVuSans', 'bold');
+    pdf.setFont('DejaVuSans', 'normal');
 
-  const rows = [
-    ['Оборот (€)',                _mrFmt(d.totalTurnover)],
-    ['  в т.ч. Кеш (€)',         _mrFmt(d.totalCash)],
-    ['  в т.ч. ПОС (€)',         _mrFmt(d.totalPos)],
-    ['Стока (€)',                 _mrFmt(d.totalStoka)],
-    ['Нетна печалба (€)',        _mrFmt(d.netProfit)],
-    ['Заплати (€)',               _mrFmt(d.totalSalary)],
-    ['Аванси (€)',                _mrFmt(d.totalAdvances)],
-    ['Оставени за зареждане (€)', _mrFmt(d.totalLeftForStock)],
-    ['Странични приходи (€)',     _mrFmt(d.totalSideInc)],
-    ['ДДС дължим (€)',            _mrFmt(d.vatDue)],
-    ['Корп. данък (€)',           _mrFmt(d.corpTax)],
-    ['Затворени дни',               String(d.closedDaysCount ?? '—')],
-    ['  Магазин 1',                 String(d.closedDaysByShop && d.closedDaysByShop.store1 != null ? d.closedDaysByShop.store1 : '—')],
-    ['  Магазин 2',                 String(d.closedDaysByShop && d.closedDaysByShop.store2 != null ? d.closedDaysByShop.store2 : '—')],
-  ];
+    const pageW  = pdf.internal.pageSize.getWidth();
+    const margin = 12;
 
-  pdf.autoTable({
-    startY: yPos,
-    head: [['Показател', 'Стойност']],
-    body: rows,
-    styles: { font: 'DejaVuSans', fontSize: 10 },
-    headStyles: { fillColor: [255, 202, 40], textColor: [0, 0, 0], fontStyle: 'bold' },
-    columnStyles: { 1: { halign: 'right' } },
-    margin: { left: 14, right: 14 },
-  });
+    // ── Заглавие ─────────────────────────────────
+    pdf.setFontSize(15); pdf.setFont('DejaVuSans', 'bold');
+    pdf.text('Нон Стоп — Месечна справка: ' + monthLabel, margin, 14);
+    pdf.setFontSize(9); pdf.setFont('DejaVuSans', 'normal');
+    pdf.text('Генериран: ' + new Date().toLocaleString('bg-BG', { timeZone: 'Europe/Sofia' }), pageW - margin, 14, { align: 'right' });
+    pdf.setDrawColor(180); pdf.line(margin, 18, pageW - margin, 18);
 
-  yPos = pdf.lastAutoTable.finalY + 8;
+    let yPos = 22;
 
-  // По магазин
-  if (d.perShop) {
-    pdf.setFont('DejaVuSans', 'bold');
-    pdf.setFontSize(11);
-    pdf.text('По магазин', 14, yPos);
-    yPos += 2;
-    const psRows = ['store1', 'store2'].map(sid => {
-      const ps = d.perShop[sid] || {};
-      const lbl = sid === 'store1' ? 'Магазин 1' : 'Магазин 2';
-      return [lbl, _mrFmt(ps.turnover), _mrFmt(ps.stoka), _mrFmt(ps.netProfit), String(ps.closedDays ?? '—')];
-    });
-    pdf.autoTable({
-      startY: yPos,
-      head: [['Магазин', 'Оборот', 'Стока', 'Нетна', 'Дни']],
-      body: psRows,
-      styles: { font: 'DejaVuSans', fontSize: 10 },
-      headStyles: { fillColor: [66, 66, 66], textColor: [255, 255, 255], fontStyle: 'bold' },
-      columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' } },
-      margin: { left: 14, right: 14 },
-    });
-    yPos = pdf.lastAutoTable.finalY + 8;
+    // ── Обобщение (от monthly_reports, ако съществува) ───
+    const ref = doc(db, 'monthly_reports', monthVal);
+    let snap;
+    try { snap = await getDocFromServer(ref); } catch (e) { snap = await getDoc(ref); }
+    if (snap.exists()) {
+      const d = snap.data();
+      const summaryRows = [
+        ['Оборот (€)',                 _mrFmt(d.totalTurnover)],
+        ['  в т.ч. Кеш (€)',          _mrFmt(d.totalCash)],
+        ['  в т.ч. ПОС (€)',          _mrFmt(d.totalPos)],
+        ['Стока (€)',                  _mrFmt(d.totalStoka)],
+        ['Нетна печалба (€)',          _mrFmt(d.netProfit)],
+        ['Заплати (€)',                _mrFmt(d.totalSalary)],
+        ['Аванси (€)',                 _mrFmt(d.totalAdvances)],
+        ['Оставени за зареждане (€)',  _mrFmt(d.totalLeftForStock)],
+        ['Странични приходи (€)',      _mrFmt(d.totalSideInc)],
+        ['ДДС дължим (€)',             _mrFmt(d.vatDue)],
+        ['Корп. данък (€)',            _mrFmt(d.corpTax)],
+        ['Затворени дни',              String(d.closedDaysCount ?? '—')],
+      ];
+      pdf.autoTable({
+        startY: yPos,
+        head: [['Показател', 'Стойност']],
+        body: summaryRows,
+        tableWidth: 110,
+        styles:      { font: 'DejaVuSans', fontSize: 9 },
+        headStyles:  { fillColor: [255, 202, 40], textColor: [0, 0, 0], fontStyle: 'bold' },
+        columnStyles:{ 1: { halign: 'right' } },
+        margin: { left: margin, right: pageW - margin - 110 },
+      });
+      yPos = pdf.lastAutoTable.finalY + 6;
+
+      if (d.perShop) {
+        const psRows = ['store1', 'store2'].map(sid => {
+          const ps  = d.perShop[sid] || {};
+          const lbl = sid === 'store1' ? 'Магазин 1' : 'Магазин 2';
+          return [lbl, _mrFmt(ps.turnover), _mrFmt(ps.stoka), _mrFmt(ps.netProfit), String(ps.closedDays ?? '—')];
+        });
+        pdf.autoTable({
+          startY: yPos,
+          head: [['Магазин', 'Оборот', 'Стока', 'Нетна', 'Дни']],
+          body: psRows,
+          tableWidth: 110,
+          styles:      { font: 'DejaVuSans', fontSize: 9 },
+          headStyles:  { fillColor: [66, 66, 66], textColor: [255, 255, 255], fontStyle: 'bold' },
+          columnStyles:{ 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' } },
+          margin: { left: margin, right: pageW - margin - 110 },
+        });
+        yPos = pdf.lastAutoTable.finalY + 10;
+      }
+    }
+
+    // ── Дневна разбивка ──────────────────────────
+    const dailyRows = window._mrLastDailyRows || await _mrLoadDailyRows(monthVal);
+    if (dailyRows.length) {
+      const fmt     = (n) => (Number(n) || 0).toFixed(2);
+      const shopLbl = (sid) => sid === 'store1' ? 'М1' : 'М2';
+      const tot = dailyRows.reduce((a, r) => ({
+        turnover: a.turnover + r.turnover, cash: a.cash + r.cash, pos: a.pos + r.pos,
+        stoka: a.stoka + r.stoka, otherExp: a.otherExp + r.otherExp,
+        sideInc: a.sideInc + r.sideInc, advances: a.advances + r.advances
+      }), { turnover:0, cash:0, pos:0, stoka:0, otherExp:0, sideInc:0, advances:0 });
+
+      pdf.setFontSize(11); pdf.setFont('DejaVuSans', 'bold'); pdf.setTextColor(40);
+      pdf.text('Дневна разбивка (по дни)', margin, yPos);
+      yPos += 2;
+
+      pdf.autoTable({
+        startY: yPos,
+        head: [['Ден', 'Маг.', 'Оборот', 'Кеш', 'POS', 'Стока', 'Друг разход', 'Стр. приход', 'Аванси']],
+        body: dailyRows.map(r => [
+          `${_ymdToWeekday(r.date)} ${r.date.slice(8)}.${r.date.slice(5,7)}`,
+          shopLbl(r.shopId),
+          fmt(r.turnover), fmt(r.cash), fmt(r.pos),
+          fmt(r.stoka), fmt(r.otherExp), fmt(r.sideInc), fmt(r.advances)
+        ]),
+        foot: [['ОБЩО', '', fmt(tot.turnover), fmt(tot.cash), fmt(tot.pos),
+                fmt(tot.stoka), fmt(tot.otherExp), fmt(tot.sideInc), fmt(tot.advances)]],
+        styles:      { font: 'DejaVuSans', fontSize: 8, cellPadding: 1.5, halign: 'right' },
+        headStyles:  { fillColor: [44, 62, 80], textColor: 255, fontStyle: 'bold', halign: 'center' },
+        footStyles:  { fillColor: [220, 220, 220], textColor: 30, fontStyle: 'bold' },
+        columnStyles:{ 0: { halign: 'left' }, 1: { halign: 'center' } },
+        margin: { left: margin, right: margin },
+      });
+    }
+
+    pdf.save(`месечна-справка-${monthVal}.pdf`);
+  } catch (err) {
+    console.error('exportMonthlyPDF:', err);
+    alert('Грешка при PDF: ' + (err.message || err));
   }
-
-  // Най-добър/слаб ден
-  if (d.bestDay || d.worstDay) {
-    const dayRows = [];
-    if (d.bestDay)  dayRows.push(['Най-добър ден',  d.bestDay.date,  _mrFmt(d.bestDay.turnover)  + ' €']);
-    if (d.worstDay) dayRows.push(['Най-слаб ден',   d.worstDay.date, _mrFmt(d.worstDay.turnover) + ' €']);
-    pdf.autoTable({
-      startY: yPos,
-      body: dayRows,
-      styles: { font: 'DejaVuSans', fontSize: 10 },
-      columnStyles: { 2: { halign: 'right' } },
-      margin: { left: 14, right: 14 },
-    });
-  }
-
-  pdf.save('месечна-справка-' + monthVal + '.pdf');
 };
