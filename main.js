@@ -3370,6 +3370,43 @@ window.loadOrCreateReport = async function() {
       _drStatus = _drData.status || "draft";
       populateDrForm(_drData);
     } else {
+      // === ЗАЩИТА: не позволявай нов отчет ако предишният ден не е затворен ===
+      const prevD = new Date(date + "T12:00:00");
+      prevD.setDate(prevD.getDate() - 1);
+      const prevDateStr = `${prevD.getFullYear()}-${String(prevD.getMonth()+1).padStart(2,"0")}-${String(prevD.getDate()).padStart(2,"0")}`;
+      const prevDocSnap = await getDoc(doc(db, "daily_reports", `${_drShopId}_${prevDateStr}`));
+
+      if (prevDocSnap.exists() && prevDocSnap.data().status !== "closed") {
+        alert(`⚠️ Не можете да попълните ${date}!\n\nПърво затворете отчета за ${prevDateStr}.`);
+        const drDateInput = document.getElementById("drDate");
+        if (drDateInput) drDateInput.value = prevDateStr;
+        _updateDrDateWeekday();
+        drSetLoading(false);
+        return;
+      }
+
+      if (!prevDocSnap.exists()) {
+        const lastClosedSnap = await getDocs(query(
+          collection(db, "daily_reports"),
+          where("shopId", "==", _drShopId),
+          where("status", "==", "closed"),
+          orderBy("date", "desc"),
+          limit(1)
+        ));
+        if (!lastClosedSnap.empty) {
+          const lastClosedDate = lastClosedSnap.docs[0].data().date;
+          if (lastClosedDate < prevDateStr) {
+            alert(`⚠️ Не можете да попълните ${date}!\n\nИма незатворени дни преди тази дата.\nПоследен затворен ден: ${lastClosedDate}.`);
+            const drDateInput = document.getElementById("drDate");
+            if (drDateInput) drDateInput.value = lastClosedDate;
+            _updateDrDateWeekday();
+            drSetLoading(false);
+            return;
+          }
+        }
+      }
+      // === КРАЙ НА ЗАЩИТАТА ===
+
       _drDocId  = null;
       _drData   = null;
       _drStatus = "draft";
