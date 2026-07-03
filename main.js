@@ -1219,7 +1219,7 @@ window.renderWeeklyReport = async function() {
       const left  = leftByDay[ymd] || 0;
       const other = Math.max(0, Number(r.totalOtherExpense || 0) - left);
       const side  = Number(r.totalSideIncomes  || 0);
-      const adv   = Number(r.totalAdvances     || 0);
+      const adv   = (r.advances || []).reduce((s, a) => s + Number(a.amount || 0), 0);
       const shiftPlus  = (r.shifts || []).reduce((s, sh) => s + Number(sh.plus  || 0), 0);
       const shiftMinus = (r.shifts || []).reduce((s, sh) => s + Number(sh.minus || 0), 0);
       totCash  += cash;  totPos   += pos;
