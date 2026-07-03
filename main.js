@@ -3728,11 +3728,19 @@ window.confirmCloseDay = async function() {
     return;
   }
 
-  // ── Стъпка 4: аванси (некритична) ───────────────────
+  // ── Стъпка 4: аванси (некритична, но видима грешка) ─
   try {
     await createAdvancesFromDr(report, _drDocId);
   } catch (err) {
     console.warn("[closeDay] createAdvancesFromDr (некритична):", err);
+    try {
+      await updateDoc(doc(db, "daily_reports", _drDocId), {
+        advancesSyncError:    true,
+        advancesSyncErrorMsg: String(err?.message || err)
+      });
+    } catch (e2) {
+      console.error("[closeDay] Не успях да логна advancesSyncError:", e2);
+    }
   }
 
   // ── Стъпка 5: известие към собственика (некритична) ─
@@ -3960,23 +3968,52 @@ async function createMainRecordsFromDr(report) {
 }
 
 // ── Записване на аванси в колекция "advances" ──────────
-async function createAdvancesFromDr(report, reportId) {
+async function upsertAdvanceDoc(report, reportId, adv, index) {
+  if (!adv.amount) return;
   const month = (report.date || "").slice(0, 7);
-  for (const adv of (report.advances || [])) {
-    if (!adv.amount) continue;
-    await addDoc(collection(db, "advances"), {
-      shopId:             report.shopId,
-      employeeId:         adv.employeeId   || "",
-      employeeName:       adv.employeeName || "",
-      amount:             adv.amount,
-      date:               report.date,
-      month,
-      note:               adv.note || "",
-      linkedReportId:     reportId || "",
-      status:             "pending",
-      deductedInSalaryId: ""
-    });
+  const advId = `${reportId}_adv${index}`;
+  await setDoc(doc(db, "advances", advId), {
+    shopId:             report.shopId,
+    employeeId:         adv.employeeId   || "",
+    employeeName:       adv.employeeName || "",
+    amount:             adv.amount,
+    date:               report.date,
+    month,
+    note:               adv.note || "",
+    linkedReportId:     reportId || "",
+    status:             "pending",
+    deductedInSalaryId: ""
+  }, { merge: true });
+}
+
+async function createAdvancesFromDr(report, reportId) {
+  const list = report.advances || [];
+  for (let i = 0; i < list.length; i++) {
+    await upsertAdvanceDoc(report, reportId, list[i], i);
   }
+}
+
+async function reconcileMonthAdvances(shopId, month) {
+  const q = query(
+    collection(db, "daily_reports"),
+    where("shopId", "==", shopId),
+    where("status", "==", "closed")
+  );
+  const snap = await getDocs(q);
+  let fixed = 0;
+  for (const docSnap of snap.docs) {
+    const report = docSnap.data();
+    if (!(report.date || "").startsWith(month)) continue;
+    const list = report.advances || [];
+    for (let i = 0; i < list.length; i++) {
+      if (list[i]?.amount > 0) {
+        await upsertAdvanceDoc(report, docSnap.id, list[i], i);
+        fixed++;
+      }
+    }
+  }
+  console.log(`[reconcileMonthAdvances] Проверени/поправени: ${fixed} аванса за ${shopId} ${month}`);
+  return fixed;
 }
 
 // ── Обновяване на свързаните транзакции (при редакция) ─
@@ -6027,6 +6064,10 @@ async function loadSalHistByMonth() {
   if (!_salHistMonth) _salHistMonth = new Date().toISOString().slice(0, 7);
   el.innerHTML = `<div class="tasks-empty">Зареждане...</div>`;
   try {
+    await Promise.all([
+      reconcileMonthAdvances("store1", _salHistMonth),
+      reconcileMonthAdvances("store2", _salHistMonth)
+    ]);
     const [e1, e2, s1, s2, wh1, wh2, advSnap] = await Promise.all([
       getDocs(query(collection(db,"employees"), where("shopId","==","store1"), where("active","==",true))),
       getDocs(query(collection(db,"employees"), where("shopId","==","store2"), where("active","==",true))),
