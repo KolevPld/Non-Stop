@@ -6056,7 +6056,9 @@ window.salSetHistTab = function(tab) {
 // ── Payroll worksheet state ────────────────────────────────
 let _salHistMonth = "";
 let _salHistStore = "all";
-let _payrollRows  = []; // [{emp, docId, hours, sAmount, holiday, sickLeave, shopBonus, persBon, advances, bank, notes}]
+let _payrollRows      = []; // [{emp, docId, hours, sAmount, holiday, sickLeave, shopBonus, persBon, advances, bank, notes}]
+let _advOrphanTotal   = 0;
+let _advOrphanDetails = []; // [{name, amount}]
 
 async function loadSalHistByMonth() {
   const el = document.getElementById("salHistMonthContent");
@@ -6091,15 +6093,28 @@ async function loadSalHistByMonth() {
       });
 
     const advByEmp = {};
+    const advByEmpNames = {};
     advSnap.docs.forEach(d => {
       const r = d.data();
-      if (r.employeeId) advByEmp[r.employeeId] = (advByEmp[r.employeeId] || 0) + (r.amount || 0);
+      const empKey = r.employeeId || "__orphan__";
+      advByEmp[empKey] = (advByEmp[empKey] || 0) + (r.amount || 0);
+      if (!advByEmpNames[empKey]) advByEmpNames[empKey] = r.employeeName || "Неизвестен";
     });
 
     const allEmps = [
       ...e1.docs.map(d => ({ id: d.id, ...d.data() })),
       ...e2.docs.map(d => ({ id: d.id, ...d.data() }))
     ].sort((a, b) => (a.name || "").localeCompare(b.name || "", "bg"));
+
+    const _activeEmpIds = new Set(allEmps.map(e => e.id));
+    _advOrphanTotal = 0;
+    _advOrphanDetails = [];
+    Object.entries(advByEmp).forEach(([key, amount]) => {
+      if (key === "__orphan__" || !_activeEmpIds.has(key)) {
+        _advOrphanTotal += (amount || 0);
+        _advOrphanDetails.push({ name: advByEmpNames[key] || key, amount: amount || 0 });
+      }
+    });
 
     _payrollRows = allEmps.map(emp => {
       const sal  = salByEmp[emp.id] || null;
@@ -6204,7 +6219,12 @@ function renderPayrollHistTable(el) {
         <th>АВАНСИ</th><th>БАНКА</th><th>КЕШ</th><th>К+Б</th>
         <th>✓</th><th>—</th>
       </tr></thead>
-      <tbody>${rowsHtml}</tbody>
+      <tbody>${rowsHtml}${_advOrphanTotal > 0 ? `<tr class="pw-orphan-row">
+        <td colspan="3" style="color:var(--amber);font-weight:600;padding:6px 8px;">⚠️ Неразпределени аванси</td>
+        <td colspan="7"></td>
+        <td class="pw-calc" style="color:var(--amber);font-weight:600;">${_advOrphanTotal.toFixed(2)}</td>
+        <td colspan="5" style="color:var(--text3);font-size:.82em;padding:4px 8px;">${_advOrphanDetails.map(d => escHtml(d.name) + "&nbsp;" + d.amount.toFixed(2) + "&nbsp;€").join(",&nbsp; ")}</td>
+      </tr>` : ""}</tbody>
       <tfoot id="pw-tfoot"></tfoot>
     </table></div>
     <div class="pw-ot-legend">🟠 &ge; 180ч &nbsp;&nbsp; 🔴 &ge; 200ч</div>`;
