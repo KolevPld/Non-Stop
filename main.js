@@ -4001,19 +4001,33 @@ async function reconcileMonthAdvances(shopId, month) {
   );
   const snap = await getDocs(q);
   let fixed = 0;
+  let removed = 0;
   for (const docSnap of snap.docs) {
     const report = docSnap.data();
     if (!(report.date || "").startsWith(month)) continue;
     const list = report.advances || [];
+    const validIds = new Set();
     for (let i = 0; i < list.length; i++) {
       if (list[i]?.amount > 0) {
         await upsertAdvanceDoc(report, docSnap.id, list[i], i);
+        validIds.add(`${docSnap.id}_adv${i}`);
         fixed++;
       }
     }
+
+    // Премахване на "сираци" — стари advances документи за този report,
+    // чийто индекс вече не съществува или сумата вече е 0 в daily_reports
+    const orphanQ = query(collection(db, "advances"), where("linkedReportId", "==", docSnap.id));
+    const orphanSnap = await getDocs(orphanQ);
+    for (const exDoc of orphanSnap.docs) {
+      if (!validIds.has(exDoc.id)) {
+        await deleteDoc(doc(db, "advances", exDoc.id));
+        removed++;
+      }
+    }
   }
-  console.log(`[reconcileMonthAdvances] Проверени/поправени: ${fixed} аванса за ${shopId} ${month}`);
-  return fixed;
+  console.log(`[reconcileMonthAdvances] Проверени/поправени: ${fixed}, изтрити сираци: ${removed} за ${shopId} ${month}`);
+  return { fixed, removed };
 }
 
 // ── Обновяване на свързаните транзакции (при редакция) ─
