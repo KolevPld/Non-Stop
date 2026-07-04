@@ -5324,9 +5324,21 @@ window.saveEmployee = async function() {
   if (!name) { alert("Въведи три имена."); return; }
 
   const data = { shopId: _whShopId, name, position, active };
-  if (rate !== null) data.hourlyRate = rate;
   try {
     if (_whEditEmpId) {
+      if (rate !== null) {
+        const curSnap = await getDoc(doc(db, "employees", _whEditEmpId));
+        const curData = curSnap.exists() ? curSnap.data() : {};
+        if (rate !== (curData.hourlyRate || 0)) {
+          const currentMonth = new Date().toISOString().slice(0, 7);
+          const hist = curData.hourlyRateHistory ? [...curData.hourlyRateHistory] : [];
+          const idx  = hist.findIndex(h => h.month === currentMonth);
+          if (idx >= 0) hist[idx].rate = rate;
+          else          hist.push({ month: currentMonth, rate });
+          data.hourlyRateHistory = hist;
+        }
+        data.hourlyRate = rate;
+      }
       await updateDoc(doc(db, "employees", _whEditEmpId), data);
     } else {
       data.createdAt         = new Date().toISOString();
@@ -5739,16 +5751,30 @@ async function loadWageData() {
       return (a.name || "").localeCompare(b.name || "", "bg");
     });
 
-    // Hours for month
-    const [wh1, wh2] = await Promise.all([
+    // Hours for month — само от затворени дни
+    const [wh1, wh2, drSnapW] = await Promise.all([
       getDocs(query(collection(db,"work_hours"), where("shopId","==","store1"))),
-      getDocs(query(collection(db,"work_hours"), where("shopId","==","store2")))
+      getDocs(query(collection(db,"work_hours"), where("shopId","==","store2"))),
+      getDocs(query(
+        collection(db, "daily_reports"),
+        where("shopId", "in", ["store1","store2"]),
+        where("status", "==", "closed"),
+        where("date", ">=", `${_wageMonth}-01`),
+        where("date", "<=", `${_wageMonth}-31`)
+      ))
     ]);
+    const closedDaysW = new Set(drSnapW.docs.map(d => `${d.data().shopId}_${d.data().date}`));
     _wageHoursMap = {};
-    [...wh1.docs, ...wh2.docs].filter(d => d.data().date?.startsWith(_wageMonth)).forEach(d => {
-      const r = d.data();
-      _wageHoursMap[r.employeeId] = (_wageHoursMap[r.employeeId] || 0) + (r.hours || 0);
-    });
+    [...wh1.docs, ...wh2.docs]
+      .filter(d => {
+        const r = d.data();
+        return r.date?.startsWith(_wageMonth)
+          && closedDaysW.has(`${r.shopId}_${r.date}`);
+      })
+      .forEach(d => {
+        const r = d.data();
+        _wageHoursMap[r.employeeId] = (_wageHoursMap[r.employeeId] || 0) + (r.hours || 0);
+      });
 
     renderWageTable();
     renderWageSummaryCards();
@@ -5768,7 +5794,7 @@ function renderWageTable() {
   let totalH = 0, totalCost = 0;
   const rows = _wageEmployeesAll.map(emp => {
     const hours   = _wageHoursMap[emp.id] || 0;
-    const rate    = emp.hourlyRate || 0;
+    const rate    = getHistoricalRate(emp, _wageMonth);
     const salary  = hours * rate;
     const store   = emp.shopId === "store1" ? "М1" : "М2";
     const scls    = emp.shopId === "store1" ? "store1" : "store2";
@@ -6084,15 +6110,23 @@ async function loadSalHistByMonth() {
       reconcileMonthAdvances("store1", _salHistMonth),
       reconcileMonthAdvances("store2", _salHistMonth)
     ]);
-    const [e1, e2, s1, s2, wh1, wh2, advSnap] = await Promise.all([
+    const [e1, e2, s1, s2, wh1, wh2, advSnap, drSnap] = await Promise.all([
       getDocs(query(collection(db,"employees"), where("shopId","==","store1"), where("active","==",true))),
       getDocs(query(collection(db,"employees"), where("shopId","==","store2"), where("active","==",true))),
       getDocs(query(collection(db,"salaries"),  where("shopId","==","store1"), where("month","==",_salHistMonth))),
       getDocs(query(collection(db,"salaries"),  where("shopId","==","store2"), where("month","==",_salHistMonth))),
       getDocs(query(collection(db,"work_hours"), where("shopId","==","store1"))),
       getDocs(query(collection(db,"work_hours"), where("shopId","==","store2"))),
-      getDocs(query(collection(db,"advances"),  where("month","==",_salHistMonth)))
+      getDocs(query(collection(db,"advances"),  where("month","==",_salHistMonth))),
+      getDocs(query(
+        collection(db, "daily_reports"),
+        where("shopId", "in", ["store1","store2"]),
+        where("status", "==", "closed"),
+        where("date", ">=", `${_salHistMonth}-01`),
+        where("date", "<=", `${_salHistMonth}-31`)
+      ))
     ]);
+    const closedDays = new Set(drSnap.docs.map(d => `${d.data().shopId}_${d.data().date}`));
 
     // Build lookup maps
     const salByEmp = {};
@@ -6100,7 +6134,11 @@ async function loadSalHistByMonth() {
 
     const hoursByEmp = {};
     [...wh1.docs, ...wh2.docs]
-      .filter(d => (d.data().date || "").startsWith(_salHistMonth))
+      .filter(d => {
+        const r = d.data();
+        return (r.date || "").startsWith(_salHistMonth)
+          && closedDays.has(`${r.shopId}_${r.date}`);
+      })
       .forEach(d => {
         const r = d.data();
         hoursByEmp[r.employeeId] = (hoursByEmp[r.employeeId] || 0) + (r.hours || 0);
@@ -6133,7 +6171,7 @@ async function loadSalHistByMonth() {
     _payrollRows = allEmps.map(emp => {
       const sal  = salByEmp[emp.id] || null;
       const h    = sal?.baseHours ?? (hoursByEmp[emp.id] || 0);
-      const rate = sal?.baseRate  ?? (emp.hourlyRate || 0);
+      const rate = sal?.baseRate  ?? getHistoricalRate(emp, _salHistMonth);
       return {
         emp,
         docId:     sal?.id || null,
