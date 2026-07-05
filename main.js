@@ -5611,26 +5611,24 @@ window.closeWhCellModal = function() {
 
 async function whSaveHours(empId, date, hours, shift, note) {
   if (!_whShopId || !empId || !date) return;
-  const existing = _whData[empId]?.[date];
+  const docId = `${_whShopId}_${empId}_${date}`;
   const data = {
     shopId:     _whShopId,
     employeeId: empId,
     date,
     hours,
-    shift:     shift  || "",
-    note:      note   || "",
+    shift:     shift || "",
+    note:      note  || "",
     updatedAt: new Date().toISOString()
   };
   try {
-    if (existing?.docId) {
-      await updateDoc(doc(db, "work_hours", existing.docId), data);
-      _whData[empId][date] = { ...data, docId: existing.docId };
-    } else {
+    const existingSnap = await getDoc(doc(db, "work_hours", docId));
+    if (!existingSnap.exists()) {
       data.createdAt = new Date().toISOString();
-      const ref = await addDoc(collection(db, "work_hours"), data);
-      if (!_whData[empId]) _whData[empId] = {};
-      _whData[empId][date] = { hours, shift: shift||"", note: note||"", docId: ref.id };
     }
+    await setDoc(doc(db, "work_hours", docId), data, { merge: true });
+    if (!_whData[empId]) _whData[empId] = {};
+    _whData[empId][date] = { ...data, docId };
     renderWhTable();
     renderWhMobile();
   } catch (e) { alert("Грешка: " + e.message); }
