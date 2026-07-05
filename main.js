@@ -6401,7 +6401,7 @@ window.savePayrollRow = async function(idx) {
     employeeName:        row.emp.name,
     month:               _salHistMonth,
     baseHours:           row.hours,
-    baseRate:            row.emp.hourlyRate || 0,
+    baseRate:            getHistoricalRate(row.emp, _salHistMonth),
     baseAmount:          row.sAmount,
     holidayAmount:       row.holiday,
     sickLeaveAmount:     row.sickLeave,
@@ -6425,10 +6425,11 @@ window.savePayrollRow = async function(idx) {
       await updateDoc(doc(db,"salaries",row.docId),
         { ...data, changeLog: [...log, { by: currentUserId, at: now, action: `Обновена: бруто ${gross.toFixed(2)} €` }] });
     } else {
+      const detId = `${row.emp.shopId}_${row.emp.id}_${_salHistMonth}`;
       data.changeLog = [{ by: currentUserId, at: now, action: `Запазена: бруто ${gross.toFixed(2)} €` }];
       data.createdAt = now;
-      const ref  = await addDoc(collection(db,"salaries"), data);
-      row.docId  = ref.id;
+      await setDoc(doc(db,"salaries",detId), data, { merge: true });
+      row.docId = detId;
     }
     // Enable slip button and update status
     const stEl   = document.getElementById(`pw_st_${idx}`);
