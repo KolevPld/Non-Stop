@@ -4121,3 +4121,29 @@ body.light .pw-input  { background: #fff; border-color: #ccd3db; }
   .mr-kpi-value { font-size: 1.25rem; }
   .mr-day-badge { min-width: 140px; }
 }
+
+/* ════════════════════════════════════════════════
+   🖨️ ПЕЧАТ ЗА БАНКА (bank transfer print)
+   ════════════════════════════════════════════════ */
+#bankPrintWrap { display: none; }
+body.print-bank #bankPrintWrap { display: block; }
+
+.bp-title { font-size: 16pt; font-weight: 700; margin-bottom: 4pt; }
+.bp-meta { display: flex; justify-content: space-between; font-size: 9pt; margin-bottom: 10pt; color: #333; }
+.bp-table { width: 100%; border-collapse: collapse; font-size: 10.5pt; }
+.bp-table th, .bp-table td { border: 1px solid #999; padding: 6pt 8pt; text-align: left; }
+.bp-table .bp-amount { text-align: right; font-weight: 600; }
+.bp-table .bp-mark { width: 80pt; }
+.bp-table tfoot td { font-weight: 700; background: #f0f0f0; }
+
+@media print {
+  body.print-bank * { visibility: hidden; }
+  body.print-bank #bankPrintWrap,
+  body.print-bank #bankPrintWrap * { visibility: visible; }
+  body.print-bank #bankPrintWrap {
+    position: static;
+    width: 100%;
+    background: #fff;
+    color: #000;
+  }
+}

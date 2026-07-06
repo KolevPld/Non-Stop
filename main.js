@@ -1338,6 +1338,58 @@ window.printWeeklyReport = function() {
   window.print();
 };
 
+window.printBankTransfer = function() {
+  const rows = (_payrollRows || []).filter(r => (r.bank || 0) > 0);
+  if (!rows.length) { alert("Няма служители с банков превод за този месец."); return; }
+
+  const storeLabel = s => s === "store1" ? "М1" : "М2";
+  const monthLabel = document.querySelector('.pw-month-sel')?.selectedOptions?.[0]?.text || _salHistMonth || "";
+
+  let wrap = document.getElementById('bankPrintWrap');
+  if (!wrap) {
+    wrap = document.createElement('div');
+    wrap.id = 'bankPrintWrap';
+    document.body.appendChild(wrap);
+  }
+
+  const now = new Date();
+  const gen = now.toLocaleDateString('bg-BG') + ' г., ' + now.toLocaleTimeString('bg-BG');
+
+  let rowsHtml = "";
+  rows.forEach((r, i) => {
+    rowsHtml += `<tr>
+      <td>${i + 1}</td>
+      <td>${r.emp.name}</td>
+      <td>${storeLabel(r.emp.shopId)}</td>
+      <td class="bp-amount">${(r.bank || 0).toFixed(2)} €</td>
+      <td class="bp-mark"></td>
+    </tr>`;
+  });
+
+  const total = rows.reduce((s, r) => s + (r.bank || 0), 0);
+
+  wrap.innerHTML = `
+    <div class="bp-title">Нон Стоп — Банкови преводи</div>
+    <div class="bp-meta">
+      <span>Месец: <strong>${monthLabel}</strong></span>
+      <span>Генериран: ${gen}</span>
+    </div>
+    <table class="bp-table">
+      <thead><tr><th>№</th><th>Име</th><th>Магазин</th><th>Сума</th><th>Отметка/Подпис</th></tr></thead>
+      <tbody>${rowsHtml}</tbody>
+      <tfoot><tr><td colspan="3">ОБЩО</td><td class="bp-amount">${total.toFixed(2)} €</td><td></td></tr></tfoot>
+    </table>
+  `;
+
+  document.body.classList.add('print-bank');
+  const done = function() {
+    document.body.classList.remove('print-bank');
+    window.removeEventListener('afterprint', done);
+  };
+  window.addEventListener('afterprint', done);
+  window.print();
+};
+
 // ── Helper: зарежда обобщени данни за дадена седмица ─────────────────────
 async function _wrLoadWeekData(shopId, monStr) {
   const mon  = new Date(monStr + 'T00:00:00Z');
@@ -6256,6 +6308,9 @@ function renderPayrollHistTable(el) {
       </select>
       <button class="btn-secondary pw-all-btn" onclick="exportAllHistSlips()">
         <i class="fa-solid fa-file-pdf"></i> Всички фишове
+      </button>
+      <button class="btn-secondary pw-all-btn" onclick="printBankTransfer()">
+        <i class="fa-solid fa-print"></i> Печат за банка
       </button>
     </div>
     <div class="pw-sheet-title">💼 ВЕДОМОСТ ЗА ЗАПЛАТИ — ${formatMonth(_salHistMonth).toUpperCase()}</div>
