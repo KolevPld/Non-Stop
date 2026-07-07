@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(firebase --version)",
+      "Bash(firebase deploy *)",
+      "Bash(git commit -m 'functions: добавен .gitignore, изключен node_modules от репото *)",
+      "Bash(node -e ' *)",
+      "Bash(git restore *)",
+      "Bash(firebase hosting:channel:deploy preview-modal-improvements)",
+      "Bash(firebase firestore:query _backups --order-by \"timestamp,DESCENDING\" --limit 1)",
+      "Bash(npx firebase-tools *)",
+      "Bash(curl -s \"https://firestore.googleapis.com/v1/projects/nonstopapp-c30b1/databases/\\(default\\)/documents/_backups?orderBy=timestamp+desc&pageSize=1\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); doc=d.get\\('documents',[{}]\\)[0]; fields=doc.get\\('fields',{}\\); ts=fields.get\\('timestamp',{}\\).get\\('timestampValue','N/A'\\); print\\('Timestamp:', ts\\)\")",
+      "Bash(findstr /n \"export.*Weekly\\\\|exportWeekly\" \"c:\\\\Users\\\\user\\\\Non-Stop\\\\main.js\")",
+      "Bash(findstr /n \"export\" main.js)",
+      "Bash(findstr -i \"week\")",
+      "Bash(git tag *)",
+      "Bash(gcloud firestore *)",
+      "Bash(where /r C:\\\\Users SKILL.md)",
+      "Bash(findstr nonstopapp *)",
+      "Read(//c/Users/**)",
+      "PowerShell(Move-Item \"C:\\\\Users\\\\user\\\\Non-Stop\\\\SKILL \\(1\\).md\" \"C:\\\\Users\\\\user\\\\Non-Stop\\\\SKILL.md\" -Force)",
+      "PowerShell(Move-Item \"C:\\\\Users\\\\user\\\\Non-Stop\\\\SKILL.md\" \"C:\\\\Users\\\\user\\\\Non-Stop\\\\CLAUDE.md\" -Force)",
+      "Bash(firebase firestore:get \"daily_reports/store2_2026-06-28\")",
+      "Bash(firebase firestore *)",
+      "Bash(curl -s \"https://nonstopapp-c30b1.web.app/main.js\")",
+      "Bash(grep -o \"createAdvancesFromDr.\\\\{0,80\\\\}\")"
+    ]
+  }
+}

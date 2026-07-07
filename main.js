@@ -2262,6 +2262,8 @@ window.addTask = async function() {
   renderChecklistBuilder();
   inp.focus();
 
+  const btn = document.querySelector('button[onclick="addTask()"]');
+  if (btn) btn.disabled = true;
   try {
     await addDoc(tasksCol, {
       text,
@@ -2275,6 +2277,7 @@ window.addTask = async function() {
       created: new Date().toLocaleDateString('bg-BG', { day:'2-digit', month:'2-digit', year:'numeric' })
     });
   } catch(e) { console.error("addTask:", e); }
+  finally { if (btn) btn.disabled = false; }
 };
 
 // ── toggleTask / deleteTask ───────────────────────────────────
@@ -2663,6 +2666,8 @@ window.addOwnerEntry = async function() {
   if (!amount || amount <= 0) { alert("Въведи сума!"); return; }
   if (!date)                  { alert("Избери дата!");  return; }
 
+  const btn = document.querySelector('.owners-submit');
+  if (btn) btn.disabled = true;
   try {
     await addDoc(collection(db, "owners"), {
       name,
@@ -2677,6 +2682,8 @@ window.addOwnerEntry = async function() {
     document.getElementById("ownerNote").value   = "";
   } catch(err) {
     alert("Грешка при запис: " + err.message);
+  } finally {
+    if (btn) btn.disabled = false;
   }
 };
 
