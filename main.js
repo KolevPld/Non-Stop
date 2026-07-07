@@ -3197,7 +3197,7 @@ function collectDrData() {
     };
   }).filter(a => a.employeeId || a.amount > 0);
 
-  const totalCashIncome      = r2(shifts.reduce((s, sh) => s + sh.cash, 0));
+  const totalCashIncome      = shifts.reduce((s, sh) => s + sh.cash, 0);
   const totalPosIncome       = r2(shifts.reduce((s, sh) => s + sh.pos, 0));
   const totalGoodsExpense    = r2(expensesGoods.reduce((s, g) => s + g.amount, 0));
   const totalOtherExpense    = r2(expensesOther.reduce((s, o) => s + o.amount, 0));
@@ -3211,16 +3211,16 @@ function collectDrData() {
   const cardExpenseTotal     = r2(cardGoodsExpense + cardOtherExpense);
   const bankExpenseTotal     = r2(bankGoodsExpense + bankOtherExpense);
   const totalSideIncomes     = r2(sideIncomes.reduce((s, si) => s + si.amount, 0));
-  const cashSideIncomes      = r2(sideIncomes.filter(si => (si.method || "Кеш") !== "Карта" && (si.method || "Кеш") !== "Банков превод").reduce((s, si) => s + si.amount, 0));
+  const cashSideIncomes      = sideIncomes.filter(si => (si.method || "Кеш") !== "Карта" && (si.method || "Кеш") !== "Банков превод").reduce((s, si) => s + si.amount, 0);
   const cardSideIncomes      = r2(sideIncomes.filter(si => si.method === "Карта").reduce((s, si) => s + si.amount, 0));
   const bankSideIncomes      = r2(sideIncomes.filter(si => si.method === "Банков превод").reduce((s, si) => s + si.amount, 0));
   const totalSideIncomesCash = cashSideIncomes;
   // ПРЕДПОЛОЖЕНИЕ: Всички аванси са в кеш (потвърдено от собственика, 2026-06-04).
   // Ако авансите започнат да се плащат и по банка — добави поле "method" в advance обекта
   // и филтрирай: advances.filter(a => !a.method || a.method === "Кеш").
-  const totalAdvances        = r2(advances.reduce((s, a) => s + a.amount, 0));
-  const totalShiftPlus  = r2(shifts.reduce((s, sh) => s + (sh.plus  || 0), 0));
-  const totalShiftMinus = r2(shifts.reduce((s, sh) => s + (sh.minus || 0), 0));
+  const totalAdvances        = advances.reduce((s, a) => s + a.amount, 0);
+  const totalShiftPlus  = shifts.reduce((s, sh) => s + (sh.plus  || 0), 0);
+  const totalShiftMinus = shifts.reduce((s, sh) => s + (sh.minus || 0), 0);
   const endCash = r2(startCash + totalCashIncome + cashSideIncomes + totalShiftPlus - totalShiftMinus - cashExpenseTotal - totalAdvances);
 
   return {
