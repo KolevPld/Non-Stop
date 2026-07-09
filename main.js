@@ -5681,10 +5681,6 @@ async function whSaveHours(empId, date, hours, shift, note) {
     updatedAt: new Date().toISOString()
   };
   try {
-    const existingSnap = await getDoc(doc(db, "work_hours", docId));
-    if (!existingSnap.exists()) {
-      data.createdAt = new Date().toISOString();
-    }
     await setDoc(doc(db, "work_hours", docId), data, { merge: true });
     if (!_whData[empId]) _whData[empId] = {};
     _whData[empId][date] = { ...data, docId };
