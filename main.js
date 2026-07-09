@@ -3433,9 +3433,15 @@ window.loadOrCreateReport = async function() {
       const prevD = new Date(date + "T12:00:00");
       prevD.setDate(prevD.getDate() - 1);
       const prevDateStr = `${prevD.getFullYear()}-${String(prevD.getMonth()+1).padStart(2,"0")}-${String(prevD.getDate()).padStart(2,"0")}`;
-      const prevDocSnap = await getDoc(doc(db, "daily_reports", `${_drShopId}_${prevDateStr}`));
+      const prevQuery   = query(
+        collection(db, "daily_reports"),
+        where("shopId", "==", _drShopId),
+        where("date",   "==", prevDateStr)
+      );
+      const prevSnap    = await getDocs(prevQuery);
+      const prevDocData = prevSnap.empty ? null : prevSnap.docs[0].data();
 
-      if (prevDocSnap.exists() && prevDocSnap.data().status !== "closed") {
+      if (prevDocData && prevDocData.status !== "closed") {
         alert(`⚠️ Не можете да попълните ${date}!\n\nПърво затворете отчета за ${prevDateStr}.`);
         const drDateInput = document.getElementById("drDate");
         if (drDateInput) drDateInput.value = prevDateStr;
@@ -3444,7 +3450,7 @@ window.loadOrCreateReport = async function() {
         return;
       }
 
-      if (!prevDocSnap.exists()) {
+      if (!prevDocData) {
         const lastClosedSnap = await getDocs(query(
           collection(db, "daily_reports"),
           where("shopId", "==", _drShopId),
