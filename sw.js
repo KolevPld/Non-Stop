@@ -1,4 +1,4 @@
-const CACHE_NAME = "nonstop-cache-v5";
+const CACHE_NAME = "nonstop-cache-v6";
 
 // Само статични asset-и се кешират — JS и HTML ВИНАГИ от мрежата
 const STATIC_CACHE = [

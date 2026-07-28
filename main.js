@@ -1702,6 +1702,10 @@ function renderMethodSummary() {
   const totals = { Кеш: 0, Карта: 0, Банка: 0 };
   let minTime = null, maxTime = null;
 
+  // [DIAG] Стъпка 1 — брои пропаднали записи
+  let _diagDrop = 0, _diagDropSum = 0;
+  const _diagFreq = {};  // Стъпка 4 — честотна карта на всички method стойности
+
   records.forEach((r) => {
     const raw = Number(r.amount || 0);
     if (!Number.isFinite(raw)) return;
@@ -1714,8 +1718,17 @@ function renderMethodSummary() {
       if (minTime === null || t < minTime) minTime = t;
       if (maxTime === null || t > maxTime) maxTime = t;
     }
+    // [DIAG] честотна карта (raw method)
+    const rawM = String(r.method ?? "(null/undefined)");
+    _diagFreq[rawM] = (_diagFreq[rawM] || 0) + 1;
+    // [DIAG] засича пропаднали
+    if (!totals.hasOwnProperty(method)) { _diagDrop++; _diagDropSum += signed; }
     if (totals.hasOwnProperty(method)) totals[method] += signed;
   });
+
+  // [DIAG] резултати в конзолата
+  console.log(`[DIAG renderMethodSummary] ПРОПАДНАЛИ: ${_diagDrop} записа | сума: ${_diagDropSum.toFixed(2)} € (>0 = изгубени приходи; <0 = неизвадени разходи → салдото е надуто с abs())`);
+  console.log("[DIAG renderMethodSummary] МЕТОДИ (уникални стойности + брой):", JSON.stringify(_diagFreq, null, 2));
 
   const msx = document.getElementById("methodSummaryExtra");
   if (!msx) return;
