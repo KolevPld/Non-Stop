@@ -1698,15 +1698,20 @@ function _wrAutoCheckSunday() {
 // ── Край на седмична справка ──────────────────────────────────────────────
 
 function renderMethodSummary() {
-  const localNormMethod = (m) => String(m ?? "").trim().split(" ")[0];
+  const localNormMethod = (m) => {
+    const s = String(m ?? "").trim().toLowerCase();
+    if (!s) return "Кеш";
+    if (s.startsWith("карт")) return "Карта";
+    if (s.startsWith("банк")) return "Банка";
+    if (s.startsWith("кеш"))  return "Кеш";
+    console.warn("Непознат метод в records:", m);
+    return "Кеш";
+  };
   const totals = { Кеш: 0, Карта: 0, Банка: 0 };
   let minTime = null, maxTime = null;
 
-  // [DIAG] Стъпка 1 — брои пропаднали записи
-  let _diagDrop = 0, _diagDropSum = 0;
-  const _diagFreq = {};  // Стъпка 4 — честотна карта на всички method стойности
-
   records.forEach((r) => {
+    if (r.type === "Трансфер") return;
     const raw = Number(r.amount || 0);
     if (!Number.isFinite(raw)) return;
     const signed = r.type === "Приход" ? raw : -raw;
@@ -1718,17 +1723,16 @@ function renderMethodSummary() {
       if (minTime === null || t < minTime) minTime = t;
       if (maxTime === null || t > maxTime) maxTime = t;
     }
-    // [DIAG] честотна карта (raw method)
-    const rawM = String(r.method ?? "(null/undefined)");
-    _diagFreq[rawM] = (_diagFreq[rawM] || 0) + 1;
-    // [DIAG] засича пропаднали
-    if (!totals.hasOwnProperty(method)) { _diagDrop++; _diagDropSum += signed; }
     if (totals.hasOwnProperty(method)) totals[method] += signed;
   });
 
-  // [DIAG] резултати в конзолата
-  console.log(`[DIAG renderMethodSummary] ПРОПАДНАЛИ: ${_diagDrop} записа | сума: ${_diagDropSum.toFixed(2)} € (>0 = изгубени приходи; <0 = неизвадени разходи → салдото е надуто с abs())`);
-  console.log("[DIAG renderMethodSummary] МЕТОДИ (уникални стойности + брой):", JSON.stringify(_diagFreq, null, 2));
+  // Трансфери намаляват банковото салдо (парите излизат от банката)
+  records.forEach((r) => {
+    if (r.type !== "Трансфер") return;
+    const raw = Number(r.amount || 0);
+    if (!Number.isFinite(raw) || raw === 0) return;
+    totals.Банка -= raw;
+  });
 
   const msx = document.getElementById("methodSummaryExtra");
   if (!msx) return;
@@ -4032,8 +4036,10 @@ async function createMainRecordsFromDr(report) {
     const siMethod = si.method === "Карта" ? "Карта" : si.method === "Банков превод" ? "Банков превод" : "Кеш";
     const ref = await addDoc(collection(db, "records"), {
       date: report.date, type: "Приход", method: siMethod,
-      amount: si.amount, store, category: "Друг приход",
-      note: si.description || `Страничен приход М${store}`, imageUrl: "", ...drMeta
+      amount: si.amount, store,
+      category: si.isTransfer ? "Трансфер" : "Друг приход",
+      note: si.description || `Страничен приход М${store}`, imageUrl: "", ...drMeta,
+      ...(si.isTransfer ? { isTransfer: true, transferId: si.transferId || "" } : {}),
     });
     ids.push(ref.id);
   }
@@ -7819,5 +7825,213 @@ window.exportMonthlyPDF = async function() {
   } catch (err) {
     console.error('exportMonthlyPDF:', err);
     alert('Грешка при PDF: ' + (err.message || err));
+  }
+};
+
+// ── Трансфер банка → каса ──────────────────────────────────────────────────
+
+// Връща recalculated endCash на предишния затворен ден (сървърен филтър, 1 документ).
+async function _getPrevEndCash(storeId, date) {
+  try {
+    const snap = await getDocs(query(
+      collection(db, "daily_reports"),
+      where("shopId", "==", storeId),
+      where("status", "==", "closed"),
+      where("date", "<", date),
+      orderBy("date", "desc"),
+      limit(1)
+    ));
+    return snap.empty ? 0 : _recalcEndCash(snap.docs[0].data());
+  } catch (e) {
+    console.warn("_getPrevEndCash:", e);
+    return 0;
+  }
+}
+
+// Обхожда напред до 7 дни и връща първия незатворен ден за магазина.
+async function _findOpenReport(storeId, startDate) {
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(startDate + "T12:00:00");
+    d.setDate(d.getDate() + i);
+    const dateStr = d.toISOString().slice(0, 10);
+    const ref     = doc(db, "daily_reports", `${storeId}_${dateStr}`);
+    let snap;
+    try { snap = await getDocFromServer(ref); }
+    catch (_) { snap = await getDoc(ref); }
+    if (!snap.exists()) {
+      return { usedDate: dateStr, ref, exists: false, data: null };
+    }
+    const dr = snap.data();
+    if (dr.status !== "closed") {
+      return { usedDate: dateStr, ref, exists: true, data: dr };
+    }
+  }
+  return null;
+}
+
+let _transferSaving = false;
+
+window.openTransferModal = function() {
+  if (!document.body.classList.contains("admin")) return;
+  document.getElementById("trDate").value        = new Date().toLocaleDateString("sv-SE");
+  document.getElementById("trAmount").value      = "";
+  document.getElementById("trNote").value        = "";
+  document.getElementById("trError").textContent = "";
+  document.getElementById("transferModal").classList.remove("hidden");
+};
+
+window.closeTransferModal = function() {
+  document.getElementById("transferModal").classList.add("hidden");
+};
+
+window.saveTransfer = async function() {
+  if (!document.body.classList.contains("admin")) return;
+  if (_transferSaving) return;
+
+  const btn   = document.getElementById("trSaveBtn");
+  const errEl = document.getElementById("trError");
+
+  _transferSaving = true;
+  if (btn) btn.disabled = true;
+  errEl.textContent = "";
+
+  try {
+    const date   = document.getElementById("trDate").value;
+    const amount = parseFloat(document.getElementById("trAmount").value);
+    const to     = document.getElementById("trTo").value;
+    const note   = (document.getElementById("trNote").value || "").trim();
+
+    if (!date)                  { errEl.textContent = "Въведи дата.";     return; }
+    if (!amount || amount <= 0) { errEl.textContent = "Въведи сума > 0."; return; }
+
+    const toLabel = to === "КасаКеш" ? "Каса Кеш"
+                  : to === "store1"   ? "Магазин 1" : "Магазин 2";
+    if (!confirm(
+      `Трансфер от банка:\n\nСума: ${r2(amount).toFixed(2)} €\nПолучател: ${toLabel}\nДата: ${date}` +
+      (note ? `\nБележка: ${note}` : "") + `\n\nПотвърди?`
+    )) return;
+
+    const now  = new Date().toISOString();
+    const fmtD = s => `${s.slice(8,10)}.${s.slice(5,7)}.${s.slice(0,4)}`;
+
+    if (to === "КасаКеш") {
+      // ── КасаКеш: два симетрични записа ──────────────────────────
+
+      const trRef = await addDoc(collection(db, "records"), {
+        date, type: "Трансфер", method: "Банка", amount: r2(amount),
+        store: "КасаКеш", category: "Трансфер",
+        note: note || "Трансфер банка → каса",
+        imageUrl: "", createdAt: now, createdBy: currentUserId,
+      });
+
+      let trRef2;
+      try {
+        trRef2 = await addDoc(collection(db, "records"), {
+          date, type: "Приход", method: "Кеш", amount: r2(amount),
+          store: "КасаКеш", category: "Трансфер",
+          isTransfer: true, transferId: trRef.id,
+          note: note || "Трансфер банка → каса",
+          imageUrl: "", createdAt: now, createdBy: currentUserId,
+        });
+      } catch (e2) {
+        try { await deleteDoc(trRef); } catch (_) {}
+        throw e2;
+      }
+
+      records.unshift({ id: trRef2.id, date, type: "Приход",   method: "Кеш",
+        amount: r2(amount), store: "КасаКеш", category: "Трансфер",
+        isTransfer: true, transferId: trRef.id,
+        note: note || "Трансфер банка → каса", imageUrl: "" });
+      records.unshift({ id: trRef.id,  date, type: "Трансфер", method: "Банка",
+        amount: r2(amount), store: "КасаКеш", category: "Трансфер",
+        note: note || "Трансфер банка → каса", imageUrl: "" });
+
+    } else {
+      // ── store1 / store2: намираме отчета ПРЕДИ всякакъв запис ────
+
+      const found = await _findOpenReport(to, date);
+      if (!found) {
+        errEl.textContent =
+          `Не намерих незатворен ден за ${toLabel} в рамките на 7 дни от ${date}. Нищо не е записано.`;
+        return;
+      }
+      const { usedDate, ref, exists, data: drData } = found;
+
+      if (usedDate !== date &&
+          !confirm(
+            `⚠️ Отчетът за ${fmtD(date)} (${toLabel}) е вече затворен.\n\n` +
+            `Трансферът ще се добави към ${fmtD(usedDate)}.\n\nПродължи?`
+          )) return;
+
+      // Чак тук — първи запис в Firestore
+      const trRef = await addDoc(collection(db, "records"), {
+        date: usedDate, type: "Трансфер", method: "Банка", amount: r2(amount),
+        store: to, category: "Трансфер",
+        note: note || "Трансфер банка → каса",
+        imageUrl: "", createdAt: now, createdBy: currentUserId,
+      });
+
+      const sideIncomeRow = {
+        description: `Трансфер от банка${note ? ": " + note : ""}`,
+        amount:      r2(amount),
+        method:      "Кеш",
+        isTransfer:  true,
+        transferId:  trRef.id,
+      };
+
+      let noStartCash = false;
+      try {
+        if (exists) {
+          const existingSI = Array.isArray(drData.sideIncomes) ? drData.sideIncomes : [];
+          await updateDoc(ref, {
+            sideIncomes: [...existingSI, sideIncomeRow],
+            updatedAt:   now,
+          });
+        } else {
+          const startCash = await _getPrevEndCash(to, usedDate);
+          if (startCash === 0) noStartCash = true;
+          await setDoc(ref, {
+            shopId:        to,
+            date:          usedDate,
+            status:        "draft",
+            startCash,
+            shifts:        [],
+            sideIncomes:   [sideIncomeRow],
+            expensesGoods: [],
+            expensesOther: [],
+            advances:      [],
+            createdAt:     now,
+            createdBy:     currentUserId,
+            updatedAt:     now,
+          }, { merge: true });
+        }
+      } catch (eDr) {
+        try { await deleteDoc(trRef); } catch (_) {}
+        throw eDr;
+      }
+
+      records.unshift({ id: trRef.id, date: usedDate, type: "Трансфер", method: "Банка",
+        amount: r2(amount), store: to, category: "Трансфер",
+        note: note || "Трансфер банка → каса", imageUrl: "" });
+
+      if (noStartCash) {
+        alert(
+          `⚠️ Начална каса не можа да се определи (няма предишен затворен ден за ${toLabel}).\n` +
+          `Управителят трябва да я въведе ръчно в отчета за ${fmtD(usedDate)}.`
+        );
+      }
+    }
+
+    refreshUI();
+    renderMethodSummary();
+    window.closeTransferModal();
+    showStatusMsg(`✅ Трансфер ${r2(amount).toFixed(2)} € записан!`);
+
+  } catch (e) {
+    console.error("saveTransfer:", e);
+    errEl.textContent = "Грешка: " + e.message;
+  } finally {
+    _transferSaving = false;
+    if (btn) btn.disabled = false;
   }
 };

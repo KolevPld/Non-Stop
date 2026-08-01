@@ -167,6 +167,9 @@
       <button type="button" class="btn-amber hidden" id="cancelEditBtn" onclick="cancelEdit()">
         ✖ Откажи редакция
       </button>
+      <button type="button" class="btn-transfer admin-only" id="openTransferBtn" onclick="openTransferModal()">
+        <i class="fa-solid fa-right-left"></i> Трансфер банка → каса
+      </button>
     </div>
 
     <!-- Recent 5 records -->
@@ -1437,6 +1440,39 @@
       <button class="btn-secondary" onclick="closeWhCellModal()">Откажи</button>
       <button class="btn-primary" onclick="saveWhCell()">
         <i class="fa-solid fa-floppy-disk"></i> Запази
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Transfer Bank → Cash Modal ───────────────── -->
+<div id="transferModal" class="hidden">
+  <div class="dr-detail-backdrop" onclick="closeTransferModal()"></div>
+  <div class="dr-detail-panel wh-cell-panel">
+    <div class="dr-detail-header">
+      <span class="dr-detail-title-text">Трансфер банка → каса</span>
+      <button class="dr-detail-close" onclick="closeTransferModal()">✖</button>
+    </div>
+    <div class="dr-detail-body">
+      <label class="field-label">Дата</label>
+      <input type="date" id="trDate" class="dr-big-input">
+      <label class="field-label" style="margin-top:12px;">Сума (€)</label>
+      <input type="number" id="trAmount" min="0.01" step="0.01" placeholder="0.00"
+             class="dr-big-input" style="font-size:1.6rem;">
+      <label class="field-label" style="margin-top:12px;">Получател</label>
+      <select id="trTo">
+        <option value="КасаКеш">Каса Кеш (физическа каса)</option>
+        <option value="store1">Магазин 1</option>
+        <option value="store2">Магазин 2</option>
+      </select>
+      <label class="field-label" style="margin-top:12px;">Бележка (по желание)</label>
+      <input type="text" id="trNote" placeholder="Напр. теглене за ресторация...">
+      <div id="trError" style="color:#f44336;margin-top:8px;font-size:0.875rem;min-height:20px;"></div>
+    </div>
+    <div class="dr-detail-footer">
+      <button class="btn-secondary" onclick="closeTransferModal()">Откажи</button>
+      <button id="trSaveBtn" class="btn-primary" onclick="saveTransfer()">
+        <i class="fa-solid fa-right-left"></i> Запиши трансфер
       </button>
     </div>
   </div>

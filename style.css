@@ -553,6 +553,16 @@ button {
   margin-top: 10px;
 }
 
+.btn-transfer {
+  background: #7e57c2;
+  color: #fff;
+  padding: 11px 18px;
+  font-size: 0.875rem;
+  width: 100%;
+  margin-top: 8px;
+}
+.btn-transfer:hover { background: #6048a5; }
+
 .btn-row {
   display: flex;
   gap: 10px;
@@ -1070,6 +1080,7 @@ body.admin .admin-only { display: block; }
 body.admin .nav-btn.admin-only { display: flex; }
 body.admin .summary.admin-only { display: block; }
 body.admin .table-responsive.admin-only { display: block; }
+body.admin .btn-transfer.admin-only { display: inline-flex; align-items: center; justify-content: center; }
 
 /* ── Tablet (600px+) ─────────────────────────── */
 @media (min-width: 600px) {
