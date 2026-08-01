@@ -2918,6 +2918,29 @@ body.light .dr-owner-totals-row td { background: #f0f2f5 !important; }
   #whCellModal .wh-cell-panel { border-radius: 14px; }
 }
 
+#transferModal {
+  position: fixed; inset: 0; z-index: 1000;
+  display: flex; align-items: flex-end; justify-content: center;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: fadeIn .2s ease;
+}
+#transferModal.hidden { display: none; }
+#transferModal > .dr-detail-backdrop {
+  position: absolute; inset: 0; background: transparent; z-index: 0;
+}
+#transferModal .wh-cell-panel {
+  position: relative; z-index: 1;
+  max-width: 480px; width: 100%;
+  box-shadow: 0 -4px 40px rgba(0, 0, 0, 0.55), 0 20px 60px rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--border2);
+}
+@media (min-width: 640px) {
+  #transferModal { align-items: center; }
+  #transferModal .wh-cell-panel { border-radius: 14px; }
+}
+
 .wh-cell-panel .dr-detail-body {
   padding: 16px 18px;
 }
