@@ -1003,6 +1003,7 @@ function updateFilterSummary(data) {
 
   let totalInc = 0, totalExp = 0;
   data.forEach(r => {
+    if (r.isTransfer || r.category === "Трансфер") return;
     const a = Number(r.amount || 0);
     if (r.type === "Приход") totalInc += a; else totalExp += a;
   });
@@ -1763,6 +1764,7 @@ function renderChart() {
 
   let totalInc = 0, totalExp = 0;
   src.forEach(r => {
+    if (r.isTransfer || r.category === "Трансфер") return;
     const a = Number(r.amount || 0);
     if (r.type === "Приход") totalInc += a;
     else if (r.type === "Разход") totalExp += a;
@@ -2041,7 +2043,8 @@ function renderTotalSummaryCards() {
   const currentMonth = today.slice(0, 7);
   let todayInc = 0, todayExp = 0, monthInc = 0, monthExp = 0;
 
-  records.forEach(({ date, type, amount }) => {
+  records.forEach(({ date, type, amount, category, isTransfer }) => {
+    if (isTransfer || category === "Трансфер") return;
     const a = Number(amount || 0);
     const isInc = type === "Приход";
     if (date === today)                        { if (isInc) todayInc += a; else todayExp += a; }
