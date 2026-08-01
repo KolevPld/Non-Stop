@@ -405,7 +405,8 @@ async function loadRecords() {
     renderTotalSummaryCards();
   }
 
-  await checkAndCreateMonthlyCarryover();
+  // ВРЕМЕННО СПРЯНО 2026-08-01: двойно броене на преноси, виж анализа
+  // await checkAndCreateMonthlyCarryover();
 }
 
 // --------------------------------------------------
