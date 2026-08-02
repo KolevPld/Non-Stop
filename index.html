@@ -813,6 +813,37 @@
 
   </div><!-- /screen-salaries -->
 
+  <div id="screen-invoices" class="hidden admin-only">
+
+    <div class="wh-owner-title">
+      <i class="fa-solid fa-file-invoice-dollar" style="color:var(--amber)"></i>
+      Издадени фактури
+    </div>
+
+    <!-- Карти с обобщение -->
+    <div class="inv-cards">
+      <div class="inv-card inv-card-pending">
+        <div class="inv-card-label">Чакащи плащане</div>
+        <div class="inv-card-amount" id="invPendingAmount">—</div>
+        <div class="inv-card-count" id="invPendingCount">0 фактури</div>
+      </div>
+      <div class="inv-card inv-card-paid">
+        <div class="inv-card-label">Платени този месец</div>
+        <div class="inv-card-amount" id="invPaidAmount">—</div>
+        <div class="inv-card-count" id="invPaidCount">0 фактури</div>
+      </div>
+    </div>
+
+    <button class="btn-primary inv-new-btn" onclick="openInvoiceModal()">
+      <i class="fa-solid fa-plus"></i> Нова фактура
+    </button>
+
+    <div id="invList">
+      <div class="tasks-empty">Зареждане...</div>
+    </div>
+
+  </div><!-- /screen-invoices -->
+
 </div><!-- /app -->
 
 <!-- ── Bottom Navigation ──────────────────────── -->
@@ -856,6 +887,11 @@
   <button class="nav-btn admin-only" id="navAccounts" onclick="showScreen('accounts')">
     <span class="nav-icon">⚙️</span>
     Акаунти
+  </button>
+
+  <button class="nav-btn admin-only" id="navInvoices" onclick="showScreen('invoices')">
+    <span class="nav-icon">🧾</span>
+    Фактури
   </button>
 
 </nav>
@@ -1473,6 +1509,38 @@
       <button class="btn-secondary" onclick="closeTransferModal()">Откажи</button>
       <button id="trSaveBtn" class="btn-primary" onclick="saveTransfer()">
         <i class="fa-solid fa-right-left"></i> Запиши трансфер
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="invoiceModal" class="hidden">
+  <div class="dr-detail-backdrop" onclick="closeInvoiceModal()"></div>
+  <div class="dr-detail-panel wh-cell-panel">
+    <div class="dr-detail-header">
+      <span class="dr-detail-title-text">Нова фактура</span>
+      <button class="dr-detail-close" onclick="closeInvoiceModal()">✖</button>
+    </div>
+    <div class="dr-detail-body">
+      <label class="field-label">Номер на фактура</label>
+      <input type="text" id="invNumber" placeholder="0000001" class="dr-big-input">
+      <label class="field-label" style="margin-top:12px;">Клиент</label>
+      <input type="text" id="invClient" placeholder="Кока-Кола ООД" class="dr-big-input">
+      <label class="field-label" style="margin-top:12px;">Дата на издаване</label>
+      <input type="date" id="invIssueDate" class="dr-big-input">
+      <label class="field-label" style="margin-top:12px;">Сума с ДДС (€)</label>
+      <input type="number" id="invAmount" min="0.01" step="0.01" placeholder="0.00"
+             class="dr-big-input" style="font-size:1.6rem;"
+             oninput="updateInvoiceVatPreview()">
+      <div id="invVatPreview" style="font-size:0.8rem;color:var(--text3);margin-top:4px;min-height:18px;"></div>
+      <label class="field-label" style="margin-top:12px;">Бележка (по желание)</label>
+      <input type="text" id="invNote" placeholder="Описание...">
+      <div id="invError" style="color:#f44336;margin-top:8px;font-size:0.875rem;min-height:20px;"></div>
+    </div>
+    <div class="dr-detail-footer">
+      <button class="btn-secondary" onclick="closeInvoiceModal()">Откажи</button>
+      <button id="invSaveBtn" class="btn-primary" onclick="saveInvoice()">
+        <i class="fa-solid fa-file-invoice-dollar"></i> Запиши фактура
       </button>
     </div>
   </div>

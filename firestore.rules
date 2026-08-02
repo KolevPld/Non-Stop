@@ -138,6 +138,11 @@ service cloud.firestore {
       allow read, write: if isOwner();
     }
 
+    // invoices — само owner има достъп
+    match /invoices/{id} {
+      allow read, write: if isOwner();
+    }
+
     // overtime_alerts — само Cloud Functions пишат, owner чете
     match /overtime_alerts/{docId} {
       allow read:  if isOwner();

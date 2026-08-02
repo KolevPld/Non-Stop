@@ -1932,6 +1932,7 @@ window.showScreen = function(screen) {
   drScreen?.classList.add("hidden");
   whScreen?.classList.add("hidden");
   document.getElementById("screen-salaries")?.classList.add("hidden");
+  document.getElementById("screen-invoices")?.classList.add("hidden");
 
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
 
@@ -1983,6 +1984,12 @@ window.showScreen = function(screen) {
     salScreen?.classList.remove("hidden");
     document.getElementById('navSalaries')?.classList.add('active');
     loadSalaryHistoryScreen();
+
+  } else if (screen === "invoices") {
+    if (!isAdmin) { alert("Нямаш достъп до този екран."); return; }
+    document.getElementById("screen-invoices")?.classList.remove("hidden");
+    document.getElementById("navInvoices")?.classList.add("active");
+    loadInvoices();
 
   } else {
     addScreen?.classList.remove("hidden");
@@ -8038,4 +8045,178 @@ window.saveTransfer = async function() {
     _transferSaving = false;
     if (btn) btn.disabled = false;
   }
+};
+
+// ── Invoices ──────────────────────────────────────────────────────────────
+let _invoices = [];
+let _invoiceSaving = false;
+
+async function loadInvoices() {
+  const list = document.getElementById("invList");
+  if (list) list.innerHTML = '<div class="tasks-empty">Зареждане...</div>';
+  try {
+    const q = query(collection(db, "invoices"), orderBy("issueDate", "desc"));
+    const snap = await getDocs(q);
+    _invoices = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderInvoices();
+  } catch (err) {
+    console.error("loadInvoices:", err);
+    if (list) list.innerHTML = '<div class="tasks-empty">Грешка при зареждане.</div>';
+  }
+}
+
+function renderInvoices() {
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const fmt = n => Number(n).toFixed(2) + " €";
+  const fmtDate = ymd => {
+    if (!ymd) return "—";
+    const [y, m, d] = ymd.split("-");
+    return `${d}.${m}.${y}`;
+  };
+  const pluralBG = n => n === 1 ? "фактура" : "фактури";
+
+  const pending    = _invoices.filter(i => i.status === "pending");
+  const paidMonth  = _invoices.filter(i => i.status === "paid" && (i.payDate || "").startsWith(currentMonth));
+  const pendingSum = pending.reduce((s, i) => s + Number(i.amount || 0), 0);
+  const paidSum    = paidMonth.reduce((s, i) => s + Number(i.amount || 0), 0);
+
+  const el = id => document.getElementById(id);
+  if (el("invPendingAmount")) el("invPendingAmount").textContent = fmt(pendingSum);
+  if (el("invPendingCount"))  el("invPendingCount").textContent  = `${pending.length} ${pluralBG(pending.length)}`;
+  if (el("invPaidAmount"))    el("invPaidAmount").textContent    = fmt(paidSum);
+  if (el("invPaidCount"))     el("invPaidCount").textContent     = `${paidMonth.length} ${pluralBG(paidMonth.length)}`;
+
+  const list = el("invList");
+  if (!list) return;
+  if (!_invoices.length) {
+    list.innerHTML = '<div class="tasks-empty">Няма въведени фактури.</div>';
+    return;
+  }
+
+  // Чакащите отгоре, платените отдолу; в рамките на всяка група редът е по issueDate desc (от Firestore)
+  const sorted = [
+    ..._invoices.filter(i => i.status === "pending"),
+    ..._invoices.filter(i => i.status === "paid"),
+  ];
+
+  list.innerHTML = sorted.map(inv => {
+    const amt    = Number(inv.amount || 0);
+    const vat    = r2(amt / 6);
+    const net    = r2(amt / 1.2);
+    const isPaid = inv.status === "paid";
+    const safeId = escHtml(inv.id);
+    return `
+      <div class="inv-row ${isPaid ? "inv-row-paid" : "inv-row-pending"}">
+        <div class="inv-row-main">
+          <div class="inv-row-num"># ${escHtml(inv.number || "—")}</div>
+          <div class="inv-row-client">${escHtml(inv.client || "—")}</div>
+          <div class="inv-row-date">Издадена: ${fmtDate(inv.issueDate)}</div>
+        </div>
+        <div class="inv-row-right">
+          <div class="inv-row-amount">${fmt(amt)}</div>
+          <div class="inv-row-vat">нето ${net.toFixed(2)} / ДДС ${vat.toFixed(2)}</div>
+          <span class="inv-status-badge ${isPaid ? "inv-status-paid" : "inv-status-pending"}">
+            ${isPaid ? "Платена" : "Чакаща"}
+          </span>
+        </div>
+        ${isPaid ? `
+          <div class="inv-row-pay-info">Платена на ${fmtDate(inv.payDate)}${inv.method ? " · " + inv.method : ""}</div>
+          <button class="btn-sm btn-secondary inv-btn-action" onclick="markInvoiceUnpaid('${safeId}')">
+            ↩ Върни като чакаща
+          </button>
+        ` : `
+          <button class="btn-sm btn-primary inv-btn-action" onclick="markInvoicePaid('${safeId}')">
+            ✓ Отбележи като платена
+          </button>
+        `}
+        ${inv.note ? `<div class="inv-row-note">${escHtml(inv.note)}</div>` : ""}
+      </div>`;
+  }).join("");
+}
+
+window.openInvoiceModal = function() {
+  const modal = document.getElementById("invoiceModal");
+  if (!modal) return;
+  document.getElementById("invIssueDate").value = new Date().toLocaleDateString("sv-SE");
+  ["invNumber", "invClient", "invAmount", "invNote"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+  document.getElementById("invVatPreview").textContent = "";
+  document.getElementById("invError").textContent = "";
+  modal.classList.remove("hidden");
+  document.getElementById("invNumber")?.focus();
+};
+
+window.closeInvoiceModal = function() {
+  document.getElementById("invoiceModal")?.classList.add("hidden");
+};
+
+window.updateInvoiceVatPreview = function() {
+  const amt  = parseFloat(document.getElementById("invAmount")?.value || 0);
+  const prev = document.getElementById("invVatPreview");
+  if (!prev) return;
+  if (!(amt > 0)) { prev.textContent = ""; return; }
+  prev.textContent = `нето ${r2(amt / 1.2).toFixed(2)} € / ДДС ${r2(amt / 6).toFixed(2)} €`;
+};
+
+window.saveInvoice = async function() {
+  if (_invoiceSaving) return;
+  const btn   = document.getElementById("invSaveBtn");
+  const errEl = document.getElementById("invError");
+
+  _invoiceSaving = true;
+  if (btn) btn.disabled = true;
+  try {
+    const number    = (document.getElementById("invNumber")?.value    || "").trim();
+    const client    = (document.getElementById("invClient")?.value    || "").trim();
+    const issueDate = (document.getElementById("invIssueDate")?.value || "").trim();
+    const amountRaw = parseFloat(document.getElementById("invAmount")?.value || 0);
+    const note      = (document.getElementById("invNote")?.value      || "").trim();
+
+    errEl.textContent = "";
+    if (!number)          { errEl.textContent = "Въведи номер на фактура."; return; }
+    if (!client)          { errEl.textContent = "Въведи клиент.";           return; }
+    if (!issueDate)       { errEl.textContent = "Въведи дата на издаване."; return; }
+    if (!(amountRaw > 0)) { errEl.textContent = "Въведи сума > 0.";         return; }
+
+    const dup = _invoices.find(i => (i.number || "").trim() === number);
+    if (dup) {
+      if (!confirm(`Фактура #${number} вече съществува (${dup.client}, ${dup.issueDate}). Наистина ли искаш втора?`)) return;
+    }
+
+    if (!confirm(`Запиши фактура #${number} — ${client} — ${amountRaw.toFixed(2)} €?`)) return;
+
+    const now = new Date().toISOString();
+    await addDoc(collection(db, "invoices"), {
+      number, client, issueDate,
+      amount:   r2(amountRaw),
+      status:   "pending",
+      payDate:  null,
+      method:   null,
+      recordId: null,
+      note,
+      createdAt: now,
+      createdBy: currentUserId,
+      updatedAt: now,
+    });
+    window.closeInvoiceModal();
+    await loadInvoices();
+    showStatusMsg?.("Фактурата е записана.");
+  } catch (err) {
+    console.error("saveInvoice:", err);
+    errEl.textContent = "Грешка при запис. Опитай пак.";
+  } finally {
+    _invoiceSaving = false;
+    if (btn) btn.disabled = false;
+  }
+};
+
+// ЕТАП 3 — логиката за плащане
+window.markInvoicePaid = function(id) {
+  console.log("markInvoicePaid → ЕТАП 3:", id);
+};
+window.markInvoiceUnpaid = function(id) {
+  console.log("markInvoiceUnpaid → ЕТАП 3:", id);
 };
