@@ -133,6 +133,7 @@
         <option>Стока</option>
         <option>Заплати</option>
         <option>Наеми</option>
+        <option>Реклама</option>
         <option>Без ДДС</option>
         <option>Митко</option>
         <option>Велко</option>
@@ -300,6 +301,7 @@
             <option>Стока</option>
             <option>Заплати</option>
             <option>Наеми</option>
+            <option>Реклама</option>
             <option>Без ДДС</option>
             <option>Митко</option>
             <option>Велко</option>
@@ -1543,6 +1545,36 @@
       <button class="btn-secondary" onclick="closeInvoiceModal()">Откажи</button>
       <button id="invSaveBtn" class="btn-primary" onclick="saveInvoice()">
         <i class="fa-solid fa-file-invoice-dollar"></i> <span id="invSaveBtnText">Запиши фактура</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="payInvoiceModal" class="hidden">
+  <div class="dr-detail-backdrop" onclick="closePayModal()"></div>
+  <div class="dr-detail-panel wh-cell-panel">
+    <div class="dr-detail-header">
+      <span class="dr-detail-title-text">Потвърди плащането</span>
+      <button class="dr-detail-close" onclick="closePayModal()">✖</button>
+    </div>
+    <div class="dr-detail-body">
+      <div id="payInvDetails"
+           style="background:var(--bg2);border-radius:8px;padding:10px 12px;
+                  margin-bottom:12px;font-size:0.9rem;line-height:1.7;"></div>
+      <label class="field-label">Дата на плащане</label>
+      <input type="date" id="payDate" class="dr-big-input">
+      <label class="field-label" style="margin-top:12px;">Метод</label>
+      <select id="payMethod" class="dr-big-input" style="font-size:1rem;">
+        <option value="Банка">Банка</option>
+        <option value="Кеш">Кеш</option>
+      </select>
+      <div id="payError"
+           style="color:#f44336;margin-top:8px;font-size:0.875rem;min-height:20px;"></div>
+    </div>
+    <div class="dr-detail-footer">
+      <button class="btn-secondary" onclick="closePayModal()">Откажи</button>
+      <button id="payConfirmBtn" class="btn-primary" onclick="confirmInvoicePayment()">
+        <i class="fa-solid fa-check"></i> Потвърди плащането
       </button>
     </div>
   </div>

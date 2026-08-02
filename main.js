@@ -8054,6 +8054,8 @@ let _invoices         = [];
 let _invoiceSaving    = false;
 let _editingInvoiceId = null;
 let _invDeleteSaving  = false;
+let _payingInvoiceId  = null;
+let _paymentSaving    = false;
 
 async function loadInvoices() {
   const list = document.getElementById("invList");
@@ -8341,10 +8343,151 @@ window.deleteInvoice = async function(id) {
   }
 };
 
-// ЕТАП 3 — логиката за плащане
 window.markInvoicePaid = function(id) {
-  console.log("markInvoicePaid → ЕТАП 3:", id);
+  window.openPayModal(id);
 };
-window.markInvoiceUnpaid = function(id) {
-  console.log("markInvoiceUnpaid → ЕТАП 3:", id);
+
+window.openPayModal = function(id) {
+  const inv = _invoices.find(i => i.id === id);
+  if (!inv) return;
+  if (inv.status === "paid") {
+    alert("Тази фактура вече е отбелязана като платена.");
+    return;
+  }
+  _payingInvoiceId = id;
+
+  const amt     = Number(inv.amount || 0);
+  const details = document.getElementById("payInvDetails");
+  if (details) details.innerHTML = `
+    <div><strong>#${escHtml(inv.number || "—")}</strong> — ${escHtml(inv.client || "—")}</div>
+    <div>Сума с ДДС: <strong>${amt.toFixed(2)} €</strong></div>
+    <div style="font-size:0.78rem;color:var(--text3);">
+      нето ${r2(amt / 1.2).toFixed(2)} / ДДС ${r2(amt / 6).toFixed(2)}
+    </div>
+    <div style="font-size:0.78rem;color:var(--text3);">Издадена: ${escHtml(inv.issueDate || "—")}</div>`;
+
+  document.getElementById("payDate").value          = new Date().toLocaleDateString("sv-SE");
+  document.getElementById("payMethod").value        = "Банка";
+  document.getElementById("payError").textContent   = "";
+  document.getElementById("payInvoiceModal")?.classList.remove("hidden");
+};
+
+window.closePayModal = function() {
+  document.getElementById("payInvoiceModal")?.classList.add("hidden");
+  _payingInvoiceId = null;
+};
+
+window.confirmInvoicePayment = async function() {
+  if (_paymentSaving) return;
+  const btn   = document.getElementById("payConfirmBtn");
+  const errEl = document.getElementById("payError");
+
+  _paymentSaving = true;
+  if (btn) btn.disabled = true;
+  try {
+    const inv = _invoices.find(i => i.id === _payingInvoiceId);
+    if (!inv) { errEl.textContent = "Фактурата не е намерена."; return; }
+
+    const payDate = (document.getElementById("payDate")?.value  || "").trim();
+    const method  =  document.getElementById("payMethod")?.value || "";
+
+    if (!payDate) { errEl.textContent = "Въведи дата на плащане."; return; }
+    if (!method)  { errEl.textContent = "Избери метод.";           return; }
+
+    const fmtDate = ymd => { const [y, m, d] = ymd.split("-"); return `${d}.${m}.${y}`; };
+    const amt   = Number(inv.amount || 0);
+    const store = method === "Кеш" ? "КасаКеш" : "КасаБанка";
+    const now   = new Date().toISOString();
+
+    if (!confirm(
+      `Фактура #${inv.number || "—"}, ${inv.client || "—"}, ${amt.toFixed(2)} € — платена на ${fmtDate(payDate)} по ${method}. Потвърди?`
+    )) return;
+
+    // 1. Запис в records
+    const note   = `Фактура #${inv.number || "—"} — ${inv.client || "—"}`;
+    const recRef = await addDoc(collection(db, "records"), {
+      date: payDate, type: "Приход", method, amount: amt,
+      store, category: "Реклама", invoiceId: _payingInvoiceId,
+      note, imageUrl: "", createdAt: now, createdBy: currentUserId,
+    });
+
+    // 2. Обнови фактурата — при грешка → rollback на records
+    try {
+      await updateDoc(doc(db, "invoices", _payingInvoiceId), {
+        status: "paid", payDate, method, recordId: recRef.id, updatedAt: now,
+      });
+    } catch (err) {
+      await deleteDoc(recRef).catch(() => {});
+      throw err;
+    }
+
+    // 3. Обнови локалния масив за незабавен UI refresh
+    records.unshift({
+      id: recRef.id, date: payDate, type: "Приход", method, amount: amt,
+      store, category: "Реклама", invoiceId: _payingInvoiceId,
+      note, imageUrl: "", createdAt: now, createdBy: currentUserId,
+    });
+
+    window.closePayModal();
+    await loadInvoices();
+    refreshUI();
+    renderMethodSummary();
+    showStatusMsg?.("Плащането е записано.");
+  } catch (err) {
+    console.error("confirmInvoicePayment:", err);
+    errEl.textContent = "Грешка при запис. Опитай пак.";
+  } finally {
+    _paymentSaving = false;
+    if (btn) btn.disabled = false;
+  }
+};
+
+window.markInvoiceUnpaid = async function(id) {
+  if (_invDeleteSaving) return;
+  const inv = _invoices.find(i => i.id === id);
+  if (!inv) return;
+
+  const fmtDate = ymd => {
+    if (!ymd) return "—";
+    const [y, m, d] = ymd.split("-");
+    return `${d}.${m}.${y}`;
+  };
+  if (!confirm(
+    `Връщане на фактура #${inv.number || "—"} като чакаща.\nЗаписът за приход от ${fmtDate(inv.payDate)} ще бъде изтрит. Продължи?`
+  )) return;
+
+  _invDeleteSaving = true;
+  let recordDeleted = false;
+  try {
+    // 1. Изтрий records (deleteDoc е идемпотентен — не гърми при not-found)
+    if (inv.recordId) {
+      await deleteDoc(doc(db, "records", inv.recordId));
+      const idx = records.findIndex(r => r.id === inv.recordId);
+      if (idx !== -1) records.splice(idx, 1);
+      recordDeleted = true;
+    }
+
+    // 2. Обнови фактурата
+    try {
+      await updateDoc(doc(db, "invoices", id), {
+        status: "pending", payDate: null, method: null, recordId: null,
+        updatedAt: new Date().toISOString(),
+      });
+    } catch (updateErr) {
+      if (recordDeleted) {
+        alert("Записът за приход е изтрит, но статусът на фактурата не можа да се смени. Опитай пак или провери ръчно.");
+      }
+      throw updateErr;
+    }
+
+    await loadInvoices();
+    refreshUI();
+    renderMethodSummary();
+    showStatusMsg?.("Фактурата е върната като чакаща.");
+  } catch (err) {
+    console.error("markInvoiceUnpaid:", err);
+    showStatusMsg?.("Грешка при връщане на фактурата. Провери конзолата.");
+  } finally {
+    _invDeleteSaving = false;
+  }
 };
