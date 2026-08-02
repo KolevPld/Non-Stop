@@ -1518,7 +1518,7 @@
   <div class="dr-detail-backdrop" onclick="closeInvoiceModal()"></div>
   <div class="dr-detail-panel wh-cell-panel">
     <div class="dr-detail-header">
-      <span class="dr-detail-title-text">Нова фактура</span>
+      <span id="invModalTitle" class="dr-detail-title-text">Нова фактура</span>
       <button class="dr-detail-close" onclick="closeInvoiceModal()">✖</button>
     </div>
     <div class="dr-detail-body">
@@ -1542,7 +1542,7 @@
     <div class="dr-detail-footer">
       <button class="btn-secondary" onclick="closeInvoiceModal()">Откажи</button>
       <button id="invSaveBtn" class="btn-primary" onclick="saveInvoice()">
-        <i class="fa-solid fa-file-invoice-dollar"></i> Запиши фактура
+        <i class="fa-solid fa-file-invoice-dollar"></i> <span id="invSaveBtnText">Запиши фактура</span>
       </button>
     </div>
   </div>

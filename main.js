@@ -8050,8 +8050,10 @@ window.saveTransfer = async function() {
 };
 
 // ── Invoices ──────────────────────────────────────────────────────────────
-let _invoices = [];
-let _invoiceSaving = false;
+let _invoices         = [];
+let _invoiceSaving    = false;
+let _editingInvoiceId = null;
+let _invDeleteSaving  = false;
 
 async function loadInvoices() {
   const list = document.getElementById("invList");
@@ -8128,9 +8130,13 @@ function renderInvoices() {
             ↩ Върни като чакаща
           </button>
         ` : `
-          <button class="btn-sm btn-primary inv-btn-action" onclick="markInvoicePaid('${safeId}')">
-            ✓ Отбележи като платена
-          </button>
+          <div class="inv-btn-action" style="display:flex;gap:8px;align-items:center;">
+            <button class="btn-sm btn-primary" style="flex:1" onclick="markInvoicePaid('${safeId}')">
+              ✓ Отбележи като платена
+            </button>
+            <button class="btn-icon btn-edit" type="button" title="Редакция" onclick="editInvoice('${safeId}')">✏️</button>
+            <button class="btn-icon btn-del"  type="button" title="Изтриване" onclick="deleteInvoice('${safeId}')">🗑️</button>
+          </div>
         `}
         ${inv.note ? `<div class="inv-row-note">${escHtml(inv.note)}</div>` : ""}
       </div>`;
@@ -8163,6 +8169,13 @@ async function _loadInvSuppliers(forceReload = false) {
 window.openInvoiceModal = async function() {
   const modal = document.getElementById("invoiceModal");
   if (!modal) return;
+
+  _editingInvoiceId = null;
+  const titleEl = document.getElementById("invModalTitle");
+  const btnTxt  = document.getElementById("invSaveBtnText");
+  if (titleEl) titleEl.textContent = "Нова фактура";
+  if (btnTxt)  btnTxt.textContent  = "Запиши фактура";
+
   const errEl = document.getElementById("invError");
   const sel   = document.getElementById("invClient");
 
@@ -8234,38 +8247,97 @@ window.saveInvoice = async function() {
     if (!issueDate)       { errEl.textContent = "Въведи дата на издаване."; return; }
     if (!(amountRaw > 0)) { errEl.textContent = "Въведи сума > 0.";         return; }
 
-    const dup = _invoices.find(i => (i.number || "").trim() === number);
+    const dup = _invoices.find(i => (i.number || "").trim() === number && i.id !== _editingInvoiceId);
     if (dup) {
       if (!confirm(`Фактура #${number} вече съществува (${dup.client}, ${dup.issueDate}). Наистина ли искаш втора?`)) return;
     }
 
-    if (!confirm(`Запиши фактура #${number} — ${clientName} — ${amountRaw.toFixed(2)} €?`)) return;
+    const confirmMsg = _editingInvoiceId
+      ? `Запази промените по фактура #${number} — ${clientName} — ${amountRaw.toFixed(2)} €?`
+      : `Запиши фактура #${number} — ${clientName} — ${amountRaw.toFixed(2)} €?`;
+    if (!confirm(confirmMsg)) return;
 
     const now = new Date().toISOString();
-    await addDoc(collection(db, "invoices"), {
-      number,
-      clientId,
-      client: clientName,
-      issueDate,
-      amount:   r2(amountRaw),
-      status:   "pending",
-      payDate:  null,
-      method:   null,
-      recordId: null,
-      note,
-      createdAt: now,
-      createdBy: currentUserId,
-      updatedAt: now,
-    });
+    if (_editingInvoiceId) {
+      await updateDoc(doc(db, "invoices", _editingInvoiceId), {
+        number, clientId, client: clientName, issueDate,
+        amount: r2(amountRaw), note,
+        updatedAt: now,
+      });
+    } else {
+      await addDoc(collection(db, "invoices"), {
+        number, clientId, client: clientName, issueDate,
+        amount:   r2(amountRaw),
+        status:   "pending",
+        payDate:  null, method: null, recordId: null,
+        note,
+        createdAt: now, createdBy: currentUserId, updatedAt: now,
+      });
+    }
     window.closeInvoiceModal();
     await loadInvoices();
-    showStatusMsg?.("Фактурата е записана.");
+    showStatusMsg?.(_editingInvoiceId ? "Фактурата е обновена." : "Фактурата е записана.");
   } catch (err) {
     console.error("saveInvoice:", err);
     errEl.textContent = "Грешка при запис. Опитай пак.";
   } finally {
     _invoiceSaving = false;
     if (btn) btn.disabled = false;
+  }
+};
+
+window.editInvoice = async function(id) {
+  const inv = _invoices.find(i => i.id === id);
+  if (!inv) return;
+  if (inv.status !== "pending") {
+    alert("Само чакащи фактури могат да се редактират.");
+    return;
+  }
+
+  await window.openInvoiceModal();   // ресетва _editingInvoiceId=null, пълни dropdown
+
+  _editingInvoiceId = id;            // задаваме СЛЕД openInvoiceModal
+
+  const num = document.getElementById("invNumber");
+  const amt = document.getElementById("invAmount");
+  const dt  = document.getElementById("invIssueDate");
+  const nt  = document.getElementById("invNote");
+  const sel = document.getElementById("invClient");
+
+  if (num) num.value = inv.number    || "";
+  if (dt)  dt.value  = inv.issueDate || "";
+  if (nt)  nt.value  = inv.note      || "";
+  if (amt) { amt.value = inv.amount  || ""; window.updateInvoiceVatPreview(); }
+  if (sel) sel.value = inv.clientId  || "";
+
+  const titleEl = document.getElementById("invModalTitle");
+  const btnTxt  = document.getElementById("invSaveBtnText");
+  if (titleEl) titleEl.textContent = "Редакция на фактура";
+  if (btnTxt)  btnTxt.textContent  = "Запази промените";
+};
+
+window.deleteInvoice = async function(id) {
+  if (_invDeleteSaving) return;
+  const inv = _invoices.find(i => i.id === id);
+  if (!inv) return;
+  if (inv.status !== "pending") {
+    alert("Само чакащи фактури могат да се изтриват. Първо върни фактурата като чакаща.");
+    return;
+  }
+  if (!confirm(
+    `Изтрий фактура #${inv.number || "—"} — ${inv.client || "—"} — ${Number(inv.amount || 0).toFixed(2)} €?\nТова действие е необратимо.`
+  )) return;
+
+  _invDeleteSaving = true;
+  try {
+    await deleteDoc(doc(db, "invoices", id));
+    await loadInvoices();
+    showStatusMsg?.("Фактурата е изтрита.");
+  } catch (err) {
+    console.error("deleteInvoice:", err);
+    alert("Грешка при изтриване. Опитай пак.");
+  } finally {
+    _invDeleteSaving = false;
   }
 };
 
