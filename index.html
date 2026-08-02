@@ -1524,8 +1524,10 @@
     <div class="dr-detail-body">
       <label class="field-label">Номер на фактура</label>
       <input type="text" id="invNumber" placeholder="0000001" class="dr-big-input">
-      <label class="field-label" style="margin-top:12px;">Клиент</label>
-      <input type="text" id="invClient" placeholder="Кока-Кола ООД" class="dr-big-input">
+      <label class="field-label" style="margin-top:12px;">Клиент (фирма)</label>
+      <select id="invClient" class="dr-big-input" style="font-size:1rem;">
+        <option value="">— Избери фирма —</option>
+      </select>
       <label class="field-label" style="margin-top:12px;">Дата на издаване</label>
       <input type="date" id="invIssueDate" class="dr-big-input">
       <label class="field-label" style="margin-top:12px;">Сума с ДДС (€)</label>

@@ -228,6 +228,8 @@ function escHtml(s) {
   return String(s ?? "").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/'/g,"&#39;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 }
 
+const normClient = s => String(s ?? "").trim().replace(/\s+/g, " ").toLowerCase();
+
 const statusDiv = document.getElementById("status");
 
 function showStatusMsg(msg, durationMs = 3000) {
@@ -8135,16 +8137,65 @@ function renderInvoices() {
   }).join("");
 }
 
-window.openInvoiceModal = function() {
+let _invSuppliers = [];
+
+async function _loadInvSuppliers(forceReload = false) {
+  if (_invSuppliers.length && !forceReload) return;
+  const [s1, s2] = await Promise.all([
+    getDocs(query(collection(db, "suppliers"), where("shopId", "==", "store1"))),
+    getDocs(query(collection(db, "suppliers"), where("shopId", "==", "store2"))),
+  ]);
+  const all = [
+    ...s1.docs.map(d => ({ id: d.id, ...d.data() })),
+    ...s2.docs.map(d => ({ id: d.id, ...d.data() })),
+  ];
+  const seen = new Set();
+  _invSuppliers = all
+    .filter(s => {
+      const key = normClient(s.name);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((a, b) => (a.name || "").localeCompare(b.name || "", "bg"));
+}
+
+window.openInvoiceModal = async function() {
   const modal = document.getElementById("invoiceModal");
   if (!modal) return;
+  const errEl = document.getElementById("invError");
+  const sel   = document.getElementById("invClient");
+
+  try {
+    await _loadInvSuppliers(true);
+  } catch (err) {
+    console.error("_loadInvSuppliers:", err);
+    if (errEl) errEl.textContent = "Грешка при зареждане на фирмите.";
+    if (sel)   sel.innerHTML = `<option value="">— Грешка —</option>`;
+    modal.classList.remove("hidden");
+    return;
+  }
+
+  if (sel) {
+    if (!_invSuppliers.length) {
+      sel.innerHTML = `<option value="" disabled>Няма въведени доставчици</option>`;
+      if (errEl) errEl.textContent = "Няма въведени доставчици в системата.";
+    } else {
+      sel.innerHTML = `<option value="">— Избери фирма —</option>` +
+        _invSuppliers.map(s =>
+          `<option value="${escHtml(normClient(s.name))}">${escHtml(s.name)}</option>`
+        ).join("");
+      sel.value = "";
+      if (errEl) errEl.textContent = "";
+    }
+  }
+
   document.getElementById("invIssueDate").value = new Date().toLocaleDateString("sv-SE");
-  ["invNumber", "invClient", "invAmount", "invNote"].forEach(id => {
+  ["invNumber", "invAmount", "invNote"].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = "";
   });
   document.getElementById("invVatPreview").textContent = "";
-  document.getElementById("invError").textContent = "";
   modal.classList.remove("hidden");
   document.getElementById("invNumber")?.focus();
 };
@@ -8169,15 +8220,17 @@ window.saveInvoice = async function() {
   _invoiceSaving = true;
   if (btn) btn.disabled = true;
   try {
-    const number    = (document.getElementById("invNumber")?.value    || "").trim();
-    const client    = (document.getElementById("invClient")?.value    || "").trim();
-    const issueDate = (document.getElementById("invIssueDate")?.value || "").trim();
-    const amountRaw = parseFloat(document.getElementById("invAmount")?.value || 0);
-    const note      = (document.getElementById("invNote")?.value      || "").trim();
+    const number     = (document.getElementById("invNumber")?.value    || "").trim();
+    const clientSel  = document.getElementById("invClient");
+    const clientId   = clientSel?.value || "";
+    const clientName = clientSel?.options[clientSel?.selectedIndex]?.text.trim() || "";
+    const issueDate  = (document.getElementById("invIssueDate")?.value || "").trim();
+    const amountRaw  = parseFloat(document.getElementById("invAmount")?.value || 0);
+    const note       = (document.getElementById("invNote")?.value      || "").trim();
 
     errEl.textContent = "";
     if (!number)          { errEl.textContent = "Въведи номер на фактура."; return; }
-    if (!client)          { errEl.textContent = "Въведи клиент.";           return; }
+    if (!clientId)        { errEl.textContent = "Избери фирма.";            return; }
     if (!issueDate)       { errEl.textContent = "Въведи дата на издаване."; return; }
     if (!(amountRaw > 0)) { errEl.textContent = "Въведи сума > 0.";         return; }
 
@@ -8186,11 +8239,14 @@ window.saveInvoice = async function() {
       if (!confirm(`Фактура #${number} вече съществува (${dup.client}, ${dup.issueDate}). Наистина ли искаш втора?`)) return;
     }
 
-    if (!confirm(`Запиши фактура #${number} — ${client} — ${amountRaw.toFixed(2)} €?`)) return;
+    if (!confirm(`Запиши фактура #${number} — ${clientName} — ${amountRaw.toFixed(2)} €?`)) return;
 
     const now = new Date().toISOString();
     await addDoc(collection(db, "invoices"), {
-      number, client, issueDate,
+      number,
+      clientId,
+      client: clientName,
+      issueDate,
       amount:   r2(amountRaw),
       status:   "pending",
       payDate:  null,
