@@ -1043,9 +1043,55 @@ function updateFilterSummary(data) {
 // 📈 Обобщения
 // --------------------------------------------------
 
+const _mrMonthNames = [
+  'Януари','Февруари','Март','Април','Май','Юни',
+  'Юли','Август','Септември','Октомври','Ноември','Декември'
+];
+
+function _taxPopulateMonthSelect() {
+  const sel = document.getElementById("taxMonthSel");
+  if (!sel) return;
+  const months = [...new Set(
+    records.map(r => (r.date || "").slice(0, 7)).filter(m => /^\d{4}-\d{2}$/.test(m))
+  )].sort().reverse();
+  const prev = sel.value;
+  sel.innerHTML = months.map(m => {
+    const [y, mo] = m.split("-").map(Number);
+    return `<option value="${m}">${_mrMonthNames[mo - 1]} ${y}</option>`;
+  }).join("");
+  if (prev && months.includes(prev)) {
+    sel.value = prev;
+  } else {
+    const now   = new Date();
+    const prevD = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const prevVal = prevD.getFullYear() + "-" + String(prevD.getMonth() + 1).padStart(2, "0");
+    sel.value = months.includes(prevVal) ? prevVal : (months[0] || "");
+  }
+}
+
 function renderTaxSummary() {
   const tax = document.getElementById("taxSummary");
   if (!tax) return;
+
+  _taxPopulateMonthSelect();
+  const sel           = document.getElementById("taxMonthSel");
+  const selectedMonth = sel?.value || "";
+
+  if (!selectedMonth) {
+    tax.innerHTML = '<div class="tasks-empty">Няма данни за данъчна справка.</div>';
+    return;
+  }
+
+  const [y, mo]    = selectedMonth.split("-").map(Number);
+  const monthLabel = _mrMonthNames[mo - 1] + " " + y;
+  const src        = records.filter(r => (r.date || "").startsWith(selectedMonth));
+
+  if (!src.length) {
+    tax.innerHTML = `
+    <h3><i class="fa-solid fa-file-invoice-dollar"></i> Данъчна справка — ${monthLabel}</h3>
+    <div class="tasks-empty" style="margin:12px 0;">Няма данни за ${monthLabel}.</div>`;
+    return;
+  }
 
   // В ДДС участват САМО:
   //   - Приходи с категория "Оборот"
@@ -1061,34 +1107,34 @@ function renderTaxSummary() {
 
   const sum = (arr) => arr.reduce((s, r) => s + Number(r.amount || 0), 0);
 
-  // Бруто суми за ДДС
-  const incGrossVat   = sum(records.filter(r => r.type === "Приход" && isOborot(r.category)));
-  const expGrossVat   = sum(records.filter(r => r.type === "Разход" && isStoka(r.category)));
+  // Бруто суми (филтрирани по избрания месец)
+  const incGrossVat   = sum(src.filter(r => r.type === "Приход" && isOborot(r.category)));
+  const expGrossVat   = sum(src.filter(r => r.type === "Разход" && isStoka(r.category)));
 
   // Заплати по банка (без ДДС — приспадат се от печалбата директно)
-  const expSalaryBank = sum(records.filter(r =>
+  const expSalaryBank = sum(src.filter(r =>
     r.type === "Разход" && isZaplata(r.category) && isBankMethod(r.method)
   ));
 
   // ── 1) ДДС (20% → /6 от бруто) ────────────────
-  const outputVat = +(incGrossVat / 6).toFixed(2);
-  const inputVat  = +(expGrossVat / 6).toFixed(2);
-  const vatDue    = +Math.max(0, outputVat - inputVat).toFixed(2);
+  // Изчисление върху незакръглени стойности, закръляне само на финалния резултат
+  const vatDue = +Math.max(0, incGrossVat / 6 - expGrossVat / 6).toFixed(2);
 
   // ── 2) Печалба (нето) ─────────────────────────
   // Оборот и Стока → нето = бруто / 1.20
   // Заплати по банка → пълната сума (без ДДС)
-  const incNet    = incGrossVat / 1.20;
-  const expNet    = expGrossVat / 1.20 + expSalaryBank;
-  const profitNet = incNet - expNet;
+  const incNet      = incGrossVat / 1.20;
+  const expNet      = expGrossVat / 1.20 + expSalaryBank;
+  const profitNet   = incNet - expNet;
 
-  const corpTax   = profitNet > 0 ? +(profitNet * 0.10).toFixed(2) : 0;
-  const netProfit = +(profitNet - corpTax).toFixed(2);
+  const corpTaxRaw  = profitNet > 0 ? profitNet * 0.10 : 0;
+  const corpTax     = +corpTaxRaw.toFixed(2);                   // само за показване
+  const netProfit   = +(profitNet - corpTaxRaw).toFixed(2);     // от незакръглен данък
 
   const hasSalBank = expSalaryBank > 0;
 
   tax.innerHTML = `
-  <h3><i class="fa-solid fa-file-invoice-dollar"></i> Данъчна справка</h3>
+  <h3><i class="fa-solid fa-file-invoice-dollar"></i> Данъчна справка — ${monthLabel}</h3>
   <table>
     <tr>
       <td>Оборот (бруто):</td>
@@ -1125,6 +1171,7 @@ function renderTaxSummary() {
     * Заплати в кеш, Друг приход, Друго, Без ДДС, Пренос — НЕ участват.
   </div>`;
 }
+window.renderTaxSummary = renderTaxSummary;
 
 // ── Седмична справка ──────────────────────────────────────────────────────
 function _ymdLocal(d) {
@@ -7261,11 +7308,6 @@ window.loadLastBackupStatus = loadLastBackupStatus;
 // ══════════════════════════════════════════════════════════════
 // МЕСЕЧНА СПРАВКА
 // ══════════════════════════════════════════════════════════════
-
-const _mrMonthNames = [
-  'Януари','Февруари','Март','Април','Май','Юни',
-  'Юли','Август','Септември','Октомври','Ноември','Декември'
-];
 
 function _mrPopulateMonthSelect() {
   const sel = document.getElementById('mrMonthSel');

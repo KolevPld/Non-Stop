@@ -262,6 +262,10 @@
         </button>
         <div id="financePanel" class="hidden">
           <div id="methodSummaryExtra"></div>
+          <div style="display:flex;align-items:center;gap:8px;margin:10px 0 4px;flex-wrap:wrap;">
+            <span class="muted" style="font-size:0.85rem;">Избери месец за данъчната справка:</span>
+            <select id="taxMonthSel" onchange="renderTaxSummary()" style="width:auto;min-width:160px;"></select>
+          </div>
           <div id="taxSummary"></div>
         </div>
       </div>
