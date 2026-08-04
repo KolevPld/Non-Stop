@@ -340,6 +340,7 @@ onAuthStateChanged(auth, async user => {
       loadRecords();
     }
   } else {
+    if (_allInvoicesUnsub) { _allInvoicesUnsub(); _allInvoicesUnsub = null; }
     if (_recordsUnsub) { _recordsUnsub(); _recordsUnsub = null; }
     currentUserId = currentUserEmail = currentUserRole = null;
     if (statusDiv) statusDiv.textContent = "🔐 Моля, влез с имейл и парола.";
@@ -390,6 +391,7 @@ async function loadRecords() {
   }
 
   if (_recordsUnsub) { _recordsUnsub(); _recordsUnsub = null; }
+  _initInvoicesListener();
 
   const q = query(collection(db, "records"), orderBy("date", "desc"));
 
@@ -1084,52 +1086,53 @@ function renderTaxSummary() {
 
   const [y, mo]    = selectedMonth.split("-").map(Number);
   const monthLabel = _mrMonthNames[mo - 1] + " " + y;
-  const src        = records.filter(r => (r.date || "").startsWith(selectedMonth));
 
-  if (!src.length) {
+  const src      = records.filter(r => (r.date || "").startsWith(selectedMonth));
+  const invMonth = _allInvoices.filter(i => (i.issueDate || "").startsWith(selectedMonth));
+  const invPaid  = invMonth.filter(i => i.status === "paid");
+  const invGross = invMonth.reduce((s, i) => s + Number(i.amount || 0), 0);
+
+  if (!src.length && !invMonth.length) {
     tax.innerHTML = `
     <h3><i class="fa-solid fa-file-invoice-dollar"></i> Данъчна справка — ${monthLabel}</h3>
     <div class="tasks-empty" style="margin:12px 0;">Няма данни за ${monthLabel}.</div>`;
     return;
   }
 
-  // В ДДС участват САМО:
-  //   - Приходи с категория "Оборот"
-  //   - Разходи с категория "Стока"
-  // В Данък печалба участват И:
-  //   - Разходи с категория "Заплати" САМО когато са по БАНКА
   const norm         = (s) => String(s ?? "").trim();
   const normLow      = (s) => norm(s).toLowerCase();
   const isOborot     = (cat) => norm(cat) === "Оборот";
   const isStoka      = (cat) => norm(cat) === "Стока";
   const isZaplata    = (cat) => { const v = normLow(cat); return v === "заплата" || v === "заплати"; };
   const isBankMethod = (m)   => normLow(m).startsWith("банка");
-
   const sum = (arr) => arr.reduce((s, r) => s + Number(r.amount || 0), 0);
 
-  // Бруто суми (филтрирани по избрания месец)
-  const incGrossVat   = sum(src.filter(r => r.type === "Приход" && isOborot(r.category)));
-  const expGrossVat   = sum(src.filter(r => r.type === "Разход" && isStoka(r.category)));
+  // ВНИМАНИЕ: category "Реклама" НЕ трябва да влиза тук.
+  // ДДС от фактурите се чете от _allInvoices по issueDate.
+  // Ако "Реклама" влезе и тук — двойно броене.
+  const incGrossVat = sum(src.filter(r => r.type === "Приход" && isOborot(r.category)));
+  const reklamaRows = src.filter(r => r.type === "Приход" && normLow(r.category) === "реклама");
+  if (reklamaRows.length) {
+    console.warn(`[renderTaxSummary] ВНИМАНИЕ: ${reklamaRows.length} записа с category "Реклама" намерени в records за ${selectedMonth}. ДДС се чете от _allInvoices — проверете за двойно броене.`);
+  }
 
-  // Заплати по банка (без ДДС — приспадат се от печалбата директно)
+  const expGrossVat   = sum(src.filter(r => r.type === "Разход" && isStoka(r.category)));
   const expSalaryBank = sum(src.filter(r =>
     r.type === "Разход" && isZaplata(r.category) && isBankMethod(r.method)
   ));
 
-  // ── 1) ДДС (20% → /6 от бруто) ────────────────
-  // Изчисление върху незакръглени стойности, закръляне само на финалния резултат
-  const vatDue = +Math.max(0, incGrossVat / 6 - expGrossVat / 6).toFixed(2);
+  // Всички суми незакръглени до финалния резултат
+  const vatDue = +Math.max(0,
+    incGrossVat / 6 + invGross / 6 - expGrossVat / 6
+  ).toFixed(2);
 
-  // ── 2) Печалба (нето) ─────────────────────────
-  // Оборот и Стока → нето = бруто / 1.20
-  // Заплати по банка → пълната сума (без ДДС)
-  const incNet      = incGrossVat / 1.20;
-  const expNet      = expGrossVat / 1.20 + expSalaryBank;
-  const profitNet   = incNet - expNet;
+  const incNet    = incGrossVat / 1.20 + invGross / 1.20;
+  const expNet    = expGrossVat / 1.20 + expSalaryBank;
+  const profitNet = incNet - expNet;
 
-  const corpTaxRaw  = profitNet > 0 ? profitNet * 0.10 : 0;
-  const corpTax     = +corpTaxRaw.toFixed(2);                   // само за показване
-  const netProfit   = +(profitNet - corpTaxRaw).toFixed(2);     // от незакръглен данък
+  const corpTaxRaw = profitNet > 0 ? profitNet * 0.10 : 0;
+  const corpTax    = +corpTaxRaw.toFixed(2);
+  const netProfit  = +(profitNet - corpTaxRaw).toFixed(2);
 
   const hasSalBank = expSalaryBank > 0;
 
@@ -1137,21 +1140,43 @@ function renderTaxSummary() {
   <h3><i class="fa-solid fa-file-invoice-dollar"></i> Данъчна справка — ${monthLabel}</h3>
   <table>
     <tr>
-      <td>Оборот (бруто):</td>
+      <td>Оборот магазини (бруто):</td>
       <td class="mono">${incGrossVat.toFixed(2)} €</td>
     </tr>
+    <tr>
+      <td style="padding-left:12px;color:var(--text2);">ДДС от оборот:</td>
+      <td class="mono" style="color:var(--text2);">${(incGrossVat / 6).toFixed(2)} €</td>
+    </tr>
+    <tr><td colspan="2"><hr style="border:none;border-top:1px solid var(--border);margin:4px 0;"></td></tr>
+    <tr>
+      <td>Издадени фактури (бруто):</td>
+      <td class="mono">${invGross.toFixed(2)} €</td>
+    </tr>
+    <tr>
+      <td style="padding-left:12px;color:var(--text2);">ДДС от фактури:</td>
+      <td class="mono" style="color:var(--text2);">${(invGross / 6).toFixed(2)} €</td>
+    </tr>
+    <tr><td colspan="2"><hr style="border:none;border-top:1px solid var(--border);margin:4px 0;"></td></tr>
     <tr>
       <td>Стока (бруто):</td>
       <td class="mono">${expGrossVat.toFixed(2)} €</td>
     </tr>
     <tr>
-      <td><strong>ДДС (за внасяне):</strong></td>
+      <td style="padding-left:12px;color:var(--text2);">ДДС за приспадане:</td>
+      <td class="mono" style="color:var(--text2);">${(expGrossVat / 6).toFixed(2)} €</td>
+    </tr>
+    <tr><td colspan="2"><hr style="border:none;border-top:1px solid var(--border);margin:4px 0;"></td></tr>
+    <tr>
+      <td><strong>ДДС ЗА ВНАСЯНЕ:</strong></td>
       <td><strong>${vatDue.toFixed(2)} €</strong></td>
     </tr>
-    ${hasSalBank ? `<tr>
+    ${hasSalBank ? `
+    <tr><td colspan="2"><hr style="border:none;border-top:1px solid var(--border);margin:4px 0;"></td></tr>
+    <tr>
       <td>Заплати по банка:</td>
       <td class="mono">${expSalaryBank.toFixed(2)} €</td>
     </tr>` : ""}
+    <tr><td colspan="2"><hr style="border:none;border-top:1px solid var(--border);margin:4px 0;"></td></tr>
     <tr>
       <td><strong>Печалба (без ДДС):</strong></td>
       <td><strong>${profitNet.toFixed(2)} €</strong></td>
@@ -1165,9 +1190,14 @@ function renderTaxSummary() {
       <td><strong style="color:#ffca28;">${netProfit.toFixed(2)} €</strong></td>
     </tr>
   </table>
-  <div style="font-size:0.72rem;color:var(--text3);margin-top:10px;">
-    * ДДС: само Оборот (приход) и Стока (разход).<br>
-    * Данък печалба: Оборот, Стока + Заплати ПО БАНКА (без кеш).<br>
+  <div style="margin-top:8px;font-size:0.82rem;color:var(--text2);">
+    Фактури за месеца: <strong>${invMonth.length}</strong> бр.,
+    от които платени: <strong>${invPaid.length}</strong> бр.
+  </div>
+  <div style="font-size:0.72rem;color:var(--text3);margin-top:8px;">
+    * ДДС от оборот и фактури = бруто / 6. ДДС за приспадане = бруто стока / 6.<br>
+    * ДДС от фактури се начислява по дата на <strong>издаване</strong> (issueDate), не на плащане.<br>
+    * Данък печалба: Оборот + Фактури + Заплати ПО БАНКА (без кеш).<br>
     * Заплати в кеш, Друг приход, Друго, Без ДДС, Пренос — НЕ участват.
   </div>`;
 }
@@ -8095,11 +8125,30 @@ window.saveTransfer = async function() {
 
 // ── Invoices ──────────────────────────────────────────────────────────────
 let _invoices         = [];
+let _allInvoices      = [];
+let _allInvoicesUnsub = null;
 let _invoiceSaving    = false;
 let _editingInvoiceId = null;
 let _invDeleteSaving  = false;
 let _payingInvoiceId  = null;
 let _paymentSaving    = false;
+
+function _initInvoicesListener() {
+  if (!document.body.classList.contains("admin")) return;
+  if (_allInvoicesUnsub) { _allInvoicesUnsub(); _allInvoicesUnsub = null; }
+  const q = query(collection(db, "invoices"), orderBy("issueDate", "desc"));
+  _allInvoicesUnsub = onSnapshot(q, (snap) => {
+    _allInvoices = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (!document.getElementById("reportsDetailsSection")?.classList.contains("hidden") &&
+        !document.getElementById("financePanel")?.classList.contains("hidden")) {
+      renderTaxSummary();
+    }
+  }, (err) => {
+    console.error("invoices listener:", err);
+    _allInvoices = [];
+    showStatusMsg?.("Грешка при зареждане на фактури.");
+  });
+}
 
 async function loadInvoices() {
   const list = document.getElementById("invList");
