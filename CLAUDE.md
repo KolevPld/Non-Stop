@@ -331,6 +331,12 @@ git push origin vX.Y-описание
   се доразвие (PDF за архив, по-богат изглед).
 - **Audit log** на редакции на затворени отчети (кой/кога/какво).
 - Изчистване на стари random-ID документи в `daily_reports` ако още стоят.
+- **Безопасно затваряне (2026-08-04):** В `confirmCloseDay` редът е:
+  1. `persistReport("closed")` → 2. `createMainRecordsFromDr`. Ако стъпка 2 гърми,
+  отчетът е closed без records. Поправката е обратен ред: pre-compute
+  `docId = _drDocId ?? \`${_drShopId}_${data.date}\``, след това
+  `createMainRecordsFromDr(report, docId)` (при грешка → report остава draft),
+  след това `persistReport("closed")` (при грешка → rollback deleteDoc на created records).
 
 ## Стил на работа (предпочитан от потребителя)
 

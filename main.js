@@ -178,6 +178,7 @@ window.logout = function () {
 // 🔄 Глобални променливи
 // --------------------------------------------------
 let records = [];
+let _recordsUnsub = null;
 let _reportsDetailsLoaded = false;
 let filteredRecords = [];
 let chartRef = null;
@@ -339,6 +340,7 @@ onAuthStateChanged(auth, async user => {
       loadRecords();
     }
   } else {
+    if (_recordsUnsub) { _recordsUnsub(); _recordsUnsub = null; }
     currentUserId = currentUserEmail = currentUserRole = null;
     if (statusDiv) statusDiv.textContent = "🔐 Моля, влез с имейл и парола.";
     document.body.classList.remove("admin");
@@ -370,6 +372,9 @@ function refreshUI() {
 // 🔥 FIRESTORE: Зареждане
 // --------------------------------------------------
 async function loadRecords() {
+  // ВРЕМЕННО СПРЯНО 2026-08-01: двойно броене на преноси, виж анализа
+  // await checkAndCreateMonthlyCarryover();
+
   // Нулираме евентуална редакция при презареждане
   if (editingId) {
     editingId = null;
@@ -384,31 +389,41 @@ async function loadRecords() {
     document.getElementById("cancelEditBtn")?.classList.add("hidden");
   }
 
-  records = [];
+  if (_recordsUnsub) { _recordsUnsub(); _recordsUnsub = null; }
 
   const q = query(collection(db, "records"), orderBy("date", "desc"));
-  const snapshot = await getDocs(q);
 
-  snapshot.forEach(docSnap => {
-    records.push({ id: docSnap.id, ...docSnap.data() });
+  return new Promise((resolve) => {
+    let settled = false;
+    _recordsUnsub = onSnapshot(q, (snap) => {
+      records.length = 0;
+      snap.docs.forEach(d => records.push({ id: d.id, ...d.data() }));
+
+      if (!settled) {
+        settled = true;
+        if (document.body.classList.contains("admin")) {
+          renderRecentList(); renderRecentTable();
+          _reportsDetailsLoaded = false;
+          if (!document.getElementById("reportsDetailsSection")?.classList.contains("hidden")) {
+            _renderReportsDetails();
+          }
+          window.showScreen("add"); document.getElementById("bottomNav")?.classList.remove("hidden");
+          renderTotalSummaryCards();
+        } else {
+          renderRecentList(); renderRecentTable();
+          window.showScreen("add"); document.getElementById("bottomNav")?.classList.remove("hidden");
+          renderTotalSummaryCards();
+        }
+        resolve();
+      } else {
+        refreshUI();
+      }
+    }, (err) => {
+      console.error("records listener:", err);
+      showStatusMsg?.("Грешка при връзка с базата.");
+      if (!settled) { settled = true; resolve(); }
+    });
   });
-
-  if (document.body.classList.contains("admin")) {
-    renderRecentList(); renderRecentTable();
-    _reportsDetailsLoaded = false;
-    if (!document.getElementById("reportsDetailsSection")?.classList.contains("hidden")) {
-      _renderReportsDetails();
-    }
-    window.showScreen("add"); document.getElementById("bottomNav")?.classList.remove("hidden");
-    renderTotalSummaryCards();
-  } else {
-    renderRecentList(); renderRecentTable();
-    window.showScreen("add"); document.getElementById("bottomNav")?.classList.remove("hidden");
-    renderTotalSummaryCards();
-  }
-
-  // ВРЕМЕННО СПРЯНО 2026-08-01: двойно броене на преноси, виж анализа
-  // await checkAndCreateMonthlyCarryover();
 }
 
 // --------------------------------------------------
@@ -527,7 +542,6 @@ async function addRecord() {
 
   try {
     const docRef = await addDoc(collection(db, "records"), { date, type, method, amount, note, category, store, imageUrl });
-    records.unshift({ id: docRef.id, date, type, method, amount, note, category, store, imageUrl });
 
     if (OWNER_CATEGORIES.includes(category)) {
       try {
@@ -7951,14 +7965,6 @@ window.saveTransfer = async function() {
         throw e2;
       }
 
-      records.unshift({ id: trRef2.id, date, type: "Приход",   method: "Кеш",
-        amount: r2(amount), store: "КасаКеш", category: "Трансфер",
-        isTransfer: true, transferId: trRef.id,
-        note: note || "Трансфер банка → каса", imageUrl: "" });
-      records.unshift({ id: trRef.id,  date, type: "Трансфер", method: "Банка",
-        amount: r2(amount), store: "КасаКеш", category: "Трансфер",
-        note: note || "Трансфер банка → каса", imageUrl: "" });
-
     } else {
       // ── store1 / store2: намираме отчета ПРЕДИ всякакъв запис ────
 
@@ -8022,10 +8028,6 @@ window.saveTransfer = async function() {
         try { await deleteDoc(trRef); } catch (_) {}
         throw eDr;
       }
-
-      records.unshift({ id: trRef.id, date: usedDate, type: "Трансфер", method: "Банка",
-        amount: r2(amount), store: to, category: "Трансфер",
-        note: note || "Трансфер банка → каса", imageUrl: "" });
 
       if (noStartCash) {
         alert(
@@ -8421,13 +8423,6 @@ window.confirmInvoicePayment = async function() {
       throw err;
     }
 
-    // 3. Обнови локалния масив за незабавен UI refresh
-    records.unshift({
-      id: recRef.id, date: payDate, type: "Приход", method, amount: amt,
-      store, category: "Реклама", invoiceId: _payingInvoiceId,
-      note, imageUrl: "", createdAt: now, createdBy: currentUserId,
-    });
-
     window.closePayModal();
     await loadInvoices();
     refreshUI();
@@ -8462,8 +8457,6 @@ window.markInvoiceUnpaid = async function(id) {
     // 1. Изтрий records (deleteDoc е идемпотентен — не гърми при not-found)
     if (inv.recordId) {
       await deleteDoc(doc(db, "records", inv.recordId));
-      const idx = records.findIndex(r => r.id === inv.recordId);
-      if (idx !== -1) records.splice(idx, 1);
       recordDeleted = true;
     }
 
