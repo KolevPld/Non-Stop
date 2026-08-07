@@ -6398,6 +6398,7 @@ function renderPayrollHistTable(el) {
     const gross  = sAmount + holiday + sickLeave + shopBonus + persBon;
     const cash   = gross - advances - bank;
     const kb     = gross - advances;
+    const hasAny = gross > 0 || advances > 0 || bank > 0 || hours > 0;
     const store  = emp.shopId === "store1" ? "М1" : "М2";
     const hasVal = hours > 0 || sAmount > 0;
     const stHtml = !hasVal ? `<span style="color:var(--text3)">—</span>`
@@ -6417,11 +6418,11 @@ function renderPayrollHistTable(el) {
       <td><input id="pw_sl_${idx}"  class="pw-input" type="number" min="0" step="0.01"  value="${fv(sickLeave)}"       oninput="onPayrollInput(${idx},'')"></td>
       <td><input id="pw_sb_${idx}"  class="pw-input" type="number" min="0" step="0.01"  value="${fv(shopBonus)}"       oninput="onPayrollInput(${idx},'')"></td>
       <td><input id="pw_pb_${idx}"  class="pw-input" type="number" min="0" step="0.01"  value="${fv(persBon)}"         oninput="onPayrollInput(${idx},'')"></td>
-      <td class="pw-calc" id="pw_gross_${idx}">${gross>0?gross.toFixed(2):"—"}</td>
+      <td class="pw-calc" id="pw_gross_${idx}">${hasAny?gross.toFixed(2):"—"}</td>
       <td><input id="pw_adv_${idx}" class="pw-input" type="number" min="0" step="0.01"  value="${fv(advances)}"        oninput="onPayrollInput(${idx},'')"></td>
       <td><input id="pw_bk_${idx}"  class="pw-input" type="number" min="0" step="0.01"  value="${fv(bank)}"            oninput="onPayrollInput(${idx},'')"></td>
-      <td class="pw-calc ${cash<0?"neg":""}" id="pw_cash_${idx}">${gross>0?cash.toFixed(2):"—"}</td>
-      <td class="pw-calc" id="pw_kb_${idx}">${gross>0?kb.toFixed(2):"—"}</td>
+      <td class="pw-calc ${cash<0?"neg":""}" id="pw_cash_${idx}">${hasAny?cash.toFixed(2):"—"}</td>
+      <td class="pw-calc ${kb<0?"neg":""}"   id="pw_kb_${idx}">${hasAny?kb.toFixed(2):"—"}</td>
       <td class="pw-status" id="pw_st_${idx}">${stHtml}</td>
       <td class="pw-actions">
         <button class="pw-btn" onclick="savePayrollRow(${idx})" title="Запази">💾</button>
@@ -6506,20 +6507,21 @@ window.onPayrollInput = function(idx, field) {
   row.advances  = get(`pw_adv_${idx}`);
   row.bank      = get(`pw_bk_${idx}`);
 
-  const gross = row.sAmount + row.holiday + row.sickLeave + row.shopBonus + row.persBon;
-  const cash  = gross - row.advances - row.bank;
-  const kb    = gross - row.advances;
+  const gross  = row.sAmount + row.holiday + row.sickLeave + row.shopBonus + row.persBon;
+  const cash   = gross - row.advances - row.bank;
+  const kb     = gross - row.advances;
   const hasVal = row.hours > 0 || row.sAmount > 0;
+  const hasAny = gross > 0 || row.advances > 0 || row.bank > 0 || row.hours > 0;
 
-  const setCell = (id, val, extra) => {
+  const setCell = (id, val, show, extra) => {
     const el = document.getElementById(id);
     if (!el) return;
-    el.textContent = hasVal ? val.toFixed(2) : "—";
+    el.textContent = show ? val.toFixed(2) : "—";
     if (extra !== undefined) el.className = `pw-calc${extra ? " " + extra : ""}`;
   };
-  setCell(`pw_gross_${idx}`, gross);
-  setCell(`pw_cash_${idx}`,  cash, cash < 0 ? "neg" : "");
-  setCell(`pw_kb_${idx}`,    kb);
+  setCell(`pw_gross_${idx}`, gross, hasAny);
+  setCell(`pw_cash_${idx}`,  cash,  hasAny, cash < 0 ? "neg" : "");
+  setCell(`pw_kb_${idx}`,    kb,    hasAny, kb   < 0 ? "neg" : "");
 
   const stEl = document.getElementById(`pw_st_${idx}`);
   if (stEl) stEl.innerHTML = !hasVal ? `<span style="color:var(--text3)">—</span>`
