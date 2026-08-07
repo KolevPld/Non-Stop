@@ -85,6 +85,7 @@ owners/{id}                      ← Собственици
 users/{id}                       ← Потребители
 notifications/{id}               ← Известия
 monthly_reports/{YYYY-MM}        ← Месечни справки (генерират се от Cloud Function)
+invoices/{id}                    ← Издадени фактури (само owner)
 ```
 
 ### Структура на дневен отчет (`daily_reports`)
@@ -166,6 +167,12 @@ endCash = r2(
    с детерминистично ID (`setDoc`, не `addDoc`) и с изключване на
    собствения тип от изчислението.
 
+8. **ДДС от издадени фактури се начислява по датата на ИЗДАВАНЕ (`issueDate`).**
+   Приходът в касата влиза по датата на ПЛАЩАНЕ (`payDate`) — чрез запис в `records`.
+   Двете дати са в различни месеци. `renderTaxSummary` чете фактурите от `_allInvoices`
+   по `issueDate`, а `records` се ползва САМО за движението на парите (салдо по каса).
+   Ако ДДС се смята и от двете места — двойно броене.
+
 ### Helper функции за показване (винаги преизчисляват от суровите данни)
 
 - **`_recalcEndCash(r)`** (~ред 3302) — преизчислява endCash от суровите данни. Ползва се навсякъде при ПОКАЗВАНЕ, защото стари отчети имат сторирана грешна стойност. "Самоизлекуват се" без миграция.
@@ -199,7 +206,7 @@ endCash = r2(
 | `collectDrData` | 3060 | Събира данните от формата + изчислява endCash. ЗАПИСВА. |
 | `saveClosedReportEdits` | 3890 | Запазва редакция на затворен отчет. Чете startCash/endCash от `data` (формата), НЕ от `_drData`. |
 | `persistReport` | 3862 | Записва/обновява дневен отчет. |
-| `loadPrevEndCash` | 3508 | Тегли preизчисления endCash на предишния ден → startCash. |
+| `loadPrevEndCash` | 3508 | Тегли преизчисления endCash на предишния ден → startCash. |
 | `loadRecentReports` | 3988 | "Последни 10 отчета" (manager). Live чрез `onSnapshot`. |
 | `loadDailyReportsScreen` | 4124 | Owner таблица "Дневни отчети". Live чрез `onSnapshot`. |
 | `renderWeeklyReport` | 1159 | Седмична справка (само closed). |
@@ -211,6 +218,20 @@ endCash = r2(
 | `_findOpenReport` | 7852 | Търси незатворен daily_report за магазин, до 7 дни напред |
 | `_getPrevEndCash` | 7834 | startCash за нов скелет-чернова (сървърен query, 1 документ) |
 | `checkAndCreateMonthlyCarryover` | 416 | ⛔ СПРЯНА — двойно броене, виж хронологията |
+| `loadRecords` | 374 | Зарежда records чрез `onSnapshot` → `_recordsUnsub`. Вика и `_initInvoicesListener`. |
+| `_taxPopulateMonthSelect` | 1053 | Попълва dropdown с месеци от records данни за данъчната справка. |
+| `renderTaxSummary` | 1074 | Данъчна справка с избор на месец. ДДС от records (Оборот) + от `_allInvoices` (по `issueDate`). |
+| `loadMonthlyReport` | 7563 | Зарежда месечна справка. `forceServer=true` след генериране — без IndexedDB кеш fallback. |
+| `_initInvoicesListener` | 8148 | onSnapshot за `invoices` → `_allInvoices[]`. Само admin. Unsubscribe: `_allInvoicesUnsub`. |
+| `loadInvoices` | 8165 | getDocs за invoice екрана → `_invoices[]`. Вика се при `showScreen("invoices")`. |
+| `_loadInvSuppliers` | 8255 | Зарежда списъка с доставчици за invoice modal. |
+| `openInvoiceModal` | 8276 | Отваря modal за нова/редактирана фактура. |
+| `saveInvoice` | 8335 | Записва нова фактура (addDoc). |
+| `editInvoice` | 8396 | Зарежда съществуваща фактура в modal за редакция. |
+| `deleteInvoice` | 8426 | Трие фактура (само ако е pending). |
+| `openPayModal` | 8455 | Отваря modal за маркиране като платена (избор на дата, метод). |
+| `confirmInvoicePayment` | 8485 | Записва records документ + обновява фактурата с payDate/recordId. |
+| `markInvoiceUnpaid` | 8543 | Връща фактурата в pending + трие records документа (rollback). |
 
 ## 💸 Трансфер банка → каса
 
@@ -249,11 +270,69 @@ endCash = r2(
 
 Трансфер записите ползват `addDoc` (random ID). Връзката е чрез `transferId` в `sideIncomes[]` и в Приход записа при КасаКеш.
 
+## 📄 Издадени фактури (invoices)
+
+Нова функция (2026-08-04) — собственикът записва фактури за реклама,
+издадени към фирми от списъка с доставчици.
+
+### Структура на документ (`invoices`)
+
+```
+{
+  number:    string,           ← номер на фактурата (показван)
+  clientId:  string,           ← нормализирано название (виж normClient по-долу)
+  client:    string,           ← показвано наименование
+  issueDate: "2026-07-15",     ← дата на ИЗДАВАНЕ (данъчна точка — за ДДС)
+  amount:    number,           ← бруто с ДДС
+  status:    "pending"|"paid",
+  payDate:   string,           ← дата на плащане (попълва се при маркиране)
+  method:    string,           ← начин на плащане при маркиране
+  recordId:  string,           ← ID на records документа, създаден при плащане
+  note:      string,
+  createdAt, updatedAt
+}
+```
+
+### Важни правила
+
+- **`clientId`** = нормализирано название на фирмата. Нормализацията е точно:
+  ```javascript
+  const normClient = s => String(s ?? "").trim().replace(/\s+/g, " ").toLowerCase();
+  ```
+  (ред 232 в main.js). НЕ е Firestore ID на supplier — доставчиците имат по два документа
+  (по един за всеки магазин), затова се ползва нормализираното им name като ключ.
+- **ДДС не се пази като поле.** Смята се при показване: `amount / 6` (ДДС),
+  `amount / 1.20` (нето). Само финалните резултати се показват с `toFixed(2)`.
+- **Издадената фактура е вземане** (очакван приход). НЕ пипа касата или записите.
+- **При маркиране като платена** → `confirmInvoicePayment` създава запис в `records`
+  с `category:"Реклама"`, `date = payDate`, `store = КасаБанка/КасаКеш`, `type:"Приход"`.
+- **При връщане в "чакаща"** → `markInvoiceUnpaid` трие `records` документа (rollback).
+
+### Display правила за invoices в данъчната справка
+
+`renderTaxSummary` чете `_allInvoices` (не `records`) и филтрира по `issueDate`:
+- **ДДС от фактури = `invGross / 6`** — добавя се към ДДС от оборот
+- **Нето от фактури = `invGross / 1.20`** — добавя се към нетния приход при печалбата
+- Records с `category:"Реклама"` НЕ участват в ДДС — само в салдото по каса
+- `console.warn` ако `records` за избрания месец съдържа "Реклама" приходи — защита срещу двойно броене
+
+`_initInvoicesListener` при промяна рендерира справката само ако `reportsDetailsSection`
+И `financePanel` са видими едновременно. При грешка: `_allInvoices = []` + `showStatusMsg`.
+
 ## Real-time (onSnapshot)
 
 `loadRecentReports` и `loadDailyReportsScreen` ползват `onSnapshot` вместо `getDocs` —
 промени от един таб се появяват на всички табове за 1-2 сек без F5.
 Unsubscribe променливи: `_recentReportsUnsub`, `_ownerReportsUnsub` (отписвай при смяна на екран).
+
+`loadRecords` (сесия 2026-08-04) също смени `getDocs` с `onSnapshot` → `_recordsUnsub`.
+Причина: собственикът не виждаше записите от дни, затворени от управителите в друга сесия.
+Unsubscribe при logout и преди нов listener. Масивът `records` се попълва с `records.length = 0`
++ `forEach push` — запазва референцията, без `records = snap.docs.map(...)`.
+
+`_initInvoicesListener` — `_allInvoicesUnsub` за `invoices` колекцията.
+Стартира само при owner логин (`body.classList.contains("admin")`).
+Firestore rules: `invoices` е само за owner — управителите биха получили permission denied.
 
 ## Команди
 
@@ -320,6 +399,31 @@ git push origin vX.Y-описание
 
 Тагът `v1.7-transfer-carryover-fix` отбелязва това стабилно състояние.
 
+Сесия 2026-08-04 до 2026-08-07:
+
+- **`loadRecords` → onSnapshot** (`_recordsUnsub`): собственикът не виждаше записи
+  от дни, затворени от управители в друга сесия. `getDocs` → `onSnapshot`. Масивът
+  `records` се пълни чрез `records.length = 0` + `forEach push` (запазва референцията).
+
+- **НОВА ФУНКЦИЯ: Издадени фактури** (`invoices` колекция). Собственикът записва
+  фактури за реклама. При маркиране като платена → `records` запис (category: "Реклама").
+  При връщане → rollback deleteDoc. Нормализация: `normClient` = `String(s ?? "").trim().replace(/\s+/g, " ").toLowerCase()`.
+
+- **`renderTaxSummary` — ДДС от фактури (ETAP 4Б):** добавен `_initInvoicesListener`
+  (onSnapshot за `invoices`). ДДС се чете от `_allInvoices` по `issueDate` —
+  НЕ от `records` по дата на плащане. Records с category "Реклама" не участват в ДДС.
+  Listener стартира само при owner (`body.classList.contains("admin")`).
+
+- **`loadMonthlyReport` cache бъг:** след "Генерирай", екранът показваше стари числа до
+  Ctrl+Shift+R. `getDocFromServer` хвърляше грешка, `catch` четеше от IndexedDB.
+  Поправено: `forceServer` параметър — при `true` няма fallback (хвърля грешката нагоре).
+  `triggerMonthlyManual` вика `await loadMonthlyReport(true)` вместо `setTimeout`.
+
+- **`renderMethodSummary` / `renderStoreComparison`:** добавени трансфер записи в
+  display логиката по правилата в "Трансфер банка → каса" раздела.
+
+Тагът `v2.0-invoices-tax-realtime` отбелязва това стабилно състояние.
+
 ## TODO / бъдещи задачи
 
 - **`checkAndCreateMonthlyCarryover` (main.js:416)** е закоментирана в `loadRecords`.
@@ -335,6 +439,15 @@ git push origin vX.Y-описание
   от `monthly_reports` чрез `getDocFromServer` (винаги сървър), но `_mrLoadDailyRows`
   чете `daily_reports` чрез `getDocs` (може да ползва IndexedDB кеш). При бъдещ
   рефактор — унифицирай с `getDocsFromServer` ако трябват 100% свежи дневни данни.
+- **Salary бъг — `salStatusLabel` не обработва `"approved"`:** Ред запазен с 💾
+  (извън payroll цикъла) записва `status: "approved"` директно в Firestore. Функцията
+  `salStatusLabel` обработва само `"generated"` и `"paid"` → показва "Не е генерирана".
+  Поправката: добави `case "approved": return "Одобрена";` в `salStatusLabel`.
+- **Salary бъг — `totalGross = 0` при нулева ставка:** `savePayrollRow` изчислява
+  `totalGross = hours * emp.hourlyRate` в момента на запис. Ако `hourlyRate` е 0 тогава
+  (нова служителка, ставката е добавена по-късно), `totalGross` се записва като 0 и не
+  се преизчислява при следваща промяна на ставката. `onPayrollInput` трябва да ползва
+  `getHistoricalRate(emp, date)` вместо `emp.hourlyRate`.
 - **Безопасно затваряне (2026-08-04):** В `confirmCloseDay` редът е:
   1. `persistReport("closed")` → 2. `createMainRecordsFromDr`. Ако стъпка 2 гърми,
   отчетът е closed без records. Поправката е обратен ред: pre-compute
