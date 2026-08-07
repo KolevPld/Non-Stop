@@ -331,6 +331,10 @@ git push origin vX.Y-описание
   се доразвие (PDF за архив, по-богат изглед).
 - **Audit log** на редакции на затворени отчети (кой/кога/какво).
 - Изчистване на стари random-ID документи в `daily_reports` ако още стоят.
+- **Месечна справка — двойна read политика:** `loadMonthlyReport` чете KPI картите
+  от `monthly_reports` чрез `getDocFromServer` (винаги сървър), но `_mrLoadDailyRows`
+  чете `daily_reports` чрез `getDocs` (може да ползва IndexedDB кеш). При бъдещ
+  рефактор — унифицирай с `getDocsFromServer` ако трябват 100% свежи дневни данни.
 - **Безопасно затваряне (2026-08-04):** В `confirmCloseDay` редът е:
   1. `persistReport("closed")` → 2. `createMainRecordsFromDr`. Ако стъпка 2 гърми,
   отчетът е closed без records. Поправката е обратен ред: pre-compute

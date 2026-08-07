@@ -7560,7 +7560,7 @@ function _mrRenderDailyTable(rows) {
   </div>`;
 }
 
-async function loadMonthlyReport() {
+async function loadMonthlyReport(forceServer = false) {
   const sel    = document.getElementById('mrMonthSel');
   const status = document.getElementById('mrStatus');
   const el     = document.getElementById('mrContent');
@@ -7576,8 +7576,15 @@ async function loadMonthlyReport() {
     // DocId е директно "YYYY-MM" — четем по ключ, не по query
     const ref = doc(db, 'monthly_reports', monthVal);
     let snap;
-    try { snap = await getDocFromServer(ref); }
-    catch (e) { snap = await getDoc(ref); }
+    if (forceServer) {
+      snap = await getDocFromServer(ref);
+    } else {
+      try { snap = await getDocFromServer(ref); }
+      catch (e) {
+        console.warn("getDocFromServer фейлна, чета от кеш:", e.code || e.message);
+        snap = await getDoc(ref);
+      }
+    }
     console.log('[monthly] exists:', snap.exists(), 'for', monthVal);
 
     if (!snap.exists()) {
@@ -7794,7 +7801,12 @@ window.triggerMonthlyManual = async function() {
     const res = await fn({ month: monthVal });
     status.style.color = '#4caf50';
     status.textContent = '✅ ' + (res.data?.message || 'Готово!');
-    setTimeout(() => loadMonthlyReport(), 1500);
+    try {
+      await loadMonthlyReport(true);
+    } catch (e) {
+      status.style.color = '#f44336';
+      status.textContent = '❌ Грешка при зареждане: ' + (e.message || e);
+    }
   } catch (err) {
     console.error('triggerMonthlyManual:', err);
     status.style.color = '#f44336';
